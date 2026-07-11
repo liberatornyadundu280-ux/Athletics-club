@@ -1,10 +1,10 @@
-# Aditya University Athletics Club Website Guidelines
+# Aditya Institutions Athletics Club Website Guidelines
 
 We are building an Athletics Club website using React and Vite.
 
 ## Project Goal
 
-The Athletics Club website will serve as the official public-facing platform for the Aditya University Athletics Club.
+The Athletics Club website will serve as the official public-facing platform for the Aditya Institutions Athletics Club.
 
 The website should:
 
@@ -17,12 +17,12 @@ The website should:
 
 ## Target Users
 
-- Current Aditya University students.
+- Current Aditya Institutions students.
 - Students interested in joining athletics.
 - Parents.
 - Visitors.
 - Alumni.
-- University staff.
+- Institutions staff.
 
 ## Functional Requirements
 
@@ -145,18 +145,18 @@ Regular
 
 ### Title
 
-Aditya University Athletics Club
+Aditya Institutions Athletics Club
 
 ### Description
 
-Official Athletics Club website for Aditya University.
+Official Athletics Club website for Aditya Institutions.
 
 ### Keywords
 
 - Athletics
 - Running
 - Sports
-- Aditya University
+- Aditya Institutions
 
 ## Social Media
 
@@ -478,9 +478,9 @@ The home page should include two main buttons placed in the middle of the screen
 
 This button should direct users to:
 
-<https://www.getorgtree.com/login?school=aditya-university>
+<https://www.getorgtree.com/login?school=aditya-Institutions>
 
-Before redirecting, the website should show a small pop-up asking whether the visitor is a student of Aditya University.
+Before redirecting, the website should show a small pop-up asking whether the visitor is a student of Aditya Institutions.
 
 - If the visitor selects "Yes", redirect them to Orgtree.
 - If the visitor selects "No", show an error message explaining that they are not authorized to join the club, then return them to the home page.
@@ -501,7 +501,7 @@ Navigates to the leaders page. The leaders page should contain cards for the pre
 
 The page should also include a "See Club Members" button that directs users to:
 
-<https://www.getorgtree.com/clubs?school=aditya-university>
+<https://www.getorgtree.com/clubs?school=aditya-Institutions>
 
 The leaders page hero heading should be:
 
@@ -513,7 +513,7 @@ Navigates to the gallery page, which contains images related to daily activities
 
 #### About Us
 
-This page should explain why the club exists and describe the athletics events practiced at Aditya University.
+This page should explain why the club exists and describe the athletics events practiced at Aditya Institutions.
 
 #### What We Do
 
@@ -583,7 +583,7 @@ The About page and leaders section may be combined. The leaders should appear af
 
 Suggested intro:
 
-"This is the official Aditya University Athletics Club. We do not only build sports stars; we also care deeply about teamwork, health, and the growth of every individual. With the help of our trained professional coaches, we create an environment where everyone feels a sense of belonging. Come through and feel what it means to be part of one Aditya, one family. Explore what we do every day, check out the gallery, and meet the leaders who guide us."
+"This is the official Aditya Institutions Athletics Club. We do not only build sports stars; we also care deeply about teamwork, health, and the growth of every individual. With the help of our trained professional coaches, we create an environment where everyone feels a sense of belonging. Come through and feel what it means to be part of one Aditya, one family. Explore what we do every day, check out the gallery, and meet the leaders who guide us."
 
 The page should include:
 
