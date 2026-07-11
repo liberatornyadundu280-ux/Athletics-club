@@ -21,7 +21,7 @@ function Contact() {
             WhatsApp:{" "}
             <a
               className="whatsapp-link"
-              href="https://wa.me/"
+              href="https://wa.me/919908325327?text=Hi%20Team%2C%20I%20visited%20your%20site%20and%20I%27m%20interested%20in%20joining."
               target="_blank"
               rel="noreferrer"
             >

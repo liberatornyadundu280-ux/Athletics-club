@@ -18,6 +18,7 @@ function Home() {
 
       <section
         className="home-preview-section home-about-preview"
+        id="home-about-preview"
         data-nav-section="about"
       >
         <div className="home-preview-copy">

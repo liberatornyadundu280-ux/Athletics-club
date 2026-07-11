@@ -40,6 +40,9 @@ function Hero() {
           Train with discipline, grow with the team, and discover the athletics
           community at Aditya Institutions.
         </p>
+        <p>
+          <i>Don't just wish for it work for it .</i>
+        </p>
         <div className="hero-actions">
           <Button onClick={openJoinModal}>Join Club</Button>
           <Button to="/activities" variant="secondary">
@@ -47,6 +50,15 @@ function Hero() {
           </Button>
         </div>
       </div>
+
+      <a
+        className="hero-scroll-cue"
+        href="#home-about-preview"
+        aria-label="Scroll to page preview"
+      >
+        <span>Scroll</span>
+        <i aria-hidden="true" />
+      </a>
 
       <JoinClubModal
         error={joinError}

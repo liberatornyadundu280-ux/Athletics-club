@@ -43,7 +43,7 @@ function Gallery() {
       </div>
 
       <GalleryFilter activeCategory={activeCategory} onChange={setActiveCategory} />
-      <GalleryGrid images={visibleImages} />
+      <GalleryGrid activeCategory={activeCategory} images={visibleImages} />
 
       <aside className="gallery-social-panel">
         <div>
