@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import {
   FaEnvelope,
   FaFacebookF,
@@ -21,7 +21,24 @@ const iconMap = {
 };
 
 function SocialLinks({ compact = false }) {
-  const socialLinks = useMemo(() => readSocialLinks(), []);
+  const [socialLinks, setSocialLinks] = useState([]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadLinks() {
+      const links = await readSocialLinks();
+      if (!ignore) {
+        setSocialLinks(links);
+      }
+    }
+
+    loadLinks();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   return (
     <div

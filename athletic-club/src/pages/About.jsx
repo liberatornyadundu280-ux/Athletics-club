@@ -1,9 +1,27 @@
+import { useEffect, useState } from "react";
 import Button from "../components/common/Button";
 import LeaderCard from "../components/leaders/LeaderCard";
 import { readLeaderItems } from "../services/contentStorage";
 
 function About() {
-  const leaders = readLeaderItems();
+  const [leaders, setLeaders] = useState([]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadLeaders() {
+      const items = await readLeaderItems();
+      if (!ignore) {
+        setLeaders(items);
+      }
+    }
+
+    loadLeaders();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   return (
     <section className="page-section">

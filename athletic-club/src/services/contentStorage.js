@@ -1,6 +1,18 @@
 import { galleryImages } from "../data/gallery";
 import { leaders } from "../data/leaders";
 import { socialLinks as defaultSocialLinks } from "../data/socialLinks";
+import {
+  deleteBackgroundItemFromFirestore,
+  deleteGalleryItemFromFirestore,
+  readBackgroundItemsFromFirestore,
+  readGalleryItemsFromFirestore,
+  setBackgroundItemsInFirestore,
+  setGalleryItemsInFirestore,
+} from "./galleryService";
+import {
+  readSettingsFromFirestore,
+  writeSettingsToFirestore,
+} from "./settingsService";
 
 const galleryStorageKey = "athletics-gallery-items";
 const backgroundStorageKey = "athletics-background-items";
@@ -67,19 +79,43 @@ function normalizeSocialLinks(items) {
   }));
 }
 
-export function readGalleryItems() {
+export async function readGalleryItems() {
+  const firestoreItems = await readGalleryItemsFromFirestore();
+  if (firestoreItems.length > 0) {
+    return firestoreItems;
+  }
+
   return readItems(galleryStorageKey, galleryImages);
 }
 
-export function writeGalleryItems(items) {
+export async function writeGalleryItems(items) {
+  if (items.length === 0) {
+    await setGalleryItemsInFirestore([]);
+    writeItems(galleryStorageKey, items);
+    return;
+  }
+
+  await setGalleryItemsInFirestore(items);
   writeItems(galleryStorageKey, items);
 }
 
-export function readBackgroundItems() {
+export async function readBackgroundItems() {
+  const firestoreItems = await readBackgroundItemsFromFirestore();
+  if (firestoreItems.length > 0) {
+    return firestoreItems;
+  }
+
   return readItems(backgroundStorageKey, defaultHomeBackgrounds);
 }
 
-export function writeBackgroundItems(items) {
+export async function writeBackgroundItems(items) {
+  if (items.length === 0) {
+    await setBackgroundItemsInFirestore([]);
+    writeItems(backgroundStorageKey, items);
+    return;
+  }
+
+  await setBackgroundItemsInFirestore(items);
   writeItems(backgroundStorageKey, items);
 }
 
@@ -91,12 +127,30 @@ export function writeLeaderItems(items) {
   writeItems(leaderStorageKey, items);
 }
 
-export function readSocialLinks() {
-  return normalizeSocialLinks(
-    readItems(socialLinksStorageKey, defaultSocialLinks),
+export async function readSocialLinks() {
+  const settings = await readSettingsFromFirestore();
+  const normalizedSettings = normalizeSocialLinks(
+    settings.socialLinks ??
+      readItems(socialLinksStorageKey, defaultSocialLinks),
   );
+
+  return normalizedSettings;
 }
 
-export function writeSocialLinks(items) {
-  writeItems(socialLinksStorageKey, normalizeSocialLinks(items));
+export async function writeSocialLinks(items) {
+  const normalizedItems = normalizeSocialLinks(items);
+  const settingsPayload = {
+    socialLinks: normalizedItems,
+  };
+
+  await writeSettingsToFirestore(settingsPayload);
+  writeItems(socialLinksStorageKey, normalizedItems);
+}
+
+export async function deleteGalleryItem(id) {
+  await deleteGalleryItemFromFirestore(id);
+}
+
+export async function deleteBackgroundItem(id) {
+  await deleteBackgroundItemFromFirestore(id);
 }

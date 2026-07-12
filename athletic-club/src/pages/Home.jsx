@@ -1,16 +1,38 @@
+import { useEffect, useState } from "react";
 import Hero from "../components/home/Hero";
 import Button from "../components/common/Button";
 import SocialLinks from "../components/common/SocialLinks";
 import LeaderCard from "../components/leaders/LeaderCard";
 import { activities } from "../data/activities";
-import { galleryImages } from "../data/gallery";
-import { readLeaderItems } from "../services/contentStorage";
+import { readGalleryItems, readLeaderItems } from "../services/contentStorage";
 
 function Home() {
-  const featuredGallery = galleryImages.slice(0, 3);
+  const [leaders, setLeaders] = useState([]);
+  const [featuredGallery, setFeaturedGallery] = useState([]);
   const featuredActivities = activities.slice(0, 3);
-  const leaders = readLeaderItems();
   const featuredLeaders = leaders.slice(0, 2);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadHomeContent() {
+      const [galleryItems, leaderItems] = await Promise.all([
+        readGalleryItems(),
+        readLeaderItems(),
+      ]);
+
+      if (!ignore) {
+        setFeaturedGallery(galleryItems.slice(0, 3));
+        setLeaders(leaderItems);
+      }
+    }
+
+    loadHomeContent();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   return (
     <>

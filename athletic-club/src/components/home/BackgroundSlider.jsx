@@ -1,21 +1,24 @@
-import { useEffect, useState } from 'react';
-import { readBackgroundItems } from '../../services/contentStorage';
+import { useEffect, useState } from "react";
+import { readBackgroundItems } from "../../services/contentStorage";
 
 function BackgroundSlider() {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [homeBackgrounds, setHomeBackgrounds] = useState(() => readBackgroundItems().map((item) => item.image));
+  const [homeBackgrounds, setHomeBackgrounds] = useState([]);
 
   useEffect(() => {
-    const refreshBackgrounds = () => {
-      setHomeBackgrounds(readBackgroundItems().map((item) => item.image));
-    };
+    let ignore = false;
 
-    window.addEventListener('storage', refreshBackgrounds);
-    window.addEventListener('focus', refreshBackgrounds);
+    async function refreshBackgrounds() {
+      const items = await readBackgroundItems();
+      if (!ignore) {
+        setHomeBackgrounds(items.map((item) => item.image));
+      }
+    }
+
+    refreshBackgrounds();
 
     return () => {
-      window.removeEventListener('storage', refreshBackgrounds);
-      window.removeEventListener('focus', refreshBackgrounds);
+      ignore = true;
     };
   }, []);
 
@@ -25,7 +28,9 @@ function BackgroundSlider() {
     }
 
     const intervalId = window.setInterval(() => {
-      setActiveIndex((currentIndex) => (currentIndex + 1) % homeBackgrounds.length);
+      setActiveIndex(
+        (currentIndex) => (currentIndex + 1) % homeBackgrounds.length,
+      );
     }, 3000);
 
     return () => window.clearInterval(intervalId);
@@ -39,7 +44,11 @@ function BackgroundSlider() {
     <div className="background-slider" aria-hidden="true">
       {homeBackgrounds.map((image, index) => (
         <div
-          className={index === activeIndex ? 'background-slide background-slide-active' : 'background-slide'}
+          className={
+            index === activeIndex
+              ? "background-slide background-slide-active"
+              : "background-slide"
+          }
           key={image}
           style={{ backgroundImage: `url(${image})` }}
         />

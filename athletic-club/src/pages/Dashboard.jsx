@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DashboardLayout from "../components/dashboard/DashboardLayout";
 import LoginDialog from "../components/dashboard/LoginDialog";
 import {
@@ -18,10 +18,36 @@ function Dashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(
     () => sessionStorage.getItem("athletics-dashboard-auth") === "true",
   );
-  const [galleryItems, setGalleryItems] = useState(readGalleryItems);
-  const [backgroundItems, setBackgroundItems] = useState(readBackgroundItems);
-  const [leaderItems, setLeaderItems] = useState(readLeaderItems);
-  const [socialLinks, setSocialLinks] = useState(readSocialLinks);
+  const [galleryItems, setGalleryItems] = useState([]);
+  const [backgroundItems, setBackgroundItems] = useState([]);
+  const [leaderItems, setLeaderItems] = useState([]);
+  const [socialLinks, setSocialLinks] = useState([]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadDashboardContent() {
+      const [gallery, backgrounds, leaders, links] = await Promise.all([
+        readGalleryItems(),
+        readBackgroundItems(),
+        readLeaderItems(),
+        readSocialLinks(),
+      ]);
+
+      if (!ignore) {
+        setGalleryItems(gallery);
+        setBackgroundItems(backgrounds);
+        setLeaderItems(leaders);
+        setSocialLinks(links);
+      }
+    }
+
+    loadDashboardContent();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const latestImage = useMemo(
     () => galleryItems[galleryItems.length - 1],
