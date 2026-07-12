@@ -41,7 +41,9 @@ function Hero() {
           community at Aditya Institutions.
         </p>
         <p>
-          <i>Don't just wish for it work for it .</i>
+          <strong>
+            <i>...."Don't just wish for it work for it."</i>
+          </strong>
         </p>
         <div className="hero-actions">
           <Button onClick={openJoinModal}>Join Club</Button>

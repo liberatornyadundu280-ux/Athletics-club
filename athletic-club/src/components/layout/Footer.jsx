@@ -5,6 +5,9 @@ function Footer() {
     <footer className="site-footer">
       <div>
         <strong>Aditya Institutions Athletics Club</strong>
+        <strong>
+          <i> ......"Don't just wish for it work for it"</i>
+        </strong>
         <p>
           © 2026 Orgtree Systems. Built with React & systems-focused design.
         </p>

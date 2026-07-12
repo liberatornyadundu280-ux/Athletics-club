@@ -1,45 +1,53 @@
-import { useMemo, useState } from 'react';
-import DashboardLayout from '../components/dashboard/DashboardLayout';
-import LoginDialog from '../components/dashboard/LoginDialog';
+import { useMemo, useState } from "react";
+import DashboardLayout from "../components/dashboard/DashboardLayout";
+import LoginDialog from "../components/dashboard/LoginDialog";
 import {
   readBackgroundItems,
   readGalleryItems,
   readLeaderItems,
+  readSocialLinks,
   writeBackgroundItems,
   writeGalleryItems,
   writeLeaderItems,
-} from '../services/contentStorage';
+  writeSocialLinks,
+} from "../services/contentStorage";
 
-const TEMP_ADMIN_PASSWORD = 'aditya-admin';
+const TEMP_ADMIN_PASSWORD = "aditya-admin";
 
 function Dashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(
-    () => sessionStorage.getItem('athletics-dashboard-auth') === 'true',
+    () => sessionStorage.getItem("athletics-dashboard-auth") === "true",
   );
   const [galleryItems, setGalleryItems] = useState(readGalleryItems);
   const [backgroundItems, setBackgroundItems] = useState(readBackgroundItems);
   const [leaderItems, setLeaderItems] = useState(readLeaderItems);
+  const [socialLinks, setSocialLinks] = useState(readSocialLinks);
 
-  const latestImage = useMemo(() => galleryItems[galleryItems.length - 1], [galleryItems]);
+  const latestImage = useMemo(
+    () => galleryItems[galleryItems.length - 1],
+    [galleryItems],
+  );
 
   const handleLogin = (password) => {
     if (password !== TEMP_ADMIN_PASSWORD) {
       return false;
     }
 
-    sessionStorage.setItem('athletics-dashboard-auth', 'true');
+    sessionStorage.setItem("athletics-dashboard-auth", "true");
     setIsAuthenticated(true);
     return true;
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem('athletics-dashboard-auth');
+    sessionStorage.removeItem("athletics-dashboard-auth");
     setIsAuthenticated(false);
   };
 
   const handleUpdateGalleryItem = (id, updates) => {
     setGalleryItems((items) => {
-      const updatedItems = items.map((item) => (item.id === id ? { ...item, ...updates } : item));
+      const updatedItems = items.map((item) =>
+        item.id === id ? { ...item, ...updates } : item,
+      );
       writeGalleryItems(updatedItems);
       return updatedItems;
     });
@@ -63,14 +71,16 @@ function Dashboard() {
 
   const handleUpdateLeaderItem = (id, updates) => {
     setLeaderItems((items) => {
-      const updatedItems = items.map((item) => (item.id === id ? { ...item, ...updates } : item));
+      const updatedItems = items.map((item) =>
+        item.id === id ? { ...item, ...updates } : item,
+      );
       writeLeaderItems(updatedItems);
       return updatedItems;
     });
   };
 
   const handleUpload = (newImage) => {
-    if (newImage.category === 'Home Background') {
+    if (newImage.category === "Home Background") {
       setBackgroundItems((items) => {
         const updatedItems = [...items, newImage];
         writeBackgroundItems(updatedItems);
@@ -86,6 +96,28 @@ function Dashboard() {
     });
   };
 
+  const handleAddSocialLink = (newLink) => {
+    setSocialLinks((items) => {
+      const updatedItems = [
+        ...items,
+        {
+          ...newLink,
+          id: `${newLink.label.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
+        },
+      ];
+      writeSocialLinks(updatedItems);
+      return updatedItems;
+    });
+  };
+
+  const handleDeleteSocialLink = (id) => {
+    setSocialLinks((items) => {
+      const updatedItems = items.filter((item) => item.id !== id);
+      writeSocialLinks(updatedItems);
+      return updatedItems;
+    });
+  };
+
   if (!isAuthenticated) {
     return <LoginDialog onLogin={handleLogin} />;
   }
@@ -96,12 +128,15 @@ function Dashboard() {
       galleryItems={galleryItems}
       leaderItems={leaderItems}
       latestImage={latestImage}
+      onAddSocialLink={handleAddSocialLink}
       onDeleteBackground={handleDeleteBackground}
       onDeleteGalleryItem={handleDeleteGalleryItem}
+      onDeleteSocialLink={handleDeleteSocialLink}
       onLogout={handleLogout}
       onUpdateLeaderItem={handleUpdateLeaderItem}
       onUpdateGalleryItem={handleUpdateGalleryItem}
       onUpload={handleUpload}
+      socialLinks={socialLinks}
     />
   );
 }

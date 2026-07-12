@@ -1,23 +1,34 @@
-import { useState } from 'react';
-import BackgroundManager from './BackgroundManager';
-import GalleryManager from './GalleryManager';
-import LeaderManager from './LeaderManager';
-import Overview from './Overview';
-import UploadImage from './UploadImage';
+import { useState } from "react";
+import BackgroundManager from "./BackgroundManager";
+import GalleryManager from "./GalleryManager";
+import LeaderManager from "./LeaderManager";
+import Overview from "./Overview";
+import SocialLinksManager from "./SocialLinksManager";
+import UploadImage from "./UploadImage";
 
-const tabs = ['Overview', 'Gallery Manager', 'Home Background Manager', 'Leader Manager', 'Upload Image'];
+const tabs = [
+  "Overview",
+  "Gallery Manager",
+  "Home Background Manager",
+  "Leader Manager",
+  "Social Links",
+  "Upload Image",
+];
 
 function DashboardLayout({
   backgroundItems,
   galleryItems,
   leaderItems,
   latestImage,
+  onAddSocialLink,
   onDeleteBackground,
   onDeleteGalleryItem,
+  onDeleteSocialLink,
   onLogout,
   onUpdateGalleryItem,
   onUpdateLeaderItem,
   onUpload,
+  socialLinks,
 }) {
   const [activeTab, setActiveTab] = useState(tabs[0]);
 
@@ -27,9 +38,15 @@ function DashboardLayout({
         <div>
           <p className="eyebrow">Admin</p>
           <h1>Content Management Dashboard</h1>
-          <p>Manage gallery images, home backgrounds, captions, and categories.</p>
+          <p>
+            Manage gallery images, home backgrounds, captions, and categories.
+          </p>
         </div>
-        <button className="button button-danger" onClick={onLogout} type="button">
+        <button
+          className="button button-danger"
+          onClick={onLogout}
+          type="button"
+        >
           Logout
         </button>
       </header>
@@ -37,7 +54,11 @@ function DashboardLayout({
       <nav className="dashboard-tabs" aria-label="Dashboard sections">
         {tabs.map((tab) => (
           <button
-            className={activeTab === tab ? 'dashboard-tab dashboard-tab-active' : 'dashboard-tab'}
+            className={
+              activeTab === tab
+                ? "dashboard-tab dashboard-tab-active"
+                : "dashboard-tab"
+            }
             key={tab}
             onClick={() => setActiveTab(tab)}
             type="button"
@@ -47,23 +68,39 @@ function DashboardLayout({
         ))}
       </nav>
 
-      {activeTab === 'Overview' ? (
-        <Overview backgroundItems={backgroundItems} galleryItems={galleryItems} latestImage={latestImage} />
+      {activeTab === "Overview" ? (
+        <Overview
+          backgroundItems={backgroundItems}
+          galleryItems={galleryItems}
+          latestImage={latestImage}
+        />
       ) : null}
-      {activeTab === 'Gallery Manager' ? (
+      {activeTab === "Gallery Manager" ? (
         <GalleryManager
           galleryItems={galleryItems}
           onDelete={onDeleteGalleryItem}
           onUpdate={onUpdateGalleryItem}
         />
       ) : null}
-      {activeTab === 'Home Background Manager' ? (
-        <BackgroundManager backgroundItems={backgroundItems} onDelete={onDeleteBackground} />
+      {activeTab === "Home Background Manager" ? (
+        <BackgroundManager
+          backgroundItems={backgroundItems}
+          onDelete={onDeleteBackground}
+        />
       ) : null}
-      {activeTab === 'Leader Manager' ? (
+      {activeTab === "Leader Manager" ? (
         <LeaderManager leaders={leaderItems} onUpdate={onUpdateLeaderItem} />
       ) : null}
-      {activeTab === 'Upload Image' ? <UploadImage onUpload={onUpload} /> : null}
+      {activeTab === "Social Links" ? (
+        <SocialLinksManager
+          links={socialLinks}
+          onAdd={onAddSocialLink}
+          onDelete={onDeleteSocialLink}
+        />
+      ) : null}
+      {activeTab === "Upload Image" ? (
+        <UploadImage onUpload={onUpload} />
+      ) : null}
     </section>
   );
 }
