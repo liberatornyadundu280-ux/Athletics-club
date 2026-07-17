@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import BackgroundManager from "./BackgroundManager";
 import GalleryManager from "./GalleryManager";
 import LeaderManager from "./LeaderManager";
@@ -31,6 +31,32 @@ function DashboardLayout({
   socialLinks,
 }) {
   const [activeTab, setActiveTab] = useState(tabs[0]);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const nextIsMobile = window.innerWidth <= 768;
+      setIsMobile(nextIsMobile);
+
+      if (!nextIsMobile) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const handleTabSelect = (tab) => {
+    setActiveTab(tab);
+
+    if (isMobile) {
+      setMobileMenuOpen(false);
+    }
+  };
 
   return (
     <section className="dashboard-page">
@@ -51,22 +77,41 @@ function DashboardLayout({
         </button>
       </header>
 
-      <nav className="dashboard-tabs" aria-label="Dashboard sections">
-        {tabs.map((tab) => (
+      <div className="dashboard-tabs-shell">
+        {isMobile ? (
           <button
-            className={
-              activeTab === tab
-                ? "dashboard-tab dashboard-tab-active"
-                : "dashboard-tab"
-            }
-            key={tab}
-            onClick={() => setActiveTab(tab)}
+            aria-controls="dashboard-tab-list"
+            aria-expanded={mobileMenuOpen}
+            className="dashboard-tabs-toggle"
+            onClick={() => setMobileMenuOpen((open) => !open)}
             type="button"
           >
-            {tab}
+            <span>{activeTab}</span>
+            <span className="dashboard-tabs-toggle-icon">☰</span>
           </button>
-        ))}
-      </nav>
+        ) : null}
+
+        <nav
+          aria-label="Dashboard sections"
+          className={`dashboard-tabs ${isMobile ? "dashboard-tabs-mobile" : ""} ${isMobile && mobileMenuOpen ? "dashboard-tabs-open" : ""}`}
+          id="dashboard-tab-list"
+        >
+          {tabs.map((tab) => (
+            <button
+              className={
+                activeTab === tab
+                  ? "dashboard-tab dashboard-tab-active"
+                  : "dashboard-tab"
+              }
+              key={tab}
+              onClick={() => handleTabSelect(tab)}
+              type="button"
+            >
+              {tab}
+            </button>
+          ))}
+        </nav>
+      </div>
 
       {activeTab === "Overview" ? (
         <Overview

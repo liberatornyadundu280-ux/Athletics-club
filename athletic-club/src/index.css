@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap");
 
 :root {
   --blue-950: #061832;
@@ -28,7 +28,7 @@ body {
   min-width: 320px;
   color: var(--ink);
   background: var(--surface-soft);
-  font-family: 'Poppins', Arial, sans-serif;
+  font-family: "Poppins", Arial, sans-serif;
 }
 
 a {
@@ -69,14 +69,22 @@ textarea {
   overflow: hidden;
   padding-bottom: 0;
   background:
-    radial-gradient(ellipse at 18% 42%, rgba(18, 86, 163, 0.28), transparent 34%),
-    radial-gradient(ellipse at 84% 56%, rgba(198, 40, 40, 0.18), transparent 30%),
+    radial-gradient(
+      ellipse at 18% 42%,
+      rgba(18, 86, 163, 0.28),
+      transparent 34%
+    ),
+    radial-gradient(
+      ellipse at 84% 56%,
+      rgba(198, 40, 40, 0.18),
+      transparent 30%
+    ),
     linear-gradient(180deg, #02040b 0%, #071226 34%, #17243a 62%, #eef2f6 100%);
 }
 
 .site-main-home::before,
 .site-main-home::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 100svh 0 0;
   z-index: 0;
@@ -85,12 +93,36 @@ textarea {
 
 .site-main-home::before {
   background:
-    radial-gradient(circle at 12% 12%, rgba(255, 255, 255, 0.92) 0 1px, transparent 2px),
-    radial-gradient(circle at 36% 24%, rgba(255, 255, 255, 0.78) 0 1px, transparent 2px),
-    radial-gradient(circle at 72% 18%, rgba(242, 201, 76, 0.72) 0 1px, transparent 2px),
-    radial-gradient(circle at 88% 38%, rgba(255, 255, 255, 0.84) 0 1px, transparent 2px),
-    radial-gradient(circle at 22% 58%, rgba(255, 255, 255, 0.66) 0 1px, transparent 2px),
-    radial-gradient(circle at 64% 72%, rgba(255, 255, 255, 0.74) 0 1px, transparent 2px);
+    radial-gradient(
+      circle at 12% 12%,
+      rgba(255, 255, 255, 0.92) 0 1px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 36% 24%,
+      rgba(255, 255, 255, 0.78) 0 1px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 72% 18%,
+      rgba(242, 201, 76, 0.72) 0 1px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 88% 38%,
+      rgba(255, 255, 255, 0.84) 0 1px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 22% 58%,
+      rgba(255, 255, 255, 0.66) 0 1px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 64% 72%,
+      rgba(255, 255, 255, 0.74) 0 1px,
+      transparent 2px
+    );
   background-size: 260px 260px;
   opacity: 0.72;
   animation: starTwinkle 4.8s ease-in-out infinite alternate;
@@ -98,8 +130,16 @@ textarea {
 
 .site-main-home::after {
   background:
-    radial-gradient(ellipse at 24% 16%, rgba(18, 86, 163, 0.26), transparent 32%),
-    radial-gradient(ellipse at 78% 30%, rgba(98, 32, 98, 0.24), transparent 30%),
+    radial-gradient(
+      ellipse at 24% 16%,
+      rgba(18, 86, 163, 0.26),
+      transparent 32%
+    ),
+    radial-gradient(
+      ellipse at 78% 30%,
+      rgba(98, 32, 98, 0.24),
+      transparent 30%
+    ),
     linear-gradient(180deg, rgba(2, 4, 11, 0.1), rgba(238, 242, 246, 0.56));
   filter: blur(12px);
   animation: nightBlendDrift 13s ease-in-out infinite alternate;
@@ -113,7 +153,11 @@ textarea {
 .site-main-gradient {
   isolation: isolate;
   background:
-    radial-gradient(ellipse at 18% 8%, rgba(242, 201, 76, 0.16), transparent 30%),
+    radial-gradient(
+      ellipse at 18% 8%,
+      rgba(242, 201, 76, 0.16),
+      transparent 30%
+    ),
     linear-gradient(180deg, #061832 0%, #0b3d78 34%, #dfe9f4 72%, #eef4f8 100%);
   background-size: 180% 180%;
   animation: baseWaterShift 12s ease-in-out infinite alternate;
@@ -127,7 +171,7 @@ textarea {
 
 .site-main-gradient::before,
 .site-main-gradient::after {
-  content: '';
+  content: "";
   position: absolute;
   z-index: 0;
   pointer-events: none;
@@ -136,9 +180,17 @@ textarea {
 .site-main-gradient::before {
   inset: -18% -16% 22%;
   background:
-    radial-gradient(ellipse at 18% 28%, rgba(18, 86, 163, 0.84), transparent 42%),
+    radial-gradient(
+      ellipse at 18% 28%,
+      rgba(18, 86, 163, 0.84),
+      transparent 42%
+    ),
     radial-gradient(ellipse at 76% 52%, rgba(6, 24, 50, 0.58), transparent 38%),
-    repeating-radial-gradient(ellipse at 48% 68%, rgba(255, 255, 255, 0.1) 0 2px, transparent 3px 22px);
+    repeating-radial-gradient(
+      ellipse at 48% 68%,
+      rgba(255, 255, 255, 0.1) 0 2px,
+      transparent 3px 22px
+    );
   filter: blur(16px);
   opacity: 0.92;
   animation: topWaterWave 8s ease-in-out infinite alternate;
@@ -147,9 +199,22 @@ textarea {
 .site-main-gradient::after {
   inset: 34% -20% -18%;
   background:
-    radial-gradient(ellipse at 22% 72%, rgba(198, 40, 40, 0.38), transparent 38%),
-    radial-gradient(ellipse at 72% 58%, rgba(18, 86, 163, 0.44), transparent 42%),
-    linear-gradient(14deg, rgba(92, 28, 88, 0.54), rgba(223, 233, 244, 0.36), rgba(12, 57, 118, 0.28));
+    radial-gradient(
+      ellipse at 22% 72%,
+      rgba(198, 40, 40, 0.38),
+      transparent 38%
+    ),
+    radial-gradient(
+      ellipse at 72% 58%,
+      rgba(18, 86, 163, 0.44),
+      transparent 42%
+    ),
+    linear-gradient(
+      14deg,
+      rgba(92, 28, 88, 0.54),
+      rgba(223, 233, 244, 0.36),
+      rgba(12, 57, 118, 0.28)
+    );
   filter: blur(18px);
   opacity: 0.9;
   animation: bottomColorWave 9s ease-in-out infinite alternate;
@@ -234,7 +299,11 @@ textarea {
   padding: 10px 12px;
   border: 1px solid rgba(255, 210, 210, 0.45);
   border-radius: 999px;
-  background: linear-gradient(90deg, rgba(143, 14, 31, 0.94), rgba(255, 126, 126, 0.88));
+  background: linear-gradient(
+    90deg,
+    rgba(143, 14, 31, 0.94),
+    rgba(255, 126, 126, 0.88)
+  );
   backdrop-filter: blur(18px);
   box-shadow:
     0 18px 48px rgba(86, 8, 20, 0.28),
@@ -252,7 +321,7 @@ textarea {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: "Montserrat", sans-serif;
   font-weight: 800;
   color: white;
   white-space: nowrap;
@@ -283,7 +352,10 @@ textarea {
   color: white;
   font-size: 0.88rem;
   font-weight: 600;
-  transition: background 180ms ease, box-shadow 180ms ease, color 180ms ease;
+  transition:
+    background 180ms ease,
+    box-shadow 180ms ease,
+    color 180ms ease;
 }
 
 .nav-link.active {
@@ -322,9 +394,14 @@ textarea {
 }
 
 .background-slider::after {
-  content: '';
+  content: "";
   background:
-    linear-gradient(90deg, rgba(6, 24, 50, 0.9) 0%, rgba(8, 35, 72, 0.7) 42%, rgba(6, 24, 50, 0.28) 100%),
+    linear-gradient(
+      90deg,
+      rgba(6, 24, 50, 0.9) 0%,
+      rgba(8, 35, 72, 0.7) 42%,
+      rgba(6, 24, 50, 0.28) 100%
+    ),
     linear-gradient(180deg, rgba(6, 24, 50, 0.28), rgba(6, 24, 50, 0.78)),
     radial-gradient(circle at 78% 24%, rgba(216, 163, 31, 0.2), transparent 34%);
 }
@@ -362,7 +439,7 @@ textarea {
 .eyebrow {
   margin-bottom: 10px;
   color: var(--gold-400);
-  font-family: 'Montserrat', sans-serif;
+  font-family: "Montserrat", sans-serif;
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0;
@@ -372,7 +449,7 @@ textarea {
 h1,
 h2,
 h3 {
-  font-family: 'Montserrat', sans-serif;
+  font-family: "Montserrat", sans-serif;
   line-height: 1.08;
 }
 
@@ -487,7 +564,10 @@ p {
   font: inherit;
   font-weight: 800;
   overflow: hidden;
-  transition: box-shadow 180ms ease, transform 180ms ease, border-color 180ms ease;
+  transition:
+    box-shadow 180ms ease,
+    transform 180ms ease,
+    border-color 180ms ease;
 }
 
 .button-primary {
@@ -496,14 +576,21 @@ p {
   box-shadow:
     0 0 18px rgba(242, 201, 76, 0.58),
     0 0 42px rgba(216, 163, 31, 0.28);
-  transition: box-shadow 180ms ease, transform 180ms ease;
+  transition:
+    box-shadow 180ms ease,
+    transform 180ms ease;
 }
 
 .button-primary::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: -2px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.58), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.58),
+    transparent
+  );
   transform: translateX(-120%);
   transition: transform 480ms ease;
 }
@@ -707,7 +794,11 @@ p {
   border-radius: calc(var(--card-radius) + 8px);
   background:
     linear-gradient(145deg, rgba(2, 8, 20, 0.94), rgba(6, 24, 50, 0.88)),
-    radial-gradient(ellipse at 18% 0%, rgba(242, 201, 76, 0.16), transparent 36%);
+    radial-gradient(
+      ellipse at 18% 0%,
+      rgba(242, 201, 76, 0.16),
+      transparent 36%
+    );
   box-shadow:
     inset 0 3px 12px rgba(255, 255, 255, 0.08),
     inset 0 -22px 42px rgba(0, 0, 0, 0.58),
@@ -715,7 +806,7 @@ p {
 }
 
 .gallery-display::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 10px;
   border: 1px solid rgba(242, 201, 76, 0.18);
@@ -727,7 +818,7 @@ p {
 }
 
 .gallery-display::after {
-  content: '';
+  content: "";
   position: absolute;
   right: clamp(18px, 3vw, 34px);
   bottom: clamp(42px, 5vw, 58px);
@@ -789,7 +880,7 @@ p {
 }
 
 .gallery-scroll-hint::after {
-  content: '';
+  content: "";
   width: 8px;
   height: 8px;
   border-right: 2px solid var(--gold-400);
@@ -831,7 +922,7 @@ p {
 }
 
 .gallery-card::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   background: linear-gradient(180deg, transparent 30%, rgba(6, 24, 50, 0.86));
@@ -882,7 +973,9 @@ p {
   font-weight: 800;
   opacity: 0;
   transform: translateY(-4px);
-  transition: opacity 180ms ease, transform 180ms ease;
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
 }
 
 .gallery-card:hover .gallery-view-button,
@@ -1082,7 +1175,7 @@ p {
   display: block;
   margin-bottom: 6px;
   color: var(--blue-950);
-  font-family: 'Montserrat', sans-serif;
+  font-family: "Montserrat", sans-serif;
   font-size: 1.35rem;
 }
 
@@ -1128,7 +1221,7 @@ p {
 }
 
 .home-gallery-card::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   background: linear-gradient(180deg, transparent 36%, rgba(6, 24, 50, 0.86));
@@ -1255,7 +1348,11 @@ p {
   border: 1px solid rgba(216, 163, 31, 0.5);
   border-radius: 8px;
   background:
-    linear-gradient(135deg, rgba(255, 246, 226, 0.96), rgba(255, 238, 232, 0.94)),
+    linear-gradient(
+      135deg,
+      rgba(255, 246, 226, 0.96),
+      rgba(255, 238, 232, 0.94)
+    ),
     white;
   box-shadow: var(--shadow);
 }
@@ -1311,12 +1408,12 @@ p {
   min-height: 70px;
 }
 
-.upload-form input[type='file'] {
+.upload-form input[type="file"] {
   padding: 7px;
   background: rgba(255, 248, 232, 0.95);
 }
 
-.upload-form input[type='file']::file-selector-button {
+.upload-form input[type="file"]::file-selector-button {
   margin-right: 12px;
   padding: 8px 14px;
   border: 0;
@@ -1331,7 +1428,7 @@ p {
     0 0 30px rgba(18, 86, 163, 0.2);
 }
 
-.upload-form input[type='file']::file-selector-button:hover {
+.upload-form input[type="file"]::file-selector-button:hover {
   background: var(--blue-800);
 }
 
@@ -1390,15 +1487,39 @@ p {
   font-size: clamp(2.2rem, 5vw, 4.2rem);
 }
 
+.dashboard-tabs-shell {
+  margin-bottom: 24px;
+}
+
 .dashboard-tabs {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-bottom: 24px;
   padding: 8px;
   border: 1px solid rgba(216, 163, 31, 0.42);
   border-radius: 8px;
   background: rgba(255, 246, 226, 0.88);
+}
+
+.dashboard-tabs-toggle {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(216, 163, 31, 0.42);
+  border-radius: 999px;
+  color: var(--blue-950);
+  background: rgba(255, 246, 226, 0.92);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+}
+
+.dashboard-tabs-toggle-icon {
+  font-size: 1.1rem;
+  line-height: 1;
 }
 
 .dashboard-tab {
@@ -1418,10 +1539,38 @@ p {
   background: var(--blue-700);
 }
 
+@media (max-width: 768px) {
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .dashboard-tabs-toggle {
+    display: flex;
+  }
+
+  .dashboard-tabs-mobile {
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dashboard-tabs-mobile.dashboard-tabs-open {
+    display: flex;
+  }
+
+  .dashboard-tabs-mobile .dashboard-tab {
+    width: 100%;
+    justify-content: flex-start;
+    border-radius: 12px;
+    text-align: left;
+  }
+}
+
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, max-content));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
   align-items: start;
 }
 
@@ -1432,7 +1581,11 @@ p {
   border: 1px solid rgba(216, 163, 31, 0.44);
   border-radius: 8px;
   background:
-    linear-gradient(135deg, rgba(255, 250, 239, 0.98), rgba(255, 241, 235, 0.94)),
+    linear-gradient(
+      135deg,
+      rgba(255, 250, 239, 0.98),
+      rgba(255, 241, 235, 0.94)
+    ),
     white;
   box-shadow: var(--shadow);
 }
@@ -1442,8 +1595,8 @@ p {
   display: grid;
   align-content: start;
   gap: 8px;
-  width: fit-content;
-  max-width: 240px;
+  width: 100%;
+  max-width: none;
   padding: 12px 14px;
   border-top: 3px solid var(--gold-500);
 }
