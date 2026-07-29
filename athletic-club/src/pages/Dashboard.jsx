@@ -105,21 +105,31 @@ function Dashboard() {
     });
   };
 
-  const handleUpload = (newImage) => {
+  const handleUpload = async (newImage) => {
     if (newImage.category === "Home Background") {
-      setBackgroundItems((items) => {
-        const updatedItems = [...items, newImage];
-        writeBackgroundItems(updatedItems);
-        return updatedItems;
-      });
+      const updatedItems = [...backgroundItems, newImage];
+      try {
+        await writeBackgroundItems(updatedItems);
+        setBackgroundItems(updatedItems);
+      } catch (error) {
+        console.error("Failed to save background item to Firestore:", error);
+        throw new Error(
+          error?.message || "Failed to persist background image to Firestore.",
+        );
+      }
       return;
     }
 
-    setGalleryItems((items) => {
-      const updatedItems = [...items, newImage];
-      writeGalleryItems(updatedItems);
-      return updatedItems;
-    });
+    const updatedItems = [...galleryItems, newImage];
+    try {
+      await writeGalleryItems(updatedItems);
+      setGalleryItems(updatedItems);
+    } catch (error) {
+      console.error("Failed to save gallery item to Firestore:", error);
+      throw new Error(
+        error?.message || "Failed to persist gallery image to Firestore.",
+      );
+    }
   };
 
   const handleAddSocialLink = (newLink) => {

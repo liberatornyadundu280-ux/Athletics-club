@@ -13,10 +13,14 @@ import { db, isFirebaseConfigured } from "./firebase";
 const galleryCollection = "gallery";
 const backgroundsCollection = "backgrounds";
 
+function sanitizeDocId(id) {
+  return id?.toString().replace(/\//g, "-") ?? "";
+}
+
 function normalizeItem(item, fallbackId) {
   return {
     ...item,
-    id: item.id ?? fallbackId,
+    id: sanitizeDocId(item.id ?? fallbackId),
   };
 }
 
@@ -43,7 +47,7 @@ export async function setGalleryItemsInFirestore(items) {
 
   const normalizedItems = items.map((item, index) => ({
     ...item,
-    id: item.id ?? `${galleryCollection}-${index}`,
+    id: sanitizeDocId(item.id ?? `${galleryCollection}-${index}`),
     createdAt: item.createdAt ?? new Date().toISOString(),
   }));
 
@@ -102,7 +106,7 @@ export async function setBackgroundItemsInFirestore(items) {
 
   const normalizedItems = items.map((item, index) => ({
     ...item,
-    id: item.id ?? `${backgroundsCollection}-${index}`,
+    id: sanitizeDocId(item.id ?? `${backgroundsCollection}-${index}`),
     createdAt: item.createdAt ?? new Date().toISOString(),
   }));
 

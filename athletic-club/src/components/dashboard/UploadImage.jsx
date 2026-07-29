@@ -1,19 +1,25 @@
-import { useEffect, useState } from 'react';
-import { uploadImageToCloudinary } from '../../services/cloudinaryService';
+import { useEffect, useState } from "react";
+import { uploadImageToCloudinary } from "../../services/cloudinaryService";
 
-const uploadCategories = ['Track', 'Field', 'Workouts', 'Achievements', 'Home Background'];
+const uploadCategories = [
+  "Track",
+  "Field",
+  "Workouts",
+  "Achievements",
+  "Home Background",
+];
 
 function UploadImage({ onUpload }) {
   const [file, setFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState('');
-  const [caption, setCaption] = useState('');
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [caption, setCaption] = useState("");
   const [category, setCategory] = useState(uploadCategories[0]);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
   const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     if (!file) {
-      setPreviewUrl('');
+      setPreviewUrl("");
       return undefined;
     }
 
@@ -27,18 +33,22 @@ function UploadImage({ onUpload }) {
     event.preventDefault();
 
     if (!file || !caption.trim()) {
-      setMessage('Please select an image and add a caption before uploading.');
+      setMessage("Please select an image and add a caption before uploading.");
       return;
     }
 
     setIsUploading(true);
-    setMessage('Uploading image to Cloudinary...');
+    setMessage("Uploading image to Cloudinary...");
 
     try {
-      const uploadedImage = await uploadImageToCloudinary({ file, caption, category });
+      const uploadedImage = await uploadImageToCloudinary({
+        file,
+        caption,
+        category,
+      });
 
-      onUpload({
-        id: uploadedImage.publicId,
+      await onUpload({
+        id: uploadedImage.publicId.replaceAll("/", "-"),
         image: uploadedImage.image,
         caption,
         category,
@@ -47,12 +57,16 @@ function UploadImage({ onUpload }) {
         bytes: uploadedImage.bytes,
       });
 
-      setMessage('Image uploaded to Cloudinary and added to the website content.');
+      setMessage(
+        "Image uploaded to Cloudinary and persisted to the dashboard content.",
+      );
       setFile(null);
-      setCaption('');
+      setCaption("");
       setCategory(uploadCategories[0]);
     } catch (error) {
-      setMessage(error.message);
+      setMessage(
+        error.message || "An error occurred while uploading the image.",
+      );
     } finally {
       setIsUploading(false);
     }
@@ -63,25 +77,39 @@ function UploadImage({ onUpload }) {
       <form className="upload-form" onSubmit={handleSubmit}>
         <label>
           Image File
-          <input accept="image/*" onChange={(event) => setFile(event.target.files?.[0] ?? null)} type="file" />
+          <input
+            accept="image/*"
+            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+            type="file"
+          />
         </label>
 
         <label>
           Caption
-          <textarea onChange={(event) => setCaption(event.target.value)} value={caption} />
+          <textarea
+            onChange={(event) => setCaption(event.target.value)}
+            value={caption}
+          />
         </label>
 
         <label>
           Category
-          <select onChange={(event) => setCategory(event.target.value)} value={category}>
+          <select
+            onChange={(event) => setCategory(event.target.value)}
+            value={category}
+          >
             {uploadCategories.map((item) => (
               <option key={item}>{item}</option>
             ))}
           </select>
         </label>
 
-        <button className="button button-primary" disabled={isUploading} type="submit">
-          {isUploading ? 'Uploading...' : 'Upload Image'}
+        <button
+          className="button button-primary"
+          disabled={isUploading}
+          type="submit"
+        >
+          {isUploading ? "Uploading..." : "Upload Image"}
         </button>
 
         {message ? <p className="dashboard-message">{message}</p> : null}
@@ -89,15 +117,21 @@ function UploadImage({ onUpload }) {
 
       <aside className="upload-preview">
         <h2>Image Preview</h2>
-        {previewUrl ? <img alt="Selected upload preview" src={previewUrl} /> : <div className="preview-placeholder">No image selected</div>}
+        {previewUrl ? (
+          <img alt="Selected upload preview" src={previewUrl} />
+        ) : (
+          <div className="preview-placeholder">No image selected</div>
+        )}
         <dl>
           <div>
             <dt>File Name</dt>
-            <dd>{file?.name ?? 'None'}</dd>
+            <dd>{file?.name ?? "None"}</dd>
           </div>
           <div>
             <dt>File Size</dt>
-            <dd>{file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : 'None'}</dd>
+            <dd>
+              {file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : "None"}
+            </dd>
           </div>
           <div>
             <dt>Selected Category</dt>
@@ -105,7 +139,7 @@ function UploadImage({ onUpload }) {
           </div>
           <div>
             <dt>Caption Preview</dt>
-            <dd>{caption || 'No caption yet'}</dd>
+            <dd>{caption || "No caption yet"}</dd>
           </div>
         </dl>
       </aside>
