@@ -90,12 +90,22 @@ export async function readGalleryItems() {
 
 export async function writeGalleryItems(items) {
   if (items.length === 0) {
-    await setGalleryItemsInFirestore([]);
+    try {
+      await setGalleryItemsInFirestore([]);
+    } catch (err) {
+      console.error("Failed to write empty gallery array to Firestore:", err);
+    }
+
     writeItems(galleryStorageKey, items);
     return;
   }
 
-  await setGalleryItemsInFirestore(items);
+  try {
+    await setGalleryItemsInFirestore(items);
+  } catch (err) {
+    console.error("Failed to write gallery items to Firestore:", err);
+  }
+
   writeItems(galleryStorageKey, items);
 }
 
@@ -110,12 +120,25 @@ export async function readBackgroundItems() {
 
 export async function writeBackgroundItems(items) {
   if (items.length === 0) {
-    await setBackgroundItemsInFirestore([]);
+    try {
+      await setBackgroundItemsInFirestore([]);
+    } catch (err) {
+      console.error(
+        "Failed to write empty background array to Firestore:",
+        err,
+      );
+    }
+
     writeItems(backgroundStorageKey, items);
     return;
   }
 
-  await setBackgroundItemsInFirestore(items);
+  try {
+    await setBackgroundItemsInFirestore(items);
+  } catch (err) {
+    console.error("Failed to write background items to Firestore:", err);
+  }
+
   writeItems(backgroundStorageKey, items);
 }
 
