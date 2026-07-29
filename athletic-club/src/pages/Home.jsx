@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Hero from "../components/home/Hero";
+import BackgroundScatter from "../components/BackgroundScatter";
 import Button from "../components/common/Button";
 import SocialLinks from "../components/common/SocialLinks";
 import LeaderCard from "../components/leaders/LeaderCard";
@@ -37,6 +38,7 @@ function Home() {
   return (
     <>
       <Hero />
+      <BackgroundScatter />
 
       <section
         className="home-preview-section home-about-preview"

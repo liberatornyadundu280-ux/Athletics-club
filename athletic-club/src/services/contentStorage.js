@@ -52,6 +52,10 @@ export const defaultHomeBackgrounds = [
   },
 ];
 
+function sanitizeId(id) {
+  return id?.toString().replaceAll("/", "-") ?? id;
+}
+
 function readItems(key, fallbackItems) {
   try {
     const storedItems = localStorage.getItem(key);
@@ -85,7 +89,8 @@ export async function readGalleryItems() {
     return firestoreItems;
   }
 
-  return readItems(galleryStorageKey, galleryImages);
+  const local = readItems(galleryStorageKey, galleryImages);
+  return local.map((item) => ({ ...item, id: sanitizeId(item.id) }));
 }
 
 export async function writeGalleryItems(items) {
@@ -106,7 +111,8 @@ export async function writeGalleryItems(items) {
     console.error("Failed to write gallery items to Firestore:", err);
   }
 
-  writeItems(galleryStorageKey, items);
+  const sanitized = items.map((item) => ({ ...item, id: sanitizeId(item.id) }));
+  writeItems(galleryStorageKey, sanitized);
 }
 
 export async function readBackgroundItems() {
@@ -115,7 +121,8 @@ export async function readBackgroundItems() {
     return firestoreItems;
   }
 
-  return readItems(backgroundStorageKey, defaultHomeBackgrounds);
+  const local = readItems(backgroundStorageKey, defaultHomeBackgrounds);
+  return local.map((item) => ({ ...item, id: sanitizeId(item.id) }));
 }
 
 export async function writeBackgroundItems(items) {
@@ -139,7 +146,8 @@ export async function writeBackgroundItems(items) {
     console.error("Failed to write background items to Firestore:", err);
   }
 
-  writeItems(backgroundStorageKey, items);
+  const sanitized = items.map((item) => ({ ...item, id: sanitizeId(item.id) }));
+  writeItems(backgroundStorageKey, sanitized);
 }
 
 export function readLeaderItems() {
