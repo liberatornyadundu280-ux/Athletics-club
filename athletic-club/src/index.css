@@ -27,48 +27,6 @@ body.has-activity-bg::after {
   display: none;
 }
 
-/* Scatter tiles used only on the Home landing page */
-.site-scatter-container {
-  position: fixed;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.scatter-item {
-  position: absolute;
-  background-size: cover;
-  background-position: center;
-  border-radius: 8px;
-  box-shadow: 0 12px 40px rgba(3, 12, 28, 0.2);
-  transition:
-    opacity 700ms ease,
-    transform 700ms ease,
-    filter 700ms ease;
-  filter: saturate(1.05) contrast(0.96) brightness(0.96);
-  mix-blend-mode: screen;
-  will-change: transform, opacity;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .scatter-item {
-    animation: floatSmall 8s ease-in-out infinite;
-  }
-
-  @keyframes floatSmall {
-    0% {
-      transform: translateY(0) rotate(-2deg);
-    }
-    50% {
-      transform: translateY(-6px) rotate(2deg);
-    }
-    100% {
-      transform: translateY(0) rotate(-2deg);
-    }
-  }
-}
-
 * {
   box-sizing: border-box;
   margin: 0;
@@ -1322,6 +1280,40 @@ p {
   gap: 18px;
 }
 
+.site-main-home .home-about-preview .eyebrow,
+.site-main-home .home-about-preview h2,
+.site-main-home .home-about-preview .home-preview-copy p {
+  color: white;
+  text-shadow:
+    0 2px 10px rgba(2, 8, 20, 0.78),
+    0 8px 26px rgba(2, 8, 20, 0.48);
+}
+
+.site-main-home .home-about-preview .home-preview-copy > p:not(.eyebrow) {
+  max-width: 720px;
+  font-weight: 600;
+}
+
+.site-main-home .home-about-preview .button-secondary {
+  color: var(--blue-950);
+  border-color: white;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.16),
+    0 0 24px rgba(255, 255, 255, 0.42),
+    0 12px 30px rgba(2, 8, 20, 0.36);
+}
+
+.site-main-home .home-about-preview .button-secondary:hover,
+.site-main-home .home-about-preview .button-secondary:focus-visible {
+  border-color: var(--gold-400);
+  background: white;
+  box-shadow:
+    0 0 0 3px rgba(242, 201, 76, 0.24),
+    0 0 28px rgba(255, 255, 255, 0.56),
+    0 14px 34px rgba(2, 8, 20, 0.4);
+}
+
 .home-stat-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -1356,6 +1348,107 @@ p {
   justify-content: space-between;
   gap: 24px;
   margin-bottom: 26px;
+}
+
+.home-activities-preview {
+  position: relative;
+  z-index: 1;
+}
+
+.home-activities-preview::before {
+  content: "";
+  position: absolute;
+  left: calc((100vw - min(1120px, calc(100vw - 32px))) / -2);
+  top: clamp(-210px, -14vw, -120px);
+  height: clamp(300px, 30vw, 430px);
+  z-index: 0;
+  width: min(760px, 72vw);
+  pointer-events: none;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(7, 18, 38, 0.02),
+      rgba(7, 18, 38, 0.12) 54%,
+      rgba(7, 18, 38, 0) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(7, 18, 38, 0.28),
+      transparent 24%,
+      transparent 76%,
+      rgba(20, 36, 58, 0.32)
+    ),
+    url("/images/sections/betweenaboutamdactivities.png") left center / 100%
+      auto no-repeat;
+  filter: saturate(1.18) contrast(1.06);
+  opacity: 0.82;
+  mask-image: linear-gradient(90deg, #000 0 74%, transparent 100%);
+}
+
+.home-activities-preview > * {
+  position: relative;
+  z-index: 1;
+}
+
+.home-leaders-preview {
+  position: relative;
+  z-index: 1;
+}
+
+.home-leaders-preview::before {
+  content: "";
+  position: absolute;
+  top: clamp(-210px, -14vw, -120px);
+  right: calc((100vw - min(1120px, calc(100vw - 32px))) / -2);
+  z-index: 0;
+  width: min(700px, 66vw);
+  height: clamp(260px, 26vw, 380px);
+  pointer-events: none;
+  background:
+    linear-gradient(
+      270deg,
+      rgba(7, 18, 38, 0.02),
+      rgba(7, 18, 38, 0.1) 58%,
+      rgba(7, 18, 38, 0) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(7, 18, 38, 0.24),
+      transparent 28%,
+      transparent 74%,
+      rgba(20, 36, 58, 0.3)
+    ),
+    url("/images/sections/coachesandwhatwedo.png") right center / 100% auto
+      no-repeat;
+  filter: saturate(1.08) contrast(1.08);
+  opacity: 0.82;
+  mask-image: linear-gradient(270deg, #000 0 74%, transparent 100%);
+}
+
+.home-leaders-preview > * {
+  position: relative;
+  z-index: 1;
+}
+
+.site-main-home .home-leaders-preview .button-secondary {
+  z-index: 2;
+  color: var(--blue-950);
+  border-color: white;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.16),
+    0 0 24px rgba(255, 255, 255, 0.38),
+    0 12px 30px rgba(2, 8, 20, 0.34);
+}
+
+.site-main-home .home-leaders-preview .button-secondary:hover,
+.site-main-home .home-leaders-preview .button-secondary:focus-visible {
+  border-color: var(--gold-400);
+  background: white;
+  box-shadow:
+    0 0 0 3px rgba(242, 201, 76, 0.24),
+    0 0 28px rgba(255, 255, 255, 0.52),
+    0 14px 34px rgba(2, 8, 20, 0.38);
 }
 
 .home-gallery-strip {
@@ -1453,6 +1546,8 @@ p {
 }
 
 .home-contact-preview {
+  position: relative;
+  z-index: 1;
   margin-bottom: 28px;
   padding: 36px;
   border-radius: 8px;
@@ -1461,6 +1556,36 @@ p {
     linear-gradient(135deg, rgba(6, 24, 50, 0.96), rgba(11, 61, 120, 0.88)),
     radial-gradient(circle at 82% 22%, rgba(216, 163, 31, 0.3), transparent 30%);
   box-shadow: var(--shadow);
+}
+
+.home-contact-preview::before {
+  content: "";
+  position: absolute;
+  top: clamp(-210px, -14vw, -120px);
+  left: calc((100vw - min(1120px, calc(100vw - 32px))) / -2);
+  z-index: -1;
+  width: min(700px, 66vw);
+  height: clamp(260px, 26vw, 380px);
+  pointer-events: none;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(7, 18, 38, 0.02),
+      rgba(7, 18, 38, 0.1) 58%,
+      rgba(7, 18, 38, 0) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(7, 18, 38, 0.24),
+      transparent 28%,
+      transparent 74%,
+      rgba(20, 36, 58, 0.3)
+    ),
+    url("/images/sections/connectandcoaches.png") left center / 100% auto
+      no-repeat;
+  filter: saturate(1.08) contrast(1.08);
+  opacity: 0.82;
+  mask-image: linear-gradient(90deg, #000 0 74%, transparent 100%);
 }
 
 .home-contact-preview h2,
@@ -1988,6 +2113,75 @@ p {
 
   .home-contact-preview {
     padding: 24px;
+  }
+
+  .home-activities-preview::before {
+    left: -16px;
+    top: -92px;
+    height: clamp(220px, 58vw, 320px);
+    width: min(620px, 92vw);
+    background:
+      linear-gradient(
+        90deg,
+        rgba(7, 18, 38, 0.04),
+        rgba(7, 18, 38, 0.12) 66%,
+        rgba(7, 18, 38, 0) 100%
+      ),
+      linear-gradient(
+        180deg,
+        rgba(7, 18, 38, 0.26),
+        transparent 26%,
+        transparent 74%,
+        rgba(20, 36, 58, 0.3)
+      ),
+      url("/images/sections/betweenaboutamdactivities.png") left center / 100%
+        auto no-repeat;
+  }
+
+  .home-leaders-preview::before {
+    top: -86px;
+    right: -16px;
+    width: min(560px, 92vw);
+    height: clamp(190px, 48vw, 280px);
+    background:
+      linear-gradient(
+        270deg,
+        rgba(7, 18, 38, 0.04),
+        rgba(7, 18, 38, 0.1) 64%,
+        rgba(7, 18, 38, 0) 100%
+      ),
+      linear-gradient(
+        180deg,
+        rgba(7, 18, 38, 0.24),
+        transparent 28%,
+        transparent 74%,
+        rgba(20, 36, 58, 0.28)
+      ),
+      url("/images/sections/coachesandwhatwedo.png") right center / 100% auto
+        no-repeat;
+  }
+
+  .home-contact-preview::before {
+    top: -86px;
+    left: -16px;
+    width: min(560px, 92vw);
+    height: clamp(190px, 48vw, 280px);
+    background:
+      linear-gradient(
+        90deg,
+        rgba(7, 18, 38, 0.04),
+        rgba(7, 18, 38, 0.1) 64%,
+        rgba(7, 18, 38, 0) 100%
+      ),
+      linear-gradient(
+        180deg,
+        rgba(7, 18, 38, 0.24),
+        transparent 28%,
+        transparent 74%,
+        rgba(20, 36, 58, 0.28)
+      ),
+      url("/images/sections/connectandcoaches.png") left center / 100% auto
+        no-repeat;
   }
 
   .home-contact-actions {
