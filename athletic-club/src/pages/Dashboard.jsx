@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import DashboardLayout from "../components/dashboard/DashboardLayout";
 import LoginDialog from "../components/dashboard/LoginDialog";
+import { useAuth } from "../contexts/authContext/useAuth";
 import {
   readBackgroundItems,
   readGalleryItems,
@@ -12,18 +13,26 @@ import {
   writeSocialLinks,
 } from "../services/contentStorage";
 
-const TEMP_ADMIN_PASSWORD = "aditya-admin";
-
 function Dashboard() {
-  const [isAuthenticated, setIsAuthenticated] = useState(
-    () => sessionStorage.getItem("athletics-dashboard-auth") === "true",
-  );
+  const {
+    confirmPhoneCode,
+    loading: authLoading,
+    loginWithEmail,
+    loginWithGoogle,
+    sendPhoneCode,
+    signOutUser,
+    userLoggedIn,
+  } = useAuth();
   const [galleryItems, setGalleryItems] = useState([]);
   const [backgroundItems, setBackgroundItems] = useState([]);
   const [leaderItems, setLeaderItems] = useState([]);
   const [socialLinks, setSocialLinks] = useState([]);
 
   useEffect(() => {
+    if (authLoading || !userLoggedIn) {
+      return undefined;
+    }
+
     let ignore = false;
 
     async function loadDashboardContent() {
@@ -47,26 +56,15 @@ function Dashboard() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [authLoading, userLoggedIn]);
 
   const latestImage = useMemo(
     () => galleryItems[galleryItems.length - 1],
     [galleryItems],
   );
 
-  const handleLogin = (password) => {
-    if (password !== TEMP_ADMIN_PASSWORD) {
-      return false;
-    }
-
-    sessionStorage.setItem("athletics-dashboard-auth", "true");
-    setIsAuthenticated(true);
-    return true;
-  };
-
-  const handleLogout = () => {
-    sessionStorage.removeItem("athletics-dashboard-auth");
-    setIsAuthenticated(false);
+  const handleLogout = async () => {
+    await signOutUser();
   };
 
   const handleUpdateGalleryItem = (id, updates) => {
@@ -115,6 +113,7 @@ function Dashboard() {
         console.error("Failed to save background item to Firestore:", error);
         throw new Error(
           error?.message || "Failed to persist background image to Firestore.",
+          { cause: error },
         );
       }
       return;
@@ -128,6 +127,7 @@ function Dashboard() {
       console.error("Failed to save gallery item to Firestore:", error);
       throw new Error(
         error?.message || "Failed to persist gallery image to Firestore.",
+        { cause: error },
       );
     }
   };
@@ -154,8 +154,27 @@ function Dashboard() {
     });
   };
 
-  if (!isAuthenticated) {
-    return <LoginDialog onLogin={handleLogin} />;
+  if (authLoading) {
+    return (
+      <section className="dashboard-login">
+        <div className="dashboard-login-card">
+          <p className="eyebrow">Admin</p>
+          <h1>Checking access</h1>
+          <p>Loading your authentication status.</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (!userLoggedIn) {
+    return (
+      <LoginDialog
+        onConfirmPhoneCode={confirmPhoneCode}
+        onEmailLogin={loginWithEmail}
+        onGoogleLogin={loginWithGoogle}
+        onSendPhoneCode={sendPhoneCode}
+      />
+    );
   }
 
   return (

@@ -1,5 +1,6 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -20,9 +21,5 @@ export const firebaseApp = hasFirebaseConfig
     : initializeApp(firebaseConfig)
   : null;
 export const db = firebaseApp ? getFirestore(firebaseApp) : null;
+export const auth = firebaseApp ? getAuth(firebaseApp) : null;
 export const isFirebaseConfigured = hasFirebaseConfig;
-
-// Temporary development note:
-// The current dashboard still uses a hardcoded admin password. Firestore write access is
-// intentionally left open for local development only and should be replaced with Firebase
-// Authentication and strict Firestore security rules before production release.

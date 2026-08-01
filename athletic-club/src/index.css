@@ -1653,6 +1653,38 @@ p {
   font-size: clamp(2rem, 5vw, 3.4rem);
 }
 
+.dashboard-auth-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid rgba(216, 163, 31, 0.42);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.dashboard-auth-tabs button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--blue-950);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+}
+
+.dashboard-auth-tabs .dashboard-tab-active {
+  color: white;
+  background: var(--blue-700);
+}
+
+.dashboard-auth-form,
+.dashboard-auth-form form {
+  display: grid;
+  gap: 12px;
+}
+
 .dashboard-login-card label,
 .upload-form label,
 .dashboard-image-card label {

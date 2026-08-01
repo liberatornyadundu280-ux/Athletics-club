@@ -1,6 +1,7 @@
 import { BrowserRouter } from "react-router-dom";
 import { useEffect } from "react";
 import AppRoutes from "./routes/AppRoutes";
+import { AuthProvider } from "./contexts/authContext";
 import { readBackgroundItems } from "./services/contentStorage";
 
 function App() {
@@ -24,7 +25,7 @@ function App() {
           );
           document.body.classList.add("has-activity-bg");
         }
-      } catch (err) {
+      } catch {
         // ignore — decorative only
         // console.error('Failed to set site activity background', err);
       }
@@ -38,9 +39,11 @@ function App() {
   }, []);
 
   return (
-    <BrowserRouter>
-      <AppRoutes />
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 
