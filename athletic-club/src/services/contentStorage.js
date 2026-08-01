@@ -72,7 +72,9 @@ function writeItems(key, items) {
 function normalizeLeaders(items) {
   return items.map((leader) => ({
     ...leader,
-    id: leader.id ?? leader.name.toLowerCase().replaceAll(" ", "-"),
+    id: sanitizeId(
+      leader.id ?? leader.name.toLowerCase().replaceAll(" ", "-"),
+    ),
   }));
 }
 
@@ -150,12 +152,23 @@ export async function writeBackgroundItems(items) {
   writeItems(backgroundStorageKey, sanitized);
 }
 
-export function readLeaderItems() {
-  return readItems(leaderStorageKey, normalizeLeaders(leaders));
+export async function readLeaderItems() {
+  const settings = await readSettingsFromFirestore();
+  const normalizedSettings = normalizeLeaders(
+    settings.leaders ?? readItems(leaderStorageKey, normalizeLeaders(leaders)),
+  );
+
+  return normalizedSettings;
 }
 
-export function writeLeaderItems(items) {
-  writeItems(leaderStorageKey, items);
+export async function writeLeaderItems(items) {
+  const normalizedItems = normalizeLeaders(items);
+  const settingsPayload = {
+    leaders: normalizedItems,
+  };
+
+  writeItems(leaderStorageKey, normalizedItems);
+  await writeSettingsToFirestore(settingsPayload);
 }
 
 export async function readSocialLinks() {

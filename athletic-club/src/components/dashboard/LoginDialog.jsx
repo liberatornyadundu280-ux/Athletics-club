@@ -71,7 +71,7 @@ function LoginDialog({
   return (
     <section className="dashboard-login">
       <div className="dashboard-login-card">
-        <p className="eyebrow">Hidden dashboard</p>
+        <p className="eyebrow">Admin login</p>
         <h1>Content Management Dashboard</h1>
         <p>Login with an approved Firebase account to manage site content.</p>
 

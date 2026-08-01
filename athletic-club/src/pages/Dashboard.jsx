@@ -98,7 +98,9 @@ function Dashboard() {
       const updatedItems = items.map((item) =>
         item.id === id ? { ...item, ...updates } : item,
       );
-      writeLeaderItems(updatedItems);
+      writeLeaderItems(updatedItems).catch((error) => {
+        console.error("Failed to save leader items to Firestore:", error);
+      });
       return updatedItems;
     });
   };

@@ -312,6 +312,39 @@ textarea {
     0 0 36px rgba(255, 126, 126, 0.18);
 }
 
+.admin-login-link {
+  position: fixed;
+  top: 12px;
+  right: 18px;
+  z-index: 100;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 10px 14px;
+  border: 1px solid rgba(242, 201, 76, 0.72);
+  border-radius: 999px;
+  color: white;
+  background: linear-gradient(135deg, var(--blue-950), var(--blue-700));
+  box-shadow:
+    0 12px 28px rgba(2, 8, 20, 0.28),
+    0 0 18px rgba(242, 201, 76, 0.22);
+  font-size: 0.84rem;
+  font-weight: 800;
+  text-decoration: none;
+  transition:
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.admin-login-link:hover,
+.admin-login-link:focus-visible {
+  box-shadow:
+    0 14px 32px rgba(2, 8, 20, 0.34),
+    0 0 24px rgba(242, 201, 76, 0.34);
+  transform: translateY(-1px);
+}
+
 .brand,
 .nav-link,
 .button,
@@ -505,22 +538,6 @@ p {
   max-width: 920px;
   color: white;
   text-shadow: 0 8px 34px rgba(0, 0, 0, 0.34);
-}
-
-.admin-trigger {
-  display: inline;
-  padding: 0;
-  border: 0;
-  color: var(--gold-400);
-  background: transparent;
-  cursor: pointer;
-  font: inherit;
-  line-height: inherit;
-}
-
-.admin-trigger:focus-visible {
-  outline: 3px solid var(--gold-400);
-  outline-offset: 5px;
 }
 
 .hero-actions {
@@ -2091,6 +2108,11 @@ p {
     top: auto;
     width: auto;
     margin: 0;
+  }
+
+  .admin-login-link {
+    top: 12px;
+    right: 14px;
   }
 
   .brand span:last-child {
