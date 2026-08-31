@@ -94,6 +94,9 @@ export async function removeAdmin(email, removedBy) {
   const normalized = normalizeEmail(email);
   requireDatabase();
   const remover = normalizeEmail(removedBy);
+  if (normalized === remover) {
+    throw new Error("You cannot remove your own admin access.");
+  }
   const adminsDocument = getAdminsDocument();
   await runTransaction(db, async (transaction) => {
     const snapshot = await transaction.get(adminsDocument);

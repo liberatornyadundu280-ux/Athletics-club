@@ -26,6 +26,7 @@ function Dashboard() {
     removeAdmin,
     sendPhoneCode,
     signOutUser,
+    user,
     userLoggedIn,
   } = useAuth();
   const [galleryItems, setGalleryItems] = useState([]);
@@ -222,6 +223,7 @@ function Dashboard() {
     <DashboardLayout
       adminEmails={adminEmails}
       backgroundItems={backgroundItems}
+      currentUserEmail={user?.email}
       galleryItems={galleryItems}
       leaderItems={leaderItems}
       latestImage={latestImage}

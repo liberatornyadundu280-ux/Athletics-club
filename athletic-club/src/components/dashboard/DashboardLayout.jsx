@@ -20,6 +20,7 @@ const tabs = [
 function DashboardLayout({
   adminEmails,
   backgroundItems,
+  currentUserEmail,
   galleryItems,
   leaderItems,
   latestImage,
@@ -151,6 +152,7 @@ function DashboardLayout({
       {activeTab === "Admin Access" ? (
         <AdminManager
           adminEmails={adminEmails}
+          currentUserEmail={currentUserEmail}
           onAddAdmin={onAddAdmin}
           onRemoveAdmin={onRemoveAdmin}
         />

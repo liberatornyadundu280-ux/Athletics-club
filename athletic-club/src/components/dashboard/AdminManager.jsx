@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Button from "../common/Button";
 
-function AdminManager({ adminEmails, onAddAdmin, onRemoveAdmin }) {
+function AdminManager({ adminEmails, currentUserEmail, onAddAdmin, onRemoveAdmin }) {
   const [newEmail, setNewEmail] = useState("");
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
@@ -91,14 +91,18 @@ function AdminManager({ adminEmails, onAddAdmin, onRemoveAdmin }) {
                   : `Granted by ${admin.addedBy || "admin"}`}
               </span>
             </div>
-            <Button
-              className="dashboard-admin-remove"
-              onClick={() => handleRemove(admin.email)}
-              type="button"
-              variant="danger"
-            >
-              Remove
-            </Button>
+            {admin.email === currentUserEmail?.toLowerCase() ? (
+              <span className="dashboard-admin-owner-badge">Your account</span>
+            ) : (
+              <Button
+                className="dashboard-admin-remove"
+                onClick={() => handleRemove(admin.email)}
+                type="button"
+                variant="danger"
+              >
+                Remove
+              </Button>
+            )}
           </div>
         ))}
       </div>
