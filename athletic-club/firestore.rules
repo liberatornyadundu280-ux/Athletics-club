@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token.email in get(/databases/$(database)/documents/settings/siteAdmins).data.emails;
+    }
+    // Replace this address with VITE_INITIAL_ADMIN_EMAIL before deployment.
+    function isInitialAdmin() {
+      return signedIn() && request.auth.token.email == 'club.admin@example.com';
+    }
+    match /settings/siteAdmins {
+      allow read: if signedIn();
+      allow create: if isInitialAdmin()
+        && request.resource.data.emails.size() == 1
+        && request.auth.token.email in request.resource.data.emails;
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+    match /gallery/{document=**} { allow read: if true; allow write: if isAdmin(); }
+    match /backgrounds/{document=**} { allow read: if true; allow write: if isAdmin(); }
+    match /settings/siteSettings { allow read: if true; allow write: if isAdmin(); }
+  }
+}

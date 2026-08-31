@@ -1,4 +1,30 @@
-# React + Vite
+# Athletics Club
+
+## Dashboard access setup
+
+Dashboard access is stored in the shared Firestore document
+`settings/siteAdmins`. A signed-in user must be on this list before the
+dashboard content is shown or editable.
+
+1. Add the email address of the first Firebase user to `VITE_INITIAL_ADMIN_EMAIL`
+   in your local `.env` and in the environment settings for your deployed site.
+2. In `firestore.rules`, replace `club.admin@example.com` with that exact same
+   email address, then deploy the Firestore rules.
+3. Sign in once with that account. This creates the shared admin list.
+4. Use **Dashboard → Admin Access** to grant access to other Firebase accounts.
+
+The initial email only bootstraps an empty list. Once it has been created, it is
+an ordinary admin and can be removed by another admin. This supports a complete
+handover when students graduate. Do not delete the shared admin document; it
+would re-enable the bootstrap account.
+
+The accompanying `firebase.json` points Firebase CLI at the included rules:
+
+```bash
+firebase deploy --only firestore:rules
+```
+
+## Vite + React
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

@@ -15,10 +15,15 @@ import {
 
 function Dashboard() {
   const {
+    addAdmin,
+    adminEmails,
+    adminLoading,
     confirmPhoneCode,
+    isAdmin,
     loading: authLoading,
     loginWithEmail,
     loginWithGoogle,
+    removeAdmin,
     sendPhoneCode,
     signOutUser,
     userLoggedIn,
@@ -29,7 +34,7 @@ function Dashboard() {
   const [socialLinks, setSocialLinks] = useState([]);
 
   useEffect(() => {
-    if (authLoading || !userLoggedIn) {
+    if (authLoading || !userLoggedIn || !isAdmin) {
       return undefined;
     }
 
@@ -56,7 +61,7 @@ function Dashboard() {
     return () => {
       ignore = true;
     };
-  }, [authLoading, userLoggedIn]);
+  }, [authLoading, isAdmin, userLoggedIn]);
 
   const latestImage = useMemo(
     () => galleryItems[galleryItems.length - 1],
@@ -179,17 +184,54 @@ function Dashboard() {
     );
   }
 
+  if (adminLoading) {
+    return (
+      <section className="dashboard-login">
+        <div className="dashboard-login-card">
+          <p className="eyebrow">Admin</p>
+          <h1>Checking admin access</h1>
+          <p>Verifying your dashboard permissions.</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <section className="dashboard-login">
+        <div className="dashboard-login-card">
+          <p className="eyebrow">Access denied</p>
+          <h1>Admin access required</h1>
+          <p>
+            Your account is not authorized to access the dashboard. Contact a
+            club admin to request access.
+          </p>
+          <button
+            className="button button-danger"
+            onClick={handleLogout}
+            type="button"
+          >
+            Logout
+          </button>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <DashboardLayout
+      adminEmails={adminEmails}
       backgroundItems={backgroundItems}
       galleryItems={galleryItems}
       leaderItems={leaderItems}
       latestImage={latestImage}
+      onAddAdmin={addAdmin}
       onAddSocialLink={handleAddSocialLink}
       onDeleteBackground={handleDeleteBackground}
       onDeleteGalleryItem={handleDeleteGalleryItem}
       onDeleteSocialLink={handleDeleteSocialLink}
       onLogout={handleLogout}
+      onRemoveAdmin={removeAdmin}
       onUpdateLeaderItem={handleUpdateLeaderItem}
       onUpdateGalleryItem={handleUpdateGalleryItem}
       onUpload={handleUpload}
