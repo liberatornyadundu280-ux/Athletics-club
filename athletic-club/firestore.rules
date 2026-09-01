@@ -20,6 +20,7 @@ service cloud.firestore {
     }
     match /gallery/{document=**} { allow read: if true; allow write: if isAdmin(); }
     match /backgrounds/{document=**} { allow read: if true; allow write: if isAdmin(); }
+    match /announcements/{document=**} { allow read: if true; allow write: if isAdmin(); }
     match /settings/siteSettings { allow read: if true; allow write: if isAdmin(); }
   }
 }

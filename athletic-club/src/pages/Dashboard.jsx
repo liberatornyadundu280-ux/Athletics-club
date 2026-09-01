@@ -12,6 +12,7 @@ import {
   writeLeaderItems,
   writeSocialLinks,
 } from "../services/contentStorage";
+import { publishAnnouncement, readAnnouncements, removeAnnouncement } from "../services/announcementService";
 
 function Dashboard() {
   const {
@@ -33,6 +34,7 @@ function Dashboard() {
   const [backgroundItems, setBackgroundItems] = useState([]);
   const [leaderItems, setLeaderItems] = useState([]);
   const [socialLinks, setSocialLinks] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
 
   useEffect(() => {
     if (authLoading || !userLoggedIn || !isAdmin) {
@@ -42,11 +44,12 @@ function Dashboard() {
     let ignore = false;
 
     async function loadDashboardContent() {
-      const [gallery, backgrounds, leaders, links] = await Promise.all([
+      const [gallery, backgrounds, leaders, links, announcementItems] = await Promise.all([
         readGalleryItems(),
         readBackgroundItems(),
         readLeaderItems(),
         readSocialLinks(),
+        readAnnouncements(),
       ]);
 
       if (!ignore) {
@@ -54,6 +57,7 @@ function Dashboard() {
         setBackgroundItems(backgrounds);
         setLeaderItems(leaders);
         setSocialLinks(links);
+        setAnnouncements(announcementItems);
       }
     }
 
@@ -162,6 +166,16 @@ function Dashboard() {
     });
   };
 
+  const handlePublishAnnouncement = async (announcement) => {
+    const published = await publishAnnouncement(announcement);
+    setAnnouncements((items) => [{ ...published, publishedAt: new Date().toISOString() }, ...items]);
+  };
+
+  const handleDeleteAnnouncement = async (id) => {
+    await removeAnnouncement(id);
+    setAnnouncements((items) => items.filter((announcement) => announcement.id !== id));
+  };
+
   if (authLoading) {
     return (
       <section className="dashboard-login">
@@ -222,17 +236,20 @@ function Dashboard() {
   return (
     <DashboardLayout
       adminEmails={adminEmails}
+      announcements={announcements}
       backgroundItems={backgroundItems}
       currentUserEmail={user?.email}
       galleryItems={galleryItems}
       leaderItems={leaderItems}
       latestImage={latestImage}
       onAddAdmin={addAdmin}
+      onDeleteAnnouncement={handleDeleteAnnouncement}
       onAddSocialLink={handleAddSocialLink}
       onDeleteBackground={handleDeleteBackground}
       onDeleteGalleryItem={handleDeleteGalleryItem}
       onDeleteSocialLink={handleDeleteSocialLink}
       onLogout={handleLogout}
+      onPublishAnnouncement={handlePublishAnnouncement}
       onRemoveAdmin={removeAdmin}
       onUpdateLeaderItem={handleUpdateLeaderItem}
       onUpdateGalleryItem={handleUpdateGalleryItem}

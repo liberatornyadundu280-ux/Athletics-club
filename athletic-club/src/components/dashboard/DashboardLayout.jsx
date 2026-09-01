@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import AdminManager from "./AdminManager";
+import AnnouncementManager from "./AnnouncementManager";
 import BackgroundManager from "./BackgroundManager";
 import GalleryManager from "./GalleryManager";
 import LeaderManager from "./LeaderManager";
@@ -14,22 +15,26 @@ const tabs = [
   "Leader Manager",
   "Social Links",
   "Admin Access",
+  "Announcements",
   "Upload Image",
 ];
 
 function DashboardLayout({
   adminEmails,
+  announcements,
   backgroundItems,
   currentUserEmail,
   galleryItems,
   leaderItems,
   latestImage,
   onAddAdmin,
+  onDeleteAnnouncement,
   onAddSocialLink,
   onDeleteBackground,
   onDeleteGalleryItem,
   onDeleteSocialLink,
   onLogout,
+  onPublishAnnouncement,
   onRemoveAdmin,
   onUpdateGalleryItem,
   onUpdateLeaderItem,
@@ -156,6 +161,9 @@ function DashboardLayout({
           onAddAdmin={onAddAdmin}
           onRemoveAdmin={onRemoveAdmin}
         />
+      ) : null}
+      {activeTab === "Announcements" ? (
+        <AnnouncementManager announcements={announcements} onDelete={onDeleteAnnouncement} onPublish={onPublishAnnouncement} />
       ) : null}
       {activeTab === "Upload Image" ? (
         <UploadImage onUpload={onUpload} />

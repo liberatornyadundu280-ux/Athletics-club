@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
 import Hero from "../components/home/Hero";
+import AnnouncementBoard from "../components/home/AnnouncementBoard";
 import Button from "../components/common/Button";
 import SocialLinks from "../components/common/SocialLinks";
 import LeaderCard from "../components/leaders/LeaderCard";
 import { activities } from "../data/activities";
 import { readGalleryItems, readLeaderItems } from "../services/contentStorage";
+import { readAnnouncements } from "../services/announcementService";
 
 function Home() {
   const [leaders, setLeaders] = useState([]);
   const [featuredGallery, setFeaturedGallery] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
   const featuredActivities = activities.slice(0, 3);
   const featuredLeaders = leaders.slice(0, 2);
 
@@ -16,14 +19,16 @@ function Home() {
     let ignore = false;
 
     async function loadHomeContent() {
-      const [galleryItems, leaderItems] = await Promise.all([
+      const [galleryItems, leaderItems, announcementItems] = await Promise.all([
         readGalleryItems(),
         readLeaderItems(),
+        readAnnouncements(),
       ]);
 
       if (!ignore) {
         setFeaturedGallery(galleryItems.slice(0, 3));
         setLeaders(leaderItems);
+        setAnnouncements(announcementItems);
       }
     }
 
@@ -37,6 +42,7 @@ function Home() {
   return (
     <>
       <Hero />
+      <AnnouncementBoard announcements={announcements} />
 
       <section
         className="home-preview-section home-about-preview"

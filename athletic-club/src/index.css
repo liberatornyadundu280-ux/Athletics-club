@@ -860,6 +860,51 @@ p {
   }
 }
 
+.announcement-board {
+  width: min(1180px, calc(100% - 40px));
+  margin: 42px auto 18px;
+  padding: clamp(22px, 4vw, 44px);
+  border: 1px solid rgba(242, 201, 76, 0.34);
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(29, 24, 18, 0.97), rgba(79, 31, 24, 0.94));
+  box-shadow: 0 20px 45px rgba(17, 11, 8, 0.24);
+}
+
+.announcement-board-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.announcement-board-heading h2,
+.announcement-copy h3 { margin: 0; color: #fff7e8; }
+.announcement-board-heading > span { color: #f2c94c; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.announcement-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.announcement-card { overflow: hidden; border: 1px solid rgba(255,255,255,0.13); border-radius: 16px; background: rgba(255,255,255,0.07); }
+.announcement-image { width: 100%; height: 170px; display: block; object-fit: cover; }
+.announcement-copy { padding: 20px; }
+.announcement-copy time { display: block; margin-bottom: 10px; color: #f2c94c; font-weight: 700; font-size: 0.82rem; text-transform: uppercase; }
+.announcement-copy p { color: rgba(255,247,232,0.82); line-height: 1.65; }
+.announcement-share { padding: 0; border: 0; background: transparent; color: #f2c94c; cursor: pointer; font: inherit; font-weight: 700; }
+.announcement-share:hover { color: #fff7e8; }
+
+.announcement-manager { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr); gap: 28px; }
+.dashboard-section-intro { grid-column: 1 / -1; }
+.dashboard-section-intro h2 { margin: 4px 0; }
+.announcement-admin-list { padding: 18px; border: 1px solid rgba(17, 24, 39, 0.12); border-radius: 14px; background: rgba(255,255,255,0.62); }
+.announcement-admin-list h3 { margin-top: 0; }
+.announcement-admin-row { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 14px 0; border-top: 1px solid rgba(17, 24, 39, 0.1); }
+.announcement-admin-row strong, .announcement-admin-row span { display: block; }
+.announcement-admin-row span { margin-top: 4px; color: #667085; font-size: 0.86rem; }
+
+@media (max-width: 800px) {
+  .announcement-list { grid-template-columns: 1fr; }
+  .announcement-board-heading { align-items: flex-start; flex-direction: column; }
+  .announcement-manager { grid-template-columns: 1fr; }
+}
+
 @media (min-width: 561px) {
   .leader-card-position,
   .leader-bio {
