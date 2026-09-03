@@ -884,6 +884,11 @@ p {
 .announcement-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
 .announcement-card { overflow: hidden; border: 1px solid rgba(255,255,255,0.13); border-radius: 16px; background: rgba(255,255,255,0.07); }
 .announcement-image { width: 100%; height: 170px; display: block; object-fit: cover; }
+.announcement-image-button { position: relative; width: 100%; padding: 0; border: 0; background: #101820; cursor: zoom-in; overflow: hidden; }
+.announcement-image-button::after { content: ""; position: absolute; inset: 0; background: rgba(0, 0, 0, 0.15); transition: background 180ms ease; }
+.announcement-image-button span { position: absolute; z-index: 1; right: 12px; bottom: 12px; padding: 6px 10px; border-radius: 999px; color: #102034; background: #fff7e8; font-size: 0.78rem; font-weight: 800; opacity: 0; transform: translateY(5px); transition: opacity 180ms ease, transform 180ms ease; }
+.announcement-image-button:hover::after, .announcement-image-button:focus-visible::after { background: rgba(0, 0, 0, 0.34); }
+.announcement-image-button:hover span, .announcement-image-button:focus-visible span { opacity: 1; transform: translateY(0); }
 .announcement-copy { padding: 20px; }
 .announcement-copy time { display: block; margin-bottom: 10px; color: #f2c94c; font-weight: 700; font-size: 0.82rem; text-transform: uppercase; }
 .announcement-copy p { color: rgba(255,247,232,0.82); line-height: 1.65; }

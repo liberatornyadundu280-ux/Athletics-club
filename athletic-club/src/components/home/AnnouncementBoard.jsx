@@ -10,9 +10,10 @@ function formatDate(value) {
 
 function AnnouncementBoard({ announcements }) {
   const [sharedId, setSharedId] = useState("");
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
 
   const handleShare = async (announcement) => {
-    const shareUrl = `${window.location.origin}${window.location.pathname}#announcements`;
+    const shareUrl = `${window.location.origin}${window.location.pathname}?announcement=${announcement.id}#announcements`;
     const shareData = { text: announcement.body, title: announcement.title, url: shareUrl };
 
     try {
@@ -42,7 +43,17 @@ function AnnouncementBoard({ announcements }) {
       <div className="announcement-list">
         {announcements.slice(0, 3).map((announcement) => (
           <article className="announcement-card" key={announcement.id}>
-            {announcement.image ? <img alt="" className="announcement-image" src={announcement.image} /> : null}
+            {announcement.image ? (
+              <button
+                aria-label={`View full image for ${announcement.title}`}
+                className="announcement-image-button"
+                onClick={() => setSelectedAnnouncement(announcement)}
+                type="button"
+              >
+                <img alt={`Event image for ${announcement.title}`} className="announcement-image" src={announcement.image} />
+                <span>View full image</span>
+              </button>
+            ) : null}
             <div className="announcement-copy">
               <time dateTime={announcement.eventDate || announcement.publishedAt}>
                 {formatDate(announcement.eventDate)}
@@ -56,6 +67,21 @@ function AnnouncementBoard({ announcements }) {
           </article>
         ))}
       </div>
+      {selectedAnnouncement ? (
+        <div className="image-lightbox" role="presentation" onMouseDown={() => setSelectedAnnouncement(null)}>
+          <section
+            aria-label={`${selectedAnnouncement.title} image preview`}
+            aria-modal="true"
+            className="image-lightbox-content"
+            role="dialog"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button aria-label="Close image preview" className="image-lightbox-close" onClick={() => setSelectedAnnouncement(null)} type="button">×</button>
+            <img alt={`Event image for ${selectedAnnouncement.title}`} src={selectedAnnouncement.image} />
+            <p>{selectedAnnouncement.title}</p>
+          </section>
+        </div>
+      ) : null}
     </section>
   );
 }
