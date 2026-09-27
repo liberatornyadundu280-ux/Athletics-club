@@ -1,0 +1,1106 @@
+openapi: 3.0.3
+info:
+  title: STMS - Smart Trainer Management System API
+  version: 1.0.0
+  description: |
+    Authentication & User Management API for Sprint 1.
+    Multi-tenant athletics management platform with club-scoped data isolation.
+  contact:
+    name: STMS Team
+    email: dev@stms.example.com
+  license:
+    name: Proprietary
+servers:
+  - url: https://api.stms.example.com/v1
+    description: Production
+  - url: https://api-staging.stms.example.com/v1
+    description: Staging
+  - url: http://localhost:3000/v1
+    description: Local development
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Authentication
+    description: User registration, login, token management
+  - name: Users
+    description: User management within club scope
+  - name: Clubs
+    description: Club lifecycle and settings (system/club admin)
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        RS256 signed JWT access token (15 min expiry).
+        Include in Authorization header: `Bearer <access_token>`
+    RefreshTokenCookie:
+      type: apiKey
+      in: cookie
+      name: refreshToken
+      description: HttpOnly, Secure, SameSite=Strict refresh token cookie (7 days)
+
+  schemas:
+    # ==================== COMMON ====================
+    Error:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [error]
+        message:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+          description: Field-level validation errors (400 only)
+
+    Success:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          type: object
+
+    PaginatedResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          type: array
+          items:
+            type: object
+        meta:
+          type: object
+          properties:
+            page:
+              type: integer
+              minimum: 1
+            limit:
+              type: integer
+              minimum: 1
+              maximum: 100
+            total:
+              type: integer
+            totalPages:
+              type: integer
+
+    # ==================== AUTH ====================
+    RegisterRequest:
+      type: object
+      required: [email, password, role]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          example: "coach.john@aditya.edu"
+        password:
+          type: string
+          minLength: 12
+          maxLength: 128
+          description: NIST 2025 guidelines - 12+ chars, no composition rules
+          example: "correct-horse-battery-staple"
+        role:
+          type: string
+          enum: [athlete, coach]
+          description: Initial role; club_admin/system_admin created via invitation
+          example: "coach"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: "John Smith"
+        clubId:
+          type: string
+          description: Optional - join existing club on registration (requires invite token)
+          example: "507f1f77bcf86cd799439011"
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    GoogleAuthRequest:
+      type: object
+      required: [idToken]
+      properties:
+        idToken:
+          type: string
+          description: Google OAuth ID token from frontend
+        clubId:
+          type: string
+          description: Optional club to join
+
+    TokenResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          type: object
+          properties:
+            accessToken:
+              type: string
+              description: RS256 JWT, 15 min expiry
+            expiresIn:
+              type: integer
+              description: Seconds until expiry (900)
+              example: 900
+            tokenType:
+              type: string
+              enum: [Bearer]
+              example: "Bearer"
+            user:
+              $ref: '#/components/schemas/UserResponse'
+
+    RefreshResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          type: object
+          properties:
+            accessToken:
+              type: string
+            expiresIn:
+              type: integer
+              example: 900
+            tokenType:
+              type: string
+              enum: [Bearer]
+
+    AuthMeResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          type: object
+          properties:
+            user:
+              $ref: '#/components/schemas/UserResponse'
+            permissions:
+              type: array
+              items:
+                type: string
+              example: ["attendance:read", "attendance:write", "workout:read"]
+
+    SwitchClubRequest:
+      type: object
+      required: [clubId]
+      properties:
+        clubId:
+          type: string
+          pattern: '^[0-9a-fA-F]{24}$'
+          description: Must be in user's clubIds
+
+    # ==================== USER ====================
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: '^[0-9a-fA-F]{24}$'
+        firebaseUid:
+          type: string
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        avatarUrl:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [system_admin, club_admin, coach, athlete]
+        clubIds:
+          type: array
+          items:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+        activeClubId:
+          type: string
+          nullable: true
+          pattern: '^[0-9a-fA-F]{24}$'
+        status:
+          type: string
+          enum: [active, invited, deactivated, deleted]
+        lastLoginAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    UserListQuery:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        search:
+          type: string
+          description: Search by name or email
+        role:
+          type: string
+          enum: [club_admin, coach, athlete]
+        status:
+          type: string
+          enum: [active, invited, deactivated]
+
+    UpdateUserRoleRequest:
+      type: object
+      required: [role]
+      properties:
+        role:
+          type: string
+          enum: [club_admin, coach, athlete]
+          description: Cannot assign system_admin via this endpoint
+
+    InviteUserRequest:
+      type: object
+      required: [email, role]
+      properties:
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [club_admin, coach, athlete]
+        clubId:
+          type: string
+          pattern: '^[0-9a-fA-F]{24}$'
+          description: Defaults to inviter's activeClubId
+
+    InviteResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          type: object
+          properties:
+            invitationId:
+              type: string
+            magicLink:
+              type: string
+            expiresAt:
+              type: string
+              format: date-time
+
+    # ==================== CLUB ====================
+    ClubResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: '^[0-9a-fA-F]{24}$'
+        name:
+          type: string
+        slug:
+          type: string
+        branding:
+          type: object
+          properties:
+            logoUrl:
+              type: string
+              nullable: true
+            primaryColor:
+              type: string
+              pattern: '^#[0-9A-Fa-f]{6}$'
+            secondaryColor:
+              type: string
+              pattern: '^#[0-9A-Fa-f]{6}$'
+        settings:
+          type: object
+          properties:
+            timezone:
+              type: string
+              example: "Asia/Kolkata"
+            attendanceMinPercent:
+              type: integer
+              minimum: 0
+              maximum: 100
+              default: 75
+            workoutVerificationRequired:
+              type: boolean
+              default: false
+            notificationDefaults:
+              type: object
+        createdBy:
+          type: string
+          pattern: '^[0-9a-fA-F]{24}$'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateClubRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        slug:
+          type: string
+          pattern: '^[a-z0-9-]+$'
+          maxLength: 50
+          description: Auto-generated from name if not provided
+        branding:
+          type: object
+          properties:
+            primaryColor:
+              type: string
+              pattern: '^#[0-9A-Fa-f]{6}$'
+              default: "#1E3A8A"  # Blue
+            secondaryColor:
+              type: string
+              pattern: '^#[0-9A-Fa-f]{6}$'
+              default: "#F59E0B"  # Gold
+        settings:
+          type: object
+          properties:
+            timezone:
+              type: string
+              default: "Asia/Kolkata"
+
+    UpdateClubSettingsRequest:
+      type: object
+      properties:
+        branding:
+          type: object
+          properties:
+            logoUrl:
+              type: string
+            primaryColor:
+              type: string
+              pattern: '^#[0-9A-Fa-f]{6}$'
+            secondaryColor:
+              type: string
+              pattern: '^#[0-9A-Fa-f]{6}$'
+        settings:
+          type: object
+          properties:
+            timezone:
+              type: string
+            attendanceMinPercent:
+              type: integer
+              minimum: 0
+              maximum: 100
+            workoutVerificationRequired:
+              type: boolean
+            notificationDefaults:
+              type: object
+
+    ClubMemberResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/UserResponse'
+        membership:
+          type: object
+          properties:
+            role:
+              type: string
+              enum: [member, captain, alumni, head_coach, assistant_coach, specialist_coach]
+            status:
+              type: string
+              enum: [active, pending, transferred_out]
+            joinedAt:
+              type: string
+              format: date-time
+            invitedBy:
+              type: string
+              nullable: true
+
+  parameters:
+    pageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    limitParam:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    clubIdHeader:
+      name: X-Club-Id
+      in: header
+      description: Injected by middleware; do not send manually
+      schema:
+        type: string
+        pattern: '^[0-9a-fA-F]{24}$'
+
+paths:
+  # ==================== AUTHENTICATION ====================
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register new user (email/password)
+      description: |
+        Creates Firebase Auth user + MongoDB user document.
+        Returns access token + sets refresh token cookie.
+        Role must be 'athlete' or 'coach'. Club admins created via invitation.
+      security: []  # Public endpoint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limited (5 requests per 15 min)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login with email/password
+      description: Returns access token + sets refresh token cookie
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limited (5 requests per 15 min)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/google:
+    post:
+      tags: [Authentication]
+      summary: Login/register with Google OAuth
+      description: Verifies Google ID token, creates/updates user, returns tokens
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleAuthRequest'
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: Invalid ID token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Google token verification failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: Refresh access token
+      description: Uses refresh token from HttpOnly cookie. Rotates refresh token.
+      security: []
+      responses:
+        '200':
+          description: New access token issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshResponse'
+        '401':
+          description: Refresh token invalid/expired/revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Logout - revokes refresh token
+      description: Blacklists refresh token in Redis, clears cookie
+      responses:
+        '200':
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/me:
+    get:
+      tags: [Authentication]
+      summary: Get current user with permissions
+      description: Returns user profile, active club, and computed permissions
+      responses:
+        '200':
+          description: Current user data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthMeResponse'
+        '401':
+          description: Invalid/expired access token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/switch-club:
+    post:
+      tags: [Authentication]
+      summary: Switch active club context
+      description: Sets user's activeClubId (must be in their clubIds). Subsequent requests scoped to new club.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SwitchClubRequest'
+      responses:
+        '200':
+          description: Club switched successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthMeResponse'
+        '400':
+          description: Club not in user's memberships
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Membership not active
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ==================== USERS ====================
+  /users:
+    get:
+      tags: [Users]
+      summary: List users in current club
+      description: Club admin only. Paginated, filterable.
+      parameters:
+        - $ref: '#/components/parameters/pageParam'
+        - $ref: '#/components/parameters/limitParam'
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [club_admin, coach, athlete]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, invited, deactivated]
+      responses:
+        '200':
+          description: Paginated user list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Requires club_admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags: [Users]
+      summary: Invite user to club
+      description: Club admin only. Sends magic link invitation email.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InviteUserRequest'
+      responses:
+        '201':
+          description: Invitation sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InviteResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Requires club_admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: User already member of club
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/{id}:
+    get:
+      tags: [Users]
+      summary: Get user by ID
+      description: Club admin can view any user in club. Users can view own profile.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized to view this user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    patch:
+      tags: [Users]
+      summary: Update user role (club admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRoleRequest'
+      responses:
+        '200':
+          description: Role updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Requires club_admin; cannot change own role; cannot assign system_admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags: [Users]
+      summary: Soft delete user (club admin only)
+      description: Marks user as deleted, anonymizes PII, revokes tokens
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+      responses:
+        '204':
+          description: User deactivated
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Requires club_admin; cannot delete self
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ==================== CLUBS ====================
+  /clubs:
+    post:
+      tags: [Clubs]
+      summary: Create new club (system_admin only)
+      description: Creates club, default settings, and club_admin membership for creator
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateClubRequest'
+      responses:
+        '201':
+          description: Club created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClubResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Requires system_admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Slug already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /clubs/{id}:
+    get:
+      tags: [Clubs]
+      summary: Get club details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+      responses:
+        '200':
+          description: Club details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClubResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not member of this club
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Club not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    patch:
+      tags: [Clubs]
+      summary: Update club settings (club_admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateClubSettingsRequest'
+      responses:
+        '200':
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClubResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Requires club_admin role in this club
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Club not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /clubs/{id}/members:
+    get:
+      tags: [Clubs]
+      summary: List club members with membership details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+        - $ref: '#/components/parameters/pageParam'
+        - $ref: '#/components/parameters/limitParam'
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [member, captain, alumni, head_coach, assistant_coach, specialist_coach]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, pending, transferred_out]
+      responses:
+        '200':
+          description: Paginated member list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ClubMemberResponse'
+                  meta:
+                    $ref: '#/components/schemas/PaginatedResponse/properties/meta'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not member of this club
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Club not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ==================== HEALTH CHECK ====================
+  /healthz:
+    get:
+      tags: [System]
+      summary: Health check endpoint
+      description: Returns service status for load balancer/monitoring
+      security: []
+      responses:
+        '200':
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+                  timestamp:
+                    type: string
+                    format: date-time
+                  version:
+                    type: string
+                  uptime:
+                    type: number
