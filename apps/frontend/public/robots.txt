@@ -1,0 +1,13 @@
+# STMS - Smart Trainer Management System
+# Robots.txt for production
+
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://stms.example.com/sitemap.xml
+
+# Disallow admin and API routes
+Disallow: /api/
+Disallow: /admin/
+Disallow: /settings/

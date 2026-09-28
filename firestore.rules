@@ -1,0 +1,172 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Custom claims are set via Firebase Admin SDK, not Firestore rules
+    // This file is for any Firestore collections you might add later
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function getUserRole() {
+      return getUserData().role;
+    }
+
+    function getUserClubIds() {
+      return getUserData().clubIds;
+    }
+
+    function getActiveClubId() {
+      return getUserData().activeClubId;
+    }
+
+    function hasPermission(permission) {
+      return permission in getUserData().permissions;
+    }
+
+    function hasRole(role) {
+      return getUserRole() == role;
+    }
+
+    function hasMinRole(minRole) {
+      let roleHierarchy = {
+        'system_admin': 4,
+        'club_admin': 3,
+        'coach': 2,
+        'athlete': 1
+      };
+      return roleHierarchy[getUserRole()] >= roleHierarchy[minRole];
+    }
+
+    function isClubMember(clubId) {
+      return clubId in getUserClubIds();
+    }
+
+    function isActiveClubMember(clubId) {
+      return isClubMember(clubId) && getActiveClubId() == clubId;
+    }
+
+    // ==================== USERS ====================
+    match /users/{userId} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == userId ||
+        hasPermission('user:read') ||
+        hasRole('system_admin')
+      );
+      allow create: if isSignedIn() && hasRole('system_admin');
+      allow update: if isSignedIn() && (
+        request.auth.uid == userId ||
+        hasPermission('user:role') ||
+        hasRole('system_admin')
+      );
+      allow delete: if isSignedIn() && hasRole('system_admin');
+    }
+
+    // ==================== CLUBS ====================
+    match /clubs/{clubId} {
+      allow read: if isSignedIn() && isClubMember(clubId);
+      allow create: if isSignedIn() && hasRole('system_admin');
+      allow update: if isSignedIn() && (
+        hasPermission('club:settings') ||
+        hasRole('system_admin')
+      ) && isClubMember(clubId);
+    }
+
+    // ==================== CLUB MEMBERSHIPS ====================
+    match /club_memberships/{membershipId} {
+      allow read: if isSignedIn() && isClubMember(resource.data.clubId);
+      allow create: if isSignedIn() && hasPermission('user:invite');
+      allow update: if isSignedIn() && (
+        hasPermission('user:role') ||
+        hasRole('system_admin')
+      );
+    }
+
+    // ==================== ATHLETES ====================
+    match /athletes/{athleteId} {
+      allow read: if isSignedIn() && (
+        hasPermission('athlete:read') ||
+        request.auth.uid == resource.data.userId
+      );
+      allow create: if isSignedIn() && hasPermission('athlete:write');
+      allow update: if isSignedIn() && hasPermission('athlete:write');
+    }
+
+    // ==================== WORKOUTS ====================
+    match /workouts/{workoutId} {
+      allow read: if isSignedIn() && hasPermission('workout:read');
+      allow create: if isSignedIn() && hasPermission('workout:write');
+      allow update: if isSignedIn() && hasPermission('workout:write');
+    }
+
+    // ==================== ATTENDANCE ====================
+    match /sessions/{sessionId} {
+      allow read: if isSignedIn() && hasPermission('attendance:read');
+      allow create: if isSignedIn() && hasPermission('attendance:write');
+    }
+
+    match /attendance/{attendanceId} {
+      allow read: if isSignedIn() && hasPermission('attendance:read');
+      allow create: if isSignedIn() && hasPermission('attendance:write');
+      allow update: if isSignedIn() && hasPermission('attendance:write');
+    }
+
+    // ==================== PERFORMANCE ====================
+    match /competitions/{competitionId} {
+      allow read: if isSignedIn() && hasPermission('performance:read');
+      allow create: if isSignedIn() && hasPermission('performance:write');
+    }
+
+    match /results/{resultId} {
+      allow read: if isSignedIn() && hasPermission('performance:read');
+      allow create: if isSignedIn() && hasPermission('performance:write');
+    }
+
+    // ==================== INJURIES ====================
+    match /injuries/{injuryId} {
+      allow read: if isSignedIn() && (
+        hasPermission('injury:read') ||
+        request.auth.uid == resource.data.athleteId
+      );
+      allow create: if isSignedIn() && hasPermission('injury:write');
+      allow update: if isSignedIn() && (
+        hasPermission('injury:write') ||
+        request.auth.uid == resource.data.athleteId
+      );
+    }
+
+    // ==================== PERMISSIONS ====================
+    match /permission_events/{eventId} {
+      allow read: if isSignedIn() && hasPermission('permission:read');
+      allow create: if isSignedIn() && hasPermission('permission:write');
+    }
+
+    match /permission_letters/{letterId} {
+      allow read: if isSignedIn() && (
+        hasPermission('permission:read') ||
+        request.auth.uid == resource.data.athleteId
+      );
+      allow create: if isSignedIn() && hasPermission('permission:write');
+      allow update: if isSignedIn() && (
+        hasPermission('permission:write') ||
+        hasPermission('permission:approve')
+      );
+    }
+
+    // ==================== ANNOUNCEMENTS ====================
+    match /announcements/{announcementId} {
+      allow read: if isSignedIn() && hasPermission('announcement:read');
+      allow create: if isSignedIn() && hasPermission('announcement:send');
+    }
+
+    // ==================== ANALYTICS ====================
+    match /analytics/{docId} {
+      allow read: if isSignedIn() && hasPermission('analytics:read');
+    }
+  }
+}
