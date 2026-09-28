@@ -6,8 +6,8 @@ import { createClient } from 'redis';
 import { env } from '../config/env';
 import { JWTPayload } from '../middleware/auth.middleware';
 
-const redisClient = createClient({ url: env.REDIS_URL });
-redisClient.on('error', (err) => console.error('Redis token error:', err));
+const redisClient = createClient({ url: env.REDIS_URL as string });
+redisClient.on('error', (err: Error) => console.error('Redis token error:', err));
 redisClient.connect().catch(console.error);
 
 const ACCESS_TOKEN_TTL = '15m';
@@ -41,7 +41,7 @@ export async function generateTokens(payload: TokenPayload): Promise<{ accessTok
       activeClubId: payload.activeClubId,
       permissions: payload.permissions,
     },
-    env.JWT_PRIVATE_KEY,
+    env.JWT_PRIVATE_KEY as string,
     {
       algorithm: 'RS256',
       expiresIn: ACCESS_TOKEN_TTL,
@@ -102,7 +102,7 @@ export async function verifyRefreshToken(refreshToken: string): Promise<TokenPay
   const { userId } = JSON.parse(stored);
 
   // Get user's current claims from Firebase
-  const { getUserClaims } = await import('../config/firebase');
+  const { getUserClaims } = await import('../config/firebase.js');
   const claims = await getUserClaims(userId);
 
   if (!claims) {
@@ -144,7 +144,7 @@ export async function revokeAllUserRefreshTokens(userId: string): Promise<void> 
  * Verify access token (for middleware)
  */
 export function verifyAccessToken(token: string): JWTPayload {
-  return jwt.verify(token, env.JWT_PUBLIC_KEY, {
+  return jwt.verify(token, env.JWT_PUBLIC_KEY as string, {
     algorithms: ['RS256'],
     issuer: 'stms-backend',
     audience: 'stms-frontend',

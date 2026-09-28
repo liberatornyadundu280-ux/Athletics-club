@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, CardHeader, CardTitle, CardContent, Button, Input, Badge, Table } from '@/components/ui';
+import { Card, CardHeader, CardTitle, CardContent, Button, Input, Badge, Table, Select } from '@/components/ui';
 import { Plus, Search, Filter, Target, Flag, TrendingUp, Edit, Trash2, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -38,48 +38,35 @@ export function Goals() {
           </div>
 
           <div className="overflow-x-auto">
-            <Table>
-              <thead>
-                <tr>
-                  <th>Goal</th>
-                  <th>Athlete</th>
-                  <th>Type</th>
-                  <th>Target</th>
-                  <th>Deadline</th>
-                  <th>Progress</th>
-                  <th>Status</th>
-                  <th className="text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { goal: 'Sub-11s 100m', athlete: 'Priya Sharma', type: 'Performance', target: '10.99s', deadline: '2024-12-31', progress: 75, status: 'active' },
-                  { goal: 'National Qualifier', athlete: 'Rahul Kumar', type: 'Competition', target: 'Qualify', deadline: '2024-10-15', progress: 90, status: 'active' },
-                  { goal: 'Injury-Free Season', athlete: 'Anita Singh', type: 'Health', target: '0 injuries', deadline: '2025-03-31', progress: 100, status: 'completed' },
-                  { goal: 'Improve Vertical', athlete: 'Vikram Patel', type: 'Physical', target: '50cm', deadline: '2024-11-30', progress: 60, status: 'active' },
-                ].map((goal, i) => (
-                  <tr key={i}>
-                    <td className="font-medium">{goal.goal}</td>
-                    <td>{goal.athlete}</td>
-                    <td><Badge variant="primary" size="sm">{goal.type}</Badge></td>
-                    <td>{goal.target}</td>
-                    <td><Calendar className="w-4 h-4 inline mr-1" /> {goal.deadline}</td>
-                    <td>
-                      <div className="w-32 h-2 bg-surface-200 dark:bg-surface-700 rounded-full overflow-hidden">
-                        <div className="h-full bg-primary-500 rounded-full transition-all" style={{ width: `${goal.progress}%` }} />
-                      </div>
-                    </td>
-                    <td><Badge variant={goal.status === 'active' ? 'primary' : goal.status === 'completed' ? 'success' : 'danger'} size="sm">{goal.status}</Badge></td>
-                    <td className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button variant="ghost" size="sm" leftIcon={<Edit className="w-4 h-4" />} onClick={() => navigate(`/performance/goals/${i}`)}>Edit</Button>
-                        <Button variant="ghost" size="sm" variant="danger" leftIcon={<Trash2 className="w-4 h-4" />}>Delete</Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
+            <Table
+              columns={[
+                { key: 'goal', header: 'Goal', accessor: 'goal', render: (item) => <span className="font-medium">{item.goal}</span> },
+                { key: 'athlete', header: 'Athlete', accessor: 'athlete' },
+                { key: 'type', header: 'Type', accessor: 'type', render: (item) => <Badge variant="split" size="sm">{item.type}</Badge> },
+                { key: 'target', header: 'Target', accessor: 'target' },
+                { key: 'deadline', header: 'Deadline', accessor: 'deadline', render: (item) => <span><Calendar className="w-4 h-4 inline mr-1" /> {item.deadline}</span> },
+                { key: 'progress', header: 'Progress', accessor: 'progress', render: (item) => (
+                  <div className="w-32 h-2 bg-lane-700 rounded-full overflow-hidden">
+                    <div className="h-full bg-split-500 rounded-full transition-all" style={{ width: `${item.progress}%` }} />
+                  </div>
+                )},
+                { key: 'status', header: 'Status', accessor: 'status', render: (item) => <Badge variant={item.status === 'active' ? 'split' : item.status === 'completed' ? 'gold' : 'danger'} size="sm">{item.status}</Badge> },
+                { key: 'actions', header: 'Actions', render: (item, _value) => (
+                  <div className="flex items-center justify-end gap-2">
+                    <Button variant="ghost" size="sm" leftIcon={<Edit className="w-4 h-4" />} onClick={() => navigate(`/performance/goals/${item.goal}`)}>Edit</Button>
+                    <Button variant="danger" size="sm" leftIcon={<Trash2 className="w-4 h-4" />}>Delete</Button>
+                  </div>
+                )},
+              ]}
+              data={[
+                { goal: 'Sub-11s 100m', athlete: 'Priya Sharma', type: 'Performance', target: '10.99s', deadline: '2024-12-31', progress: 75, status: 'active' },
+                { goal: 'National Qualifier', athlete: 'Rahul Kumar', type: 'Competition', target: 'Qualify', deadline: '2024-10-15', progress: 90, status: 'active' },
+                { goal: 'Injury-Free Season', athlete: 'Anita Singh', type: 'Health', target: '0 injuries', deadline: '2025-03-31', progress: 100, status: 'completed' },
+                { goal: 'Improve Vertical', athlete: 'Vikram Patel', type: 'Physical', target: '50cm', deadline: '2024-11-30', progress: 60, status: 'active' },
+              ]}
+              keyExtractor={(item) => item.goal}
+              emptyMessage="No goals set yet"
+            />
           </div>
         </CardContent>
       </Card>

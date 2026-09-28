@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent, Button, Input, Badge, Avatar, Select } from '@/components/ui';
+import { Card, CardHeader, CardTitle, CardContent, Button, Input, Textarea, Badge, Avatar, Select } from '@/components/ui';
 import { ArrowLeft, Dumbbell, Calendar, Trophy, Target, AlertTriangle, Upload, Save, Clock, TrendingUp, User, Settings, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -31,15 +31,14 @@ export function Profile() {
   const navigate = useNavigate();
   const { user, hasPermission } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'workouts' | 'performance' | 'attendance' | 'settings'>('overview');
-
+  
   const tabs = [
     { id: 'overview', label: 'Overview', icon: <User className="w-4 h-4" /> },
     { id: 'workouts', label: 'Workouts', icon: <Dumbbell className="w-4 h-4" /> },
     { id: 'performance', label: 'Performance', icon: <Trophy className="w-4 h-4" /> },
     { id: 'attendance', label: 'Attendance', icon: <Calendar className="w-4 h-4" /> },
     { id: 'settings', label: 'Settings', icon: <Settings className="w-4 h-4" /> },
-  ];
-
+  ] as const;
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -259,7 +258,7 @@ export function Profile() {
                 <Input label="School" defaultValue={mockAthlete.school} />
                 <Input label="Grade" defaultValue={mockAthlete.grade} />
                 <Input label="Events" placeholder="Comma separated" defaultValue={mockAthlete.eventSpecialization.join(', ')} />
-                <Input label="Medical Notes" as="textarea" rows={3} defaultValue={mockAthlete.medicalNotes} />
+                <Textarea label="Medical Notes" rows={3} defaultValue={mockAthlete.medicalNotes} />
                 <Button leftIcon={<Save className="w-4 h-4" />}>Save Profile</Button>
               </div>
             </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent, Button, Badge, Input } from '@/components/ui';
+import { Card, CardHeader, CardTitle, CardContent, Button, Badge, Input, Textarea } from '@/components/ui';
 import { ArrowLeft, Play, Pause, Check, ChevronRight, ChevronLeft, Clock, Settings, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -10,9 +10,9 @@ const mockWorkout = {
   estimatedDuration: 90,
   difficulty: 'advanced' as const,
   exercises: [
-    { id: '1', exerciseId: 'e1', order: 1, sets: 3, reps: '30m', restSeconds: 120, tempo: 'Max', targetZone: 'Speed', coachNotes: 'Focus on explosive start', exercise: { name: '30m Flying Sprint', muscles: ['hamstrings', 'glutes'], equipment: ['cones'] } },
-    { id: '2', exerciseId: 'e2', order: 2, sets: 4, reps: '60m', restSeconds: 180, tempo: 'Max', targetZone: 'Speed Endurance', coachNotes: 'Maintain form throughout', exercise: { name: '60m Sprint', muscles: ['hamstrings', 'glutes'], equipment: ['cones'] } },
-    { id: '3', exerciseId: 'e3', order: 3, sets: 2, reps: '100m', restSeconds: 300, tempo: 'Max', targetZone: 'Speed Endurance', coachNotes: 'Full recovery between sets', exercise: { name: '100m Sprint', muscles: ['hamstrings', 'glutes'], equipment: ['cones'] } },
+    { id: '1', exerciseId: 'e1', order: 1, sets: 3, reps: '30m', restSeconds: 120, tempo: 'Max', targetZone: 'Speed', coachNotes: 'Focus on explosive start', exercise: { name: '30m Flying Sprint', muscles: ['hamstrings', 'glutes'], equipment: ['cones'] }, difficulty: 'beginner' as const },
+    { id: '2', exerciseId: 'e2', order: 2, sets: 4, reps: '60m', restSeconds: 180, tempo: 'Max', targetZone: 'Speed Endurance', coachNotes: 'Maintain form throughout', exercise: { name: '60m Sprint', muscles: ['hamstrings', 'glutes'], equipment: ['cones'] }, difficulty: 'intermediate' as const },
+    { id: '3', exerciseId: 'e3', order: 3, sets: 2, reps: '100m', restSeconds: 300, tempo: 'Max', targetZone: 'Speed Endurance', coachNotes: 'Full recovery between sets', exercise: { name: '100m Sprint', muscles: ['hamstrings', 'glutes'], equipment: ['cones'] }, difficulty: 'advanced' as const },
   ],
 };
 
@@ -184,7 +184,7 @@ export function WorkoutPlayer() {
               <Input label="RPE (1-10)" type="number" min="1" max="10" placeholder="Rate of Perceived Exertion" />
             </div>
 
-            <Input label="Your Notes" placeholder="How did this set feel? Any issues?" as="textarea" rows={2} value={notes[exercise.id] || ''} onChange={e => setNotes(prev => ({ ...prev, [exercise.id]: e.target.value }))} />
+            <Textarea label="Your Notes" placeholder="How did this set feel? Any issues?" rows={2} value={notes[exercise.id] || ''} onChange={e => setNotes(prev => ({ ...prev, [exercise.id]: e.target.value }))} />
           </div>
         </CardContent>
       </Card>

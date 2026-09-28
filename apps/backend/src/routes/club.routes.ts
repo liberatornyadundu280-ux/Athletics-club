@@ -203,6 +203,8 @@ router.get('/:id/members',
     const { page, limit, role, status } = req.query;
 
     const db = getDatabase();
+    const pageNum = Math.max(1, parseInt(page as string) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit as string) || 20));
 
     // Build filter
     const filter: any = { clubId: new ObjectId(id) };
@@ -216,8 +218,8 @@ router.get('/:id/members',
     const memberships = await db.collection('club_memberships')
       .find(filter)
       .sort({ joinedAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
+      .skip((pageNum - 1) * limitNum)
+      .limit(limitNum)
       .toArray();
 
     // Get user details for each membership
@@ -259,10 +261,10 @@ router.get('/:id/members',
       status: 'success',
       data: formattedMembers,
       meta: {
-        page,
-        limit,
+        page: pageNum,
+        limit: limitNum,
         total,
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.ceil(total / limitNum),
       },
     });
   })

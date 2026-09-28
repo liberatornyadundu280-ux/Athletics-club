@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { cn } from '@/utils/helpers';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
-import { Dropdown, DropdownItem } from '@/components/ui/Modal';
 import { ChevronDown, Building2, Plus, Check } from 'lucide-react';
 import { Club } from '@/types';
 

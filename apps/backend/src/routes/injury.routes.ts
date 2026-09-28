@@ -25,7 +25,7 @@ const createInjurySchema = z.object({
     imaging: z.array(z.string()).optional(),
     rtpProtocolId: z.string().regex(/^[0-9a-fA-F]{24}$/).optional(),
   }),
-};
+});
 
 const createRehabLogSchema = z.object({
   params: z.object({
@@ -38,7 +38,7 @@ const createRehabLogSchema = z.object({
     exercisesCompleted: z.array(z.string()).optional(),
     notes: z.string().optional(),
   }),
-};
+});
 
 const createRTPProtocolSchema = z.object({
   body: z.object({
@@ -52,7 +52,7 @@ const createRTPProtocolSchema = z.object({
       restrictedExercises: z.array(z.string()).optional(),
     })),
   }),
-};
+});
 
 const updateInjurySchema = z.object({
   params: z.object({
@@ -71,10 +71,9 @@ const updateInjurySchema = z.object({
     actualReturnDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
     rtpProtocolId: z.string().regex(/^[0-9a-fA-F]{24}$/).optional().nullable(),
   }),
-};
+});
 
 // ==================== ROUTES ====================
-const router = Router();
 
 /**
  * POST /injuries
@@ -319,7 +318,7 @@ router.get('/:id/restrictions',
       if (protocol) {
         // Determine current stage based on days since onset
         const daysSinceOnset = Math.ceil((Date.now() - injury.onsetDate.getTime()) / (1000 * 60 * 60 * 24));
-        const currentStage = protocol.stages.find(s => s.minDays <= daysSinceOnset) || protocol.stages[protocol.stages.length - 1];
+        const currentStage = protocol.stages.find((s: any) => s.minDays <= daysSinceOnset) || protocol.stages[protocol.stages.length - 1];
         
         restrictions = {
           allowed: currentStage.allowedExercises || [],

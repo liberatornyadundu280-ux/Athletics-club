@@ -25,11 +25,14 @@ const optionalEnvVars = [
 type RequiredEnv = typeof requiredEnvVars[number];
 type OptionalEnv = typeof optionalEnvVars[number];
 
-export type EnvConfig = Record<RequiredEnv, string> & Partial<Record<OptionalEnv, string>>;
+// Explicitly type ALLOWED_ORIGINS as string[]
+export type EnvConfig = Record<RequiredEnv, string | string[]> & Partial<Record<OptionalEnv, string | string[]>> & {
+  ALLOWED_ORIGINS: string[];
+};
 
 function validateEnv(): EnvConfig {
   const missing: string[] = [];
-  const config: Record<string, string> = {};
+  const config: Record<string, string | string[]> = {};
 
   for (const key of requiredEnvVars) {
     const value = process.env[key];
@@ -52,12 +55,12 @@ function validateEnv(): EnvConfig {
   }
 
   // Validate NODE_ENV
-  if (!['development', 'staging', 'production'].includes(config.NODE_ENV)) {
+  if (!['development', 'staging', 'production'].includes(config.NODE_ENV as string)) {
     throw new Error(`NODE_ENV must be one of: development, staging, production`);
   }
 
   // Parse ALLOWED_ORIGINS
-  config.ALLOWED_ORIGINS = config.ALLOWED_ORIGINS.split(',').map(o => o.trim());
+  config.ALLOWED_ORIGINS = (config.ALLOWED_ORIGINS as string).split(',').map(o => o.trim());
 
   return config as EnvConfig;
 }

@@ -93,6 +93,7 @@ export function Register() {
   };
 
   const getPasswordStrength = (pwd: string) => {
+    if (!pwd) return 0;
     let strength = 0;
     if (pwd.length >= 12) strength++;
     if (/[A-Z]/.test(pwd)) strength++;

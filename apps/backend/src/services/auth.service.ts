@@ -18,7 +18,7 @@ import {
   ValidationError,
 } from '../utils/errors';
 import { ERROR_CODES } from '@stms/shared/constants/errors';
-import { RegisterInput, LoginInput, TokenPair, JWTPayload } from '@stms/shared/types';
+import { RegisterInput, LoginInput, TokenPair, JWTPayload, UserRole } from '@stms/shared/types';
 
 export class AuthService {
   private readonly REFRESH_TOKEN_TTL_DAYS = 7;
@@ -333,7 +333,7 @@ export class AuthService {
     return {
       uid: userId,
       email: '', // Would be populated from user document
-      role: claims.role,
+      role: claims.role as import('@stms/shared/types').UserRole,
       clubIds: claims.clubIds,
       activeClubId: claims.activeClubId,
       permissions: claims.permissions,

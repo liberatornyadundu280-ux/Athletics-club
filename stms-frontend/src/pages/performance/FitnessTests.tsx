@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, CardHeader, CardTitle, CardContent, Button, Input, Badge, Table, Column } from '@/components/ui';
+import { Card, CardHeader, CardTitle, CardContent, Button, Input, Badge, Table, Column, Select } from '@/components/ui';
 import { Plus, Search, Filter, Clock, Trophy, TrendingUp, Download, Upload, Edit, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/utils/helpers';
@@ -42,41 +42,30 @@ export function FitnessTests() {
           </div>
 
           <div className="overflow-x-auto">
-            <Table>
-              <thead>
-                <tr>
-                  <th>Test Name</th>
-                  <th>Type</th>
-                  <th>Unit</th>
-                  <th>Protocol</th>
-                  <th>Status</th>
-                  <th className="text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { name: '30m Sprint', type: 'Speed', unit: 'seconds', protocol: 'Flying start, 3 attempts', status: 'active' },
-                  { name: 'Yo-Yo IR1', type: 'Endurance', unit: 'level', protocol: 'Progressive shuttle run', status: 'active' },
-                  { name: 'CMJ', type: 'Power', unit: 'cm', protocol: 'Countermovement jump, 3 attempts', status: 'active' },
-                  { name: '5-0-5 Agility', type: 'Agility', unit: 'seconds', protocol: '5m out, 180 turn, 5m back', status: 'active' },
-                  { name: 'Sit & Reach', type: 'Flexibility', unit: 'cm', protocol: 'Standard sit and reach', status: 'active' },
-                ].map((test, i) => (
-                  <tr key={i}>
-                    <td className="font-medium">{test.name}</td>
-                    <td><Badge variant="primary" size="sm">{test.type}</Badge></td>
-                    <td>{test.unit}</td>
-                    <td className="text-body-sm text-surface-500 max-w-xs truncate">{test.protocol}</td>
-                    <td><Badge variant={test.status === 'active' ? 'success' : 'neutral'} size="sm">{test.status}</Badge></td>
-                    <td className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button variant="ghost" size="sm" leftIcon={<Edit className="w-4 h-4" />} onClick={() => navigate(`/performance/fitness-tests/${i}`)}>Edit</Button>
-                        <Button variant="ghost" size="sm" variant="danger" leftIcon={<Trash2 className="w-4 h-4" />}>Delete</Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
+            <Table
+              columns={[
+                { key: 'name', header: 'Test Name', accessor: 'name', render: (item) => <span className="font-medium">{item.name}</span> },
+                { key: 'type', header: 'Type', accessor: 'type', render: (item) => <Badge variant="split" size="sm">{item.type}</Badge> },
+                { key: 'unit', header: 'Unit', accessor: 'unit' },
+                { key: 'protocol', header: 'Protocol', accessor: 'protocol', render: (item) => <span className="text-body-sm text-chalk-400 max-w-xs truncate">{item.protocol}</span> },
+                { key: 'status', header: 'Status', accessor: 'status', render: (item) => <Badge variant={item.status === 'active' ? 'split' : 'lane'} size="sm">{item.status}</Badge> },
+                { key: 'actions', header: 'Actions', render: (item, _value) => (
+                  <div className="flex items-center justify-end gap-2">
+                    <Button variant="ghost" size="sm" leftIcon={<Edit className="w-4 h-4" />} onClick={() => navigate(`/performance/fitness-tests/${item.name}`)}>Edit</Button>
+                    <Button variant="danger" size="sm" leftIcon={<Trash2 className="w-4 h-4" />}>Delete</Button>
+                  </div>
+                )},
+              ]}
+              data={[
+                { name: '30m Sprint', type: 'Speed', unit: 'seconds', protocol: 'Flying start, 3 attempts', status: 'active' },
+                { name: 'Yo-Yo IR1', type: 'Endurance', unit: 'level', protocol: 'Progressive shuttle run', status: 'active' },
+                { name: 'CMJ', type: 'Power', unit: 'cm', protocol: 'Countermovement jump, 3 attempts', status: 'active' },
+                { name: '5-0-5 Agility', type: 'Agility', unit: 'seconds', protocol: '5m out, 180 turn, 5m back', status: 'active' },
+                { name: 'Sit & Reach', type: 'Flexibility', unit: 'cm', protocol: 'Standard sit and reach', status: 'active' },
+              ]}
+              keyExtractor={(item) => item.name}
+              emptyMessage="No fitness tests configured"
+            />
           </div>
         </CardContent>
       </Card>

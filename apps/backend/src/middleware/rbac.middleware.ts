@@ -4,7 +4,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ForbiddenError } from '../utils/errors';
 import { ERROR_CODES } from '@stms/shared/constants/errors';
-import { Permission } from '@stms/shared/constants/permissions';
 
 // ==================== PERMISSION TYPES ====================
 

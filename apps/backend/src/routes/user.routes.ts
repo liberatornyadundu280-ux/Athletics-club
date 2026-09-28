@@ -29,6 +29,8 @@ router.get('/',
     const clubId = req.clubId;
 
     const db = getDatabase();
+    const pageNum = Math.max(1, parseInt(page as string) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit as string) || 20));
 
     // Build filter
     const filter: any = { clubIds: new ObjectId(clubId) };
@@ -48,8 +50,8 @@ router.get('/',
     const users = await db.collection('users')
       .find(filter)
       .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
+      .skip((pageNum - 1) * limitNum)
+      .limit(limitNum)
       .project({ password: 0 })
       .toArray();
 
@@ -73,10 +75,10 @@ router.get('/',
       status: 'success',
       data: formattedUsers,
       meta: {
-        page,
-        limit,
+        page: pageNum,
+        limit: limitNum,
         total,
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.ceil(total / limitNum),
       },
     });
   })
@@ -322,7 +324,7 @@ router.delete('/:id',
     );
 
     // Revoke Firebase tokens
-    const { revokeUserClaims } = await import('../config/firebase');
+    const { revokeUserClaims } = await import('../config/firebase.js');
     await revokeUserClaims(user.firebaseUid);
 
     res.status(204).send();

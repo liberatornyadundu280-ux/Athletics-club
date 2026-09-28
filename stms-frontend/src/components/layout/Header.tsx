@@ -3,12 +3,13 @@ import { cn } from '@/utils/helpers';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { Button } from '@/components/ui/Button';
-import { Avatar, Dropdown, DropdownItem } from '@/components/ui';
-import { Bell, Moon, Sun, Monitor, LogOut, User, Settings } from 'lucide-react';
+import { Avatar, Dropdown } from '@/components/ui/Split';
+import type { DropdownItem } from '@/components/ui/Split';
+import { Bell, Moon, Sun, LogOut, User, Settings } from 'lucide-react';
 import { ClubSwitcher } from './ClubSwitcher';
 
 export function Header() {
-  const { user, permissions, hasPermission, logout } = useAuth();
+  const { user, logout } = useAuth();
   const { theme, resolvedTheme, setTheme, toggleTheme } = useTheme();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -39,7 +40,7 @@ export function Header() {
   }, []);
 
   return (
-    <header className="fixed top-0 left-64 right-0 z-30 h-16 bg-white/80 dark:bg-surface-950/80 backdrop-blur-sm border-b border-surface-200 dark:border-surface-800 flex items-center justify-between px-4 sm:px-6">
+    <header className="fixed top-0 left-lane right-0 z-30 h-16 bg-track-900/80 backdrop-blur-sm border-b border-lane-700 flex items-center justify-between px-split">
       {/* Left side - Club Switcher */}
       <div className="flex items-center gap-4">
         <ClubSwitcher />
@@ -73,7 +74,7 @@ export function Header() {
             <span className="relative">
               <Bell className="w-5 h-5" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-danger-500 text-white text-[10px] font-medium flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-split-500 text-track-900 text-[10px] font-medium flex items-center justify-center">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
@@ -81,11 +82,11 @@ export function Header() {
           </Button>
 
           {notificationsOpen && (
-            <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-surface-900 rounded-lg shadow-elevated border border-surface-200 dark:border-surface-700 z-50 animate-fade-in">
-              <div className="p-3 border-b border-surface-200 dark:border-surface-700 flex items-center justify-between">
-                <h3 className="text-heading-sm font-semibold">Notifications</h3>
+            <div className="absolute right-0 mt-2 w-80 split-band-elevated z-50 animate-split-reveal">
+              <div className="p-3 border-b border-lane-700 flex items-center justify-between">
+                <h3 className="text-split-sm font-semibold text-chalk-100">Notifications</h3>
                 {unreadCount > 0 && (
-                  <button className="text-body-sm text-primary-800 hover:text-primary-700">Mark all read</button>
+                  <button className="text-body-sm text-split-400 hover:text-split-300">Mark all read</button>
                 )}
               </div>
               <div className="max-h-96 overflow-y-auto">
@@ -93,34 +94,34 @@ export function Header() {
                   <button
                     key={notification.id}
                     className={cn(
-                      'w-full p-3 text-left hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors',
-                      !notification.read && 'bg-primary-50/50 dark:bg-primary-900/20'
+                      'w-full p-3 text-left hover:bg-track-700 transition-colors',
+                      !notification.read && 'bg-split-500/10'
                     )}
                   >
                     <div className="flex items-start gap-3">
                       <div className={cn(
                         'w-2 h-2 mt-2 rounded-full flex-shrink-0',
-                        !notification.read && 'bg-primary-500'
+                        !notification.read && 'bg-split-500'
                       )} />
                       <div className="flex-1 min-w-0">
-                        <p className={cn('text-body-sm font-medium', !notification.read && 'font-semibold')}>
+                        <p className={cn('text-body-sm font-medium text-chalk-100', !notification.read && 'font-semibold')}>
                           {notification.title}
                         </p>
-                        <p className="text-body-sm text-surface-500 dark:text-surface-400 mt-0.5 truncate">
+                        <p className="text-body-sm text-chalk-400 mt-0.5 truncate">
                           {notification.message}
                         </p>
-                        <p className="text-caption text-surface-400 mt-1">{notification.time}</p>
+                        <p className="text-caption text-chalk-400 mt-1">{notification.time}</p>
                       </div>
                     </div>
                   </button>
                 ))}
                 {notifications.length === 0 && (
-                  <div className="p-6 text-center text-surface-500 dark:text-surface-400">
+                  <div className="p-6 text-center text-chalk-400">
                     No notifications
                   </div>
                 )}
               </div>
-              <div className="p-3 border-t border-surface-200 dark:border-surface-700 text-center">
+              <div className="p-3 border-t border-lane-700 text-center">
                 <Button variant="ghost" size="sm" className="w-full">View all notifications</Button>
               </div>
             </div>
@@ -142,16 +143,16 @@ export function Header() {
               name={user?.name}
               size="sm"
             />
-            <span className="hidden sm:block text-body-sm font-medium text-surface-700 dark:text-surface-300">
+            <span className="hidden sm:block text-body-sm font-medium text-chalk-100">
               {user?.name}
             </span>
           </Button>
 
           {userMenuOpen && (
-            <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-surface-900 rounded-lg shadow-elevated border border-surface-200 dark:border-surface-700 z-50 animate-fade-in">
-              <div className="p-3 border-b border-surface-200 dark:border-surface-700">
-                <p className="text-body-sm font-medium text-surface-900 dark:text-surface-100">{user?.name}</p>
-                <p className="text-caption text-surface-500 dark:text-surface-400 capitalize">{user?.role.replace('_', ' ')}</p>
+            <div className="absolute right-0 mt-2 w-56 split-band-elevated z-50 animate-split-reveal">
+              <div className="p-3 border-b border-lane-700">
+                <p className="text-body-sm font-medium text-chalk-100">{user?.name}</p>
+                <p className="text-caption text-chalk-400 capitalize">{user?.role.replace('_', ' ')}</p>
               </div>
               <Dropdown
                 trigger={<div />}

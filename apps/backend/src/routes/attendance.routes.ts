@@ -23,7 +23,7 @@ const createSessionSchema = z.object({
     type: z.enum(['training', 'competition', 'meeting', 'other']),
     linkedWorkoutId: z.string().regex(/^[0-9a-fA-F]{24}$/).optional(),
   }),
-};
+});
 
 const updateSessionSchema = z.object({
   params: z.object({
@@ -38,7 +38,7 @@ const updateSessionSchema = z.object({
     linkedWorkoutId: z.string().regex(/^[0-9a-fA-F]{24}$/).optional().nullable(),
     status: z.enum(['scheduled', 'in_progress', 'completed', 'cancelled']).optional(),
   }),
-};
+});
 
 const markAttendanceSchema = z.object({
   params: z.object({
@@ -51,7 +51,7 @@ const markAttendanceSchema = z.object({
     excuseNote: z.string().optional(),
     excuseAttachment: z.string().url().optional().nullable(),
   }),
-};
+});
 
 const bulkAttendanceSchema = z.object({
   params: z.object({
@@ -66,7 +66,7 @@ const bulkAttendanceSchema = z.object({
       excuseAttachment: z.string().url().optional().nullable(),
     })).min(1),
   }),
-};
+});
 
 const attendanceQuerySchema = z.object({
   params: z.object({
@@ -81,7 +81,7 @@ const attendanceQuerySchema = z.object({
     dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
     dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   }),
-};
+});
 
 const reportQuerySchema = z.object({
   query: z.object({
@@ -90,7 +90,7 @@ const reportQuerySchema = z.object({
     athleteId: z.string().regex(/^[0-9a-fA-F]{24}$/).optional(),
     groupBy: z.enum(['day', 'week', 'month', 'athlete']).optional(),
   }),
-};
+});
 
 const qrScanSchema = z.object({
   body: z.object({
@@ -99,7 +99,6 @@ const qrScanSchema = z.object({
 });
 
 // ==================== ROUTES ====================
-const router = Router();
 
 /**
  * POST /sessions
@@ -341,7 +340,7 @@ router.post('/bulk',
     const session = await db.collection('sessions').findOne({ _id: new ObjectId(sessionId) });
     if (!session) throw new NotFoundError('Session');
 
-    const operations = records.map(record => ({
+    const operations = records.map((record: any) => ({
       updateOne: {
         filter: { sessionId: session._id, athleteId: new ObjectId(record.athleteId) },
         update: {

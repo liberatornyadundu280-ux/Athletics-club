@@ -39,6 +39,9 @@ export const UpdateClubSettingsRequestSchema = z.object({
   }),
 });
 
+// Alias for backward compatibility
+export const UpdateClubSettingsSchema = UpdateClubSettingsRequestSchema;
+
 export const ClubMembersQuerySchema = z.object({
   params: z.object({
     id: z.string().regex(/^[0-9a-fA-F]{24}$/),

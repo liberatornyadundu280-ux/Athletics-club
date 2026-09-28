@@ -19,10 +19,9 @@ const analyticsQuerySchema = z.object({
     athleteId: z.string().regex(/^[0-9a-fA-F]{24}$/).optional(),
     groupBy: z.enum(['day', 'week', 'month', 'athlete']).optional(),
   }),
-);
+});
 
 // ==================== ROUTES ====================
-const router = Router();
 
 /**
  * GET /athlete/:id
@@ -43,7 +42,7 @@ router.get('/athlete/:id',
     }
 
     // Get attendance percentage
-    const attendanceFilter = { clubId: new ObjectId(req.clubId), athleteId: new ObjectId(id) };
+    const attendanceFilter: Record<string, any> = { clubId: new ObjectId(req.clubId), athleteId: new ObjectId(id) };
     if (from && to) {
       attendanceFilter.markedAt = { $gte: new Date(from as string), $lte: new Date(to as string) };
     }
@@ -76,13 +75,15 @@ router.get('/athlete/:id',
 
     // Get goal progress
     const goals = await db.collection('goals').find({ athleteId: new ObjectId(id), status: 'active' }).toArray();
-    const goalProgress = goals.map(g => ({
-      goalId: g._id.toString(),
-      event: g.event,
-      target: g.targetValue,
-      current: '0', // Would need current best
-      progressPercent: 0, // Would calculate
-      daysRemaining: Math.ceil((new Date(g.targetDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
+    const goalProgress = goals.map(g => {
+      return {
+        goalId: g._id.toString(),
+        event: g.event,
+        target: g.targetValue,
+        current: '0',
+        progressPercent: 0,
+        daysRemaining: Math.ceil((new Date(g.targetDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
+      };
     });
 
     // Get injury history
@@ -131,7 +132,7 @@ router.get('/coach',
     const athleteIds = athletes.map(a => a._id);
 
     // Squad attendance heatmap
-    const attendanceFilter = { clubId: new ObjectId(clubId) };
+    const attendanceFilter: Record<string, any> = { clubId: new ObjectId(clubId) };
     if (from && to) {
       attendanceFilter.markedAt = { $gte: new Date(from as string), $lte: new Date(to as string) };
     }
@@ -229,7 +230,7 @@ router.get('/club-admin',
     const coachWorkload = await Promise.all(coaches.map(async c => {
       const assignments = await db.collection('workout_assignments').find({ createdBy: new ObjectId(c._id) }).toArray();
       const sessions = await db.collection('sessions').find({ createdBy: new ObjectId(c._id) }).toArray();
-      return { coachId: c._id.toString(), coachName: c.name, athletes: new Set(assignments.flatMap(a => a.athleteIds.map(id => id.toString()))).size, sessions: sessions.length };
+      return { coachId: c._id.toString(), coachName: c.name, athletes: new Set(assignments.flatMap(a => a.athleteIds.map((id: ObjectId) => id.toString()))).size, sessions: sessions.length };
     }));
 
     // Competition summary

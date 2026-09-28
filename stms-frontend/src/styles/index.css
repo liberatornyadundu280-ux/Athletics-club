@@ -4,13 +4,19 @@
 
 @layer base {
   :root {
-    --color-primary: 30 58 138;
-    --color-gold: 245 158 11;
-    --color-danger: 220 38 38;
+    --font-sans: 'Space Grotesk', system-ui, sans-serif;
+    --font-mono: 'Space Grotesk', ui-monospace, 'SFMono-Regular', monospace;
+  }
+
+  @font-face {
+    font-family: 'Space Grotesk';
+    src: url('https://fonts.gstatic.com/s/spacegrotesk/v17/VdGPAYcB5W3QZjAxSEzLzQ.ttf') format('truetype');
+    font-weight: 300 700;
+    font-display: swap;
   }
 
   * {
-    @apply border-surface-200 dark:border-surface-700;
+    @apply border-lane-700 dark:border-lane-700;
   }
 
   html {
@@ -18,97 +24,132 @@
   }
 
   body {
-    @apply bg-white dark:bg-surface-950 text-surface-900 dark:text-surface-50
-           antialiased font-sans text-body leading-relaxed;
+    @apply bg-track-900 text-chalk-100 antialiased font-sans text-body leading-relaxed;
+    font-feature-settings: 'cv02' 1, 'cv03' 1, 'cv04' 1;
   }
 
   ::selection {
-    @apply bg-primary-200 text-primary-900 dark:bg-primary-800 dark:text-primary-100;
+    @apply bg-split-500 text-track-900;
   }
 
   :focus-visible {
-    @apply outline-none ring-2 ring-primary-500 ring-offset-2 ring-offset-white dark:ring-offset-surface-950;
+    @apply outline-none ring-2 ring-split-500 ring-offset-2 ring-offset-track-900;
+  }
+
+  /* Tabular numerals for all numeric content */
+  .tnum, time, .time, .distance, .split, .score, .count, .percentage {
+    @apply font-mono tabular-nums;
+  }
+
+  /* Clipboard paper texture for forms */
+  .clipboard {
+    @apply bg-track-800 bg-clipboard;
+  }
+
+  /* Lane border utility */
+  .lane-border {
+    @apply border-l-lane-700;
+  }
+
+  /* Split band utility */
+  .split-band {
+    @apply bg-track-800 rounded-split border border-lane-700 shadow-split;
+  }
+
+  .split-band-elevated {
+    @apply bg-track-800 rounded-split-lg shadow-split-elevated border-none;
   }
 }
 
 @layer components {
-  /* Button Variants */
+  /* ===== BUTTON VARIANTS ===== */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 font-medium rounded-lg
-           transition-all duration-200 focus-visible:outline-none focus-visible:ring-2
-           focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 font-medium rounded-split
+           transition-all duration-150 focus-visible:outline-none focus-visible:ring-2
+           focus-visible:ring-offset-2 focus-visible:ring-offset-track-900
+           disabled:opacity-40 disabled:cursor-not-allowed;
   }
 
-  .btn-primary {
-    @apply btn bg-primary-800 text-white hover:bg-primary-700 active:bg-primary-900
-           focus-visible:ring-primary-500 focus-visible:ring-offset-white dark:ring-offset-surface-950;
+  /* Split — primary action, live data, "now" */
+  .btn-split {
+    @apply btn bg-split-500 text-track-900 hover:bg-split-400 active:bg-split-600
+           focus-visible:ring-split-500;
   }
 
-  .btn-secondary {
-    @apply btn bg-surface-100 text-surface-900 hover:bg-surface-200 active:bg-surface-300
-           focus-visible:ring-surface-500 focus-visible:ring-offset-white dark:ring-offset-surface-950
-           dark:bg-surface-800 dark:text-surface-50 dark:hover:bg-surface-700 dark:active:bg-surface-600;
+  .btn-split:hover {
+    @apply animate-split-flash;
   }
 
-  .btn-outline {
-    @apply btn border-2 border-primary-800 text-primary-800 hover:bg-primary-50 active:bg-primary-100
-           focus-visible:ring-primary-500 focus-visible:ring-offset-white dark:ring-offset-surface-950
-           dark:border-primary-400 dark:text-primary-400 dark:hover:bg-primary-950 dark:active:bg-primary-900;
+  /* Track — secondary, quiet */
+  .btn-track {
+    @apply btn bg-track-800 text-chalk-100 hover:bg-track-700 active:bg-track-600
+           border border-lane-700 focus-visible:ring-lane-500;
   }
 
-  .btn-ghost {
-    @apply btn text-surface-600 hover:bg-surface-100 active:bg-surface-200
-           focus-visible:ring-surface-500 focus-visible:ring-offset-white dark:ring-offset-surface-950
-           dark:text-surface-400 dark:hover:bg-surface-800 dark:active:bg-surface-700;
+  /* Gold — achievement, earned actions only */
+  .btn-gold {
+    @apply btn bg-gold-500 text-track-900 hover:bg-gold-400 active:bg-gold-600
+           focus-visible:ring-gold-500;
   }
 
+  /* Danger — injury, deletion, critical */
   .btn-danger {
-    @apply btn bg-danger-600 text-white hover:bg-danger-700 active:bg-danger-800
-           focus-visible:ring-danger-500 focus-visible:ring-offset-white dark:ring-offset-surface-950;
+    @apply btn bg-danger-500 text-chalk-100 hover:bg-danger-400 active:bg-danger-600
+           focus-visible:ring-danger-500;
   }
 
-  .btn-success {
-    @apply btn bg-green-600 text-white hover:bg-green-700 active:bg-green-800
-           focus-visible:ring-green-500 focus-visible:ring-offset-white dark:ring-offset-surface-950;
+  /* Ghost — minimal, for tertiary actions */
+  .btn-ghost {
+    @apply btn text-chalk-300 hover:text-chalk-100 hover:bg-track-800 active:bg-track-700
+           focus-visible:ring-lane-500;
   }
 
-  .btn-sm {
-    @apply px-3 py-1.5 text-body-sm gap-1.5;
+  /* Sizes */
+  .btn-xs { @apply px-2.5 py-1 text-caption gap-1; }
+  .btn-sm { @apply px-3 py-1.5 text-body-sm gap-1.5; }
+  .btn-md { @apply px-4 py-2 text-body gap-2; }
+  .btn-lg { @apply px-6 py-3 text-body gap-2.5; }
+  .btn-xl { @apply px-8 py-4 text-split-sm gap-3; }
+
+  /* ===== SPLIT (replaces Card) ===== */
+  .split {
+    @apply split-band p-split transition-shadow duration-150;
   }
 
-  .btn-md {
-    @apply px-4 py-2 text-body gap-2;
+  .split-hover {
+    @apply split hover:shadow-split-elevated;
   }
 
-  .btn-lg {
-    @apply px-6 py-3 text-body-lg gap-2;
+  .split-interactive {
+    @apply split-hover cursor-pointer;
   }
 
-  .btn-xl {
-    @apply px-8 py-4 text-heading-sm gap-2.5;
+  .split-interactive:hover {
+    @apply bg-track-700;
   }
 
-  /* Card Variants */
-  .card {
-    @apply bg-white dark:bg-surface-900 rounded-xl border border-surface-200 dark:border-surface-700
-           shadow-card overflow-hidden transition-shadow duration-200;
+  /* Split header — the "lap label" */
+  .split-header {
+    @apply flex items-center justify-between mb-3 pb-2 border-b border-lane-700;
   }
 
-  .card-hover {
-    @apply card hover:shadow-elevated;
+  .split-label {
+    @apply text-split-sm font-medium text-split-500 uppercase tracking-wider;
   }
 
-  .card-elevated {
-    @apply bg-white dark:bg-surface-900 rounded-xl shadow-elevated border-none;
+  .split-value {
+    @apply text-split-md font-semibold text-chalk-100 tnum;
   }
 
-  /* Input Variants */
+  /* ===== INPUT VARIANTS (Clipboard style) ===== */
   .input {
-    @apply w-full px-4 py-2.5 rounded-lg border border-surface-300 dark:border-surface-600
-           bg-white dark:bg-surface-800 text-surface-900 dark:text-surface-50
-           placeholder:text-surface-400 dark:placeholder:text-surface-500
-           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
-           disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200;
+    @apply w-full px-4 py-3 rounded-split
+           bg-track-900 border border-lane-700
+           text-chalk-100 placeholder:text-chalk-400
+           focus:outline-none focus:ring-2 focus:ring-split-500 focus:border-transparent
+           disabled:opacity-40 disabled:cursor-not-allowed
+           transition-all duration-150
+           clipboard;
   }
 
   .input-error {
@@ -116,11 +157,11 @@
   }
 
   .input-success {
-    @apply border-green-500 focus:ring-green-500;
+    @apply border-split-500 focus:ring-split-500;
   }
 
   .label {
-    @apply block text-body-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5;
+    @apply block text-body-sm font-medium text-chalk-300 mb-1.5;
   }
 
   .form-group {
@@ -128,181 +169,214 @@
   }
 
   .form-error {
-    @apply text-body-sm text-danger-600 dark:text-danger-400;
+    @apply text-body-sm text-danger-400;
   }
 
   .form-hint {
-    @apply text-body-sm text-surface-500 dark:text-surface-400;
+    @apply text-body-sm text-chalk-400;
   }
 
-  /* Badge Variants */
+  /* ===== BADGE VARIANTS ===== */
   .badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-caption font-medium;
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-split text-caption font-medium;
   }
 
-  .badge-primary {
-    @apply badge bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200;
+  .badge-split {
+    @apply badge bg-split-500/15 text-split-400 border border-split-500/30;
   }
 
   .badge-gold {
-    @apply badge bg-gold-100 text-gold-800 dark:bg-gold-900 dark:text-gold-200;
+    @apply badge bg-gold-500/15 text-gold-400 border border-gold-500/30;
   }
 
   .badge-danger {
-    @apply badge bg-danger-100 text-danger-800 dark:bg-danger-900 dark:text-danger-200;
+    @apply badge bg-danger-500/15 text-danger-400 border border-danger-500/30;
   }
 
-  .badge-success {
-    @apply badge bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200;
+  .badge-lane {
+    @apply badge bg-lane-700 text-chalk-300;
   }
 
-  .badge-neutral {
-    @apply badge bg-surface-100 text-surface-700 dark:bg-surface-800 dark:text-surface-300;
+  .badge-injury {
+    @apply badge bg-danger-500/20 text-danger-400 border-l-danger-500 pl-3;
   }
 
-  .badge-outline {
-    @apply badge border border-surface-300 dark:border-surface-600 bg-transparent;
-  }
-
-  /* Table Styles */
-  .table-container {
-    @apply overflow-x-auto rounded-lg border border-surface-200 dark:border-surface-700;
-  }
-
-  .table {
+  /* ===== TABLE (Results Board) ===== */
+  .results-table {
     @apply w-full text-sm;
   }
 
-  .table th {
-    @apply px-4 py-3 text-left font-semibold text-surface-600 dark:text-surface-400
-           bg-surface-50 dark:bg-surface-800 border-b border-surface-200 dark:border-surface-700;
+  .results-table th {
+    @apply px-4 py-3 text-left font-medium text-chalk-400 uppercase tracking-wider text-caption
+           bg-track-900 border-b border-lane-700;
   }
 
-  .table td {
-    @apply px-4 py-3 border-b border-surface-100 dark:border-surface-800;
+  .results-table td {
+    @apply px-4 py-3 border-b border-lane-800/50;
   }
 
-  .table tbody tr {
-    @apply bg-white dark:bg-surface-900 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors;
+  .results-table tbody tr {
+    @apply bg-track-800 hover:bg-track-700 transition-colors duration-100;
   }
 
-  .table tbody tr:last-child td {
+  .results-table tbody tr:last-child td {
     @apply border-b-0;
   }
 
-  /* Modal */
+  .results-table .injury-row {
+    @apply border-l-3 border-l-danger-500;
+  }
+
+  .results-table .pb-row {
+    @apply border-l-3 border-l-gold-500;
+  }
+
+  /* ===== MODAL ===== */
   .modal-overlay {
-    @apply fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4;
+    @apply fixed inset-0 bg-track-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-split;
   }
 
   .modal-content {
-    @apply bg-white dark:bg-surface-900 rounded-2xl shadow-elevated max-h-[90vh] overflow-hidden
-           w-full max-w-lg animate-scale-in;
+    @apply bg-track-800 rounded-split-lg shadow-split-elevated border border-lane-700
+           max-h-[90vh] overflow-hidden w-full max-w-2xl animate-split-reveal;
   }
 
   .modal-header {
-    @apply px-6 py-4 border-b border-surface-200 dark:border-surface-700 flex items-center justify-between;
+    @apply px-split py-4 border-b border-lane-700 flex items-center justify-between;
   }
 
   .modal-body {
-    @apply px-6 py-4 overflow-y-auto;
+    @apply px-split py-split overflow-y-auto;
   }
 
   .modal-footer {
-    @apply px-6 py-4 border-t border-surface-200 dark:border-surface-700 flex justify-end gap-3;
+    @apply px-split py-4 border-t border-lane-700 flex justify-end gap-3;
   }
 
-  /* Dropdown */
-  .dropdown {
-    @apply relative inline-block;
-  }
-
+  /* ===== DROPDOWN ===== */
   .dropdown-menu {
-    @apply absolute right-0 mt-2 w-48 bg-white dark:bg-surface-900 rounded-lg shadow-elevated
-           border border-surface-200 dark:border-surface-700 py-1 z-50 animate-fade-in;
+    @apply absolute right-0 mt-2 w-56 bg-track-800 rounded-split shadow-split-elevated
+           border border-lane-700 py-1 z-50 animate-split-reveal;
   }
 
   .dropdown-item {
-    @apply w-full px-4 py-2 text-left text-body text-surface-700 dark:text-surface-300
-           hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors;
+    @apply w-full px-4 py-2 text-left text-body text-chalk-200
+           hover:bg-track-700 hover:text-chalk-100 transition-colors duration-100;
   }
 
   .dropdown-divider {
-    @apply h-px bg-surface-200 dark:bg-surface-700 my-1;
+    @apply h-px bg-lane-700 my-1;
   }
 
-  /* Tabs */
-  .tabs {
-    @apply flex border-b border-surface-200 dark:border-surface-700;
+  /* ===== TABS (Lane navigation) ===== */
+  .lane-tabs {
+    @apply flex flex-col gap-0.5;
   }
 
-  .tab {
-    @apply px-4 py-2 font-medium text-body-sm text-surface-500 dark:text-surface-400
-           hover:text-surface-700 dark:hover:text-surface-300
-           border-b-2 border-transparent -mb-px transition-all duration-200;
+  .lane-tab {
+    @apply w-full px-4 py-3 text-left font-medium text-body text-chalk-400
+           hover:text-chalk-100 hover:bg-track-700
+           rounded-split-l-lg transition-all duration-150
+           border-l-3 border-l-transparent;
   }
 
-  .tab-active {
-    @apply text-primary-800 dark:text-primary-300 border-primary-500;
+  .lane-tab-active {
+    @apply text-split-400 bg-track-700 border-l-split-500;
   }
 
-  /* Tooltip */
-  .tooltip {
-    @apply absolute z-50 px-3 py-1.5 text-caption text-white bg-surface-900 dark:bg-surface-100
-           rounded-lg shadow-elevated animate-fade-in;
+  .lane-tab-injury {
+    @apply border-l-danger-500 text-danger-400;
   }
 
-  /* Avatar */
+  /* ===== AVATAR (Lane marker) ===== */
   .avatar {
-    @apply inline-flex items-center justify-center rounded-full bg-primary-100 text-primary-800
-           font-medium select-none overflow-hidden;
+    @apply inline-flex items-center justify-center rounded-full bg-lane-700 text-chalk-100
+           font-medium select-none overflow-hidden ring-2 ring-track-900;
   }
 
-  .avatar-sm { @apply avatar w-8 h-8 text-caption; }
-  .avatar-md { @apply avatar w-10 h-10 text-body-sm; }
-  .avatar-lg { @apply avatar w-12 h-12 text-body; }
-  .avatar-xl { @apply avatar w-16 h-16 text-heading-sm; }
+  .avatar-xs { @apply avatar w-6 h-6 text-caption; }
+  .avatar-sm { @apply avatar w-8 h-8 text-body-sm; }
+  .avatar-md { @apply avatar w-10 h-10 text-body; }
+  .avatar-lg { @apply avatar w-12 h-12 text-split-sm; }
+  .avatar-xl { @apply avatar w-16 h-16 text-split-md; }
 
-  /* Empty State */
+  /* ===== EMPTY STATE ===== */
   .empty-state {
-    @apply flex flex-col items-center justify-center py-12 px-4 text-center;
+    @apply flex flex-col items-center justify-center py-split-lg px-split text-center;
   }
 
   .empty-state-icon {
-    @apply text-surface-300 dark:text-surface-600 mb-4;
+    @apply text-lane-500 mb-4;
   }
 
   .empty-state-title {
-    @apply text-heading-md text-surface-900 dark:text-surface-100 mb-2;
+    @apply text-split-md text-chalk-100 mb-2;
   }
 
   .empty-state-description {
-    @apply text-body text-surface-500 dark:text-surface-400 max-w-md mb-6;
+    @apply text-body text-chalk-400 max-w-md mb-split;
   }
 
-  /* Loading States */
+  /* ===== LOADING STATES ===== */
   .skeleton {
-    @apply animate-pulse bg-surface-200 dark:bg-surface-700 rounded;
+    @apply animate-pulse bg-lane-700 rounded-split;
   }
 
   .skeleton-text {
-    @apply h-4 w-full skeleton rounded;
+    @apply h-4 w-full skeleton;
   }
 
-  .skeleton-title {
-    @apply h-6 w-3/4 skeleton rounded;
+  .skeleton-split {
+    @apply h-10 w-1/3 skeleton rounded-split;
   }
 
   .skeleton-avatar {
     @apply w-10 h-10 rounded-full skeleton;
   }
 
-  .skeleton-card {
-    @apply p-4 space-y-4;
+  .skeleton-split-band {
+    @apply split-band p-split space-y-3;
   }
-}
 
-@layer utilities {
+  /* ===== HERO SPLIT (Dashboard metric) ===== */
+  .hero-split {
+    @apply split-band-elevated p-split-lg relative overflow-hidden;
+  }
+
+  .hero-split::before {
+    content: '';
+    @apply absolute top-0 left-0 w-1 h-full bg-split-500;
+  }
+
+  .hero-split.gold::before {
+    @apply bg-gold-500;
+  }
+
+  .hero-split.danger::before {
+    @apply bg-danger-500;
+  }
+
+  .hero-split-label {
+    @apply text-split-sm text-chalk-400 uppercase tracking-wider mb-1;
+  }
+
+  .hero-split-value {
+    @apply text-split-xl font-bold text-chalk-100 tnum;
+  }
+
+  .hero-split-sub {
+    @apply text-body-sm text-chalk-400 mt-1;
+  }
+
+  /* ===== SPLIT REVEAL STAGGER ===== */
+  .split-reveal-1 { animation-delay: 0ms; }
+  .split-reveal-2 { animation-delay: 60ms; }
+  .split-reveal-3 { animation-delay: 120ms; }
+  .split-reveal-4 { animation-delay: 180ms; }
+  .split-reveal-5 { animation-delay: 240ms; }
+  .split-reveal-6 { animation-delay: 300ms; }
+
+  /* ===== UTILITIES ===== */
   .text-balance {
     text-wrap: balance;
   }
@@ -316,52 +390,41 @@
     display: none;
   }
 
-  .gradient-text {
-    @apply bg-gradient-to-r from-primary-800 to-gold-600 bg-clip-text text-transparent;
+  /* Gradient text for rare emphasis */
+  .gradient-split {
+    @apply bg-gradient-to-r from-split-400 to-split-600 bg-clip-text text-transparent;
   }
 
-  .gradient-border {
-    @apply relative before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-r
-           before:from-primary-500 before:to-gold-500 before:p-[1px] before:-z-10;
-  }
-}
-
-/* Print Styles */
-@media print {
-  .no-print {
-    display: none !important;
-  }
-
-  .print-only {
-    display: block !important;
-  }
-
-  body {
-    @apply bg-white text-black;
-  }
-
-  .card {
-    @apply shadow-none border border-gray-300;
+  .gradient-gold {
+    @apply bg-gradient-to-r from-gold-400 to-gold-600 bg-clip-text text-transparent;
   }
 }
 
-/* Accessibility */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
+@layer utilities {
+  /* Print Styles */
+  @media print {
+    .no-print { display: none !important; }
+    .print-only { display: block !important; }
+    body { @apply bg-white text-black; }
+    .split { @apply shadow-none border border-gray-300 bg-white; }
   }
-}
 
-/* High Contrast Mode */
-@media (prefers-contrast: high) {
-  :root {
-    --color-primary: 0 0 139;
-    --color-gold: 184 134 11;
-    --color-danger: 139 0 0;
+  /* Accessibility */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* High Contrast Mode */
+  @media (prefers-contrast: high) {
+    :root {
+      --color-split: 0 212 170;
+      --color-gold: 255 184 0;
+      --color-danger: 255 77 106;
+    }
   }
 }

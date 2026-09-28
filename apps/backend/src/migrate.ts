@@ -24,7 +24,7 @@ const migrations = [
 ];
 
 async function runMigrations(direction: 'up' | 'down' = 'up'): Promise<void> {
-  const client = new MongoClient(env.MONGODB_URI);
+  const client = new MongoClient(env.MONGODB_URI as string);
   await client.connect();
   
   const db = client.db();

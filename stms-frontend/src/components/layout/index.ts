@@ -1,4 +1,4 @@
-export { Sidebar } from './Sidebar';
-export { Header } from './Header';
-export { ClubSwitcher } from './ClubSwitcher';
-export { MainLayout, AuthLayout, EmptyLayout } from './MainLayout';
+export * from './Sidebar';
+export * from './Header';
+export * from './MainLayout';
+export * from './ClubSwitcher';

@@ -98,12 +98,12 @@ export function PermissionsList() {
           {activeTab === 'letters' && (
             <Table
               columns={[
-                { key: 'athlete', header: 'Athlete', accessor: (l) => { const a = mockEvents.flatMap(e => e.athleteIds); return a.includes(l.athleteId) ? 'Athlete' : 'Unknown'; } },
-                { key: 'event', header: 'Event', accessor: 'eventId', render: (_, e) => { const ev = mockEvents.find(e => e.id === l.eventId); return ev?.name || e; } },
+                { key: 'athlete', header: 'Athlete', accessor: (letter) => { const a = mockEvents.flatMap(e => e.athleteIds); return a.includes(letter.athleteId) ? 'Athlete' : 'Unknown'; } },
+                { key: 'event', header: 'Event', accessor: 'eventId', render: (letter) => { const ev = mockEvents.find(e => e.id === letter.eventId); return ev?.name || letter.eventId; } },
                 { key: 'template', header: 'Type', accessor: 'templateId', render: (_, t) => <Badge variant="neutral">{t.replace('_', ' ')}</Badge> },
-                { key: 'status', header: 'Status', accessor: 'status', render: (_, s) => { const c = statusConfig[s as keyof typeof statusConfig]; return <div className="flex items-center gap-2"><c.icon /> <Badge variant={c.color}>{c.label}</Badge></div>; } },
+                { key: 'status', header: 'Status', accessor: 'status', render: (_, s) => { const c = statusConfig[s as keyof typeof statusConfig]; return <div className="flex items-center gap-2">{c.icon} <Badge variant={c.color}>{c.label}</Badge></div>; } },
                 { key: 'created', header: 'Created', accessor: 'createdAt' },
-                { key: 'actions', header: 'Actions', render: (l) => <Button variant="ghost" size="sm" leftIcon={<Eye className="w-4 h-4" />}>View</Button> },
+                { key: 'actions', header: 'Actions', render: () => <Button variant="ghost" size="sm" leftIcon={<Eye className="w-4 h-4" />}>View</Button> },
               ]}
               data={mockLetters}
               keyExtractor={(l) => l.id}

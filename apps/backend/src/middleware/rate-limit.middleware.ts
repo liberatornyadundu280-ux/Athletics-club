@@ -9,10 +9,10 @@ import { RateLimitError } from '../utils/errors';
 
 // Create Redis client for rate limiting
 const redisClient = createClient({
-  url: env.REDIS_URL,
+  url: env.REDIS_URL as string,
 });
 
-redisClient.on('error', (err) => {
+redisClient.on('error', (err: Error) => {
   console.error('Rate limit Redis error:', err);
 });
 

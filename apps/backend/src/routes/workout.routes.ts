@@ -57,7 +57,7 @@ const workoutSchema = z.object({
     tags: z.array(z.string()).optional(),
     isTemplate: z.boolean().optional(),
   }),
-};
+});
 
 const assignmentSchema = z.object({
   body: z.object({
@@ -76,7 +76,7 @@ const assignmentSchema = z.object({
     message: 'Either workoutId or programId required',
     path: ['workoutId'],
   }),
-};
+});
 
 const completeWorkoutSchema = z.object({
   body: z.object({
@@ -95,9 +95,9 @@ const completeWorkoutSchema = z.object({
       completedAt: z.string().datetime().optional(),
       notes: z.string().optional(),
       rating: z.number().int().min(1).max(10).optional(),
-    }),
+    })),
   }),
-};
+});
 
 // ==================== EXERCISE ROUTES ====================
 

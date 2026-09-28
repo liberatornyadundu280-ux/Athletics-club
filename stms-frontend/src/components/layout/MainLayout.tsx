@@ -9,50 +9,47 @@ import { Button } from '@/components/ui/Button';
 export function MainLayout() {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  const isAuthPage = location.pathname.startsWith('/login') || 
-                     location.pathname.startsWith('/register') || 
-                     location.pathname.startsWith('/forgot-password');
+  const isAuthPage = location.pathname.startsWith('/login') ||
+    location.pathname.startsWith('/register') ||
+    location.pathname.startsWith('/forgot-password');
 
   if (isAuthPage) {
     return <Outlet />;
   }
 
   return (
-    <div className="min-h-screen bg-surface-50 dark:bg-surface-950">
+    <div className="min-h-screen bg-track-900">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-track-950/80 lg:hidden"
           onClick={() => setSidebarOpen(false)}
           aria-hidden="true"
         />
       )}
 
       {/* Sidebar */}
-      <Sidebar className={cn(
-        'transition-transform duration-300 ease-in-out',
-        sidebarCollapsed ? 'w-20' : 'w-64',
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-      )} />
+      <Sidebar
+        className={cn(
+          'transition-transform duration-300 ease-in-out',
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        )}
+        onNavigate={() => setSidebarOpen(false)}
+      />
 
       {/* Main content */}
-      <div className={cn(
-        'transition-all duration-300 ease-in-out',
-        'lg:pl-64',
-        sidebarCollapsed ? 'lg:pl-20' : ''
-      )}>
+      <div className="lg:pl-lane transition-all duration-300 ease-in-out">
         {/* Header */}
         <Header />
 
         {/* Main content area */}
-        <main className="pt-16 pb-8 px-4 sm:px-6 lg:px-8" id="main-content">
+        <main className="pt-16 pb-split-lg px-split lg:px-split-lg" id="main-content">
           <div className="max-w-full">
             {/* Mobile sidebar toggle */}
-            <div className="lg:hidden mb-4">
+            <div className="lg:hidden mb-split">
               <Button
-                variant="outline"
+                variant="track"
                 size="sm"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
                 className="w-full justify-start"
@@ -75,24 +72,24 @@ export function MainLayout() {
 // ==================== AUTH LAYOUT ====================
 export function AuthLayout() {
   return (
-    <div className="min-h-screen bg-surface-50 dark:bg-surface-950 flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-track-900 flex items-center justify-center px-split py-split-lg">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary-800 mx-auto mb-4">
-            <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
+        <div className="text-center mb-split-lg">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-split-lg bg-split-500 mx-auto mb-4">
+            <svg className="w-10 h-10 text-track-900" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
             </svg>
           </div>
-          <h1 className="text-heading-lg font-bold text-surface-900 dark:text-surface-100">STMS</h1>
-          <p className="text-body text-surface-500 dark:text-surface-400 mt-2">
+          <h1 className="text-split-lg font-bold text-chalk-100 tracking-tight">STMS</h1>
+          <p className="text-body text-chalk-400 mt-2">
             Smart Trainer Management System
           </p>
         </div>
-        <div className="card-elevated p-8">
+        <div className="split-band-elevated p-split-lg">
           <Outlet />
         </div>
-        <p className="text-center text-caption text-surface-500 dark:text-surface-400 mt-6">
-          Need help? <a href="#" className="text-primary-800 hover:text-primary-700">Contact support</a>
+        <p className="text-center text-caption text-chalk-400 mt-6">
+          Need help? <a href="#" className="text-split-400 hover:text-split-300">Contact support</a>
         </p>
       </div>
     </div>

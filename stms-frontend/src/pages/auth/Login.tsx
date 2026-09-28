@@ -6,9 +6,10 @@ import { z } from 'zod';
 import { toast } from 'sonner';
 import { authApi } from '@/services/api';
 import { initializeFirebase, signInWithGoogle } from '@/services/firebase';
+import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader2, Monitor } from 'lucide-react';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address').min(1, 'Email is required'),
@@ -21,6 +22,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export function Login() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -68,6 +70,39 @@ export function Login() {
       }
     } finally {
       setGoogleLoading(false);
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    setIsLoading(true);
+    try {
+      // Skip API call entirely - directly set mock auth in localStorage
+      const mockUser = {
+        id: 'demo-user',
+        email: 'demo@stms.local',
+        name: 'Demo Coach',
+        role: 'coach',
+        clubId: 'demo-club',
+        avatarUrl: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      const mockPermissions = [
+        'athlete:read', 'athlete:write', 'workout:read', 'workout:write',
+        'attendance:read', 'attendance:write', 'performance:read', 'performance:write',
+        'injury:read', 'injury:write', 'permission:read', 'permission:write',
+        'analytics:read', 'settings:manage'
+      ];
+      // Set keys that AuthContext/api.ts expects
+      localStorage.setItem('user', JSON.stringify(mockUser));
+      localStorage.setItem('permissions', JSON.stringify(mockPermissions));
+      localStorage.setItem('accessToken', 'demo-token');
+      localStorage.setItem('tokenExpiresAt', String(Date.now() + 3600000));
+
+      toast.success('Demo mode - Welcome to STMS!');
+      navigate(from, { replace: true });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -161,6 +196,17 @@ export function Login() {
         ) : (
           'Continue with Google'
         )}
+      </Button>
+
+      <Button
+        variant="secondary"
+        className="w-full gap-3"
+        onClick={handleDemoLogin}
+        loading={isLoading}
+        disabled={googleLoading}
+        leftIcon={<Monitor className="w-5 h-5" />}
+      >
+        Demo Login (No Backend)
       </Button>
 
       <p className="text-center text-body-sm text-surface-500 dark:text-surface-400">

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent, Button, Input, Select, SelectOption, Badge, Avatar, Switch } from '@/components/ui';
+import { Card, CardHeader, CardTitle, CardContent, Button, Input, Textarea, Select, SelectOption, Badge, Avatar, Switch } from '@/components/ui';
 import { User, Shield, Bell, Palette, Globe, Save, Key, Moon, Sun, Monitor, LogOut, Eye, EyeOff, Upload } from 'lucide-react';
 import { useAuth, useTheme } from '@/context';
 import { User as UserType } from '@/types';
@@ -100,7 +100,7 @@ export function Settings() {
               <Input label="Full Name" value={profileData.name} onChange={e => setProfileData(prev => ({ ...prev, name: e.target.value }))} />
               <Input label="Email" type="email" value={profileData.email} onChange={e => setProfileData(prev => ({ ...prev, email: e.target.value }))} disabled />
               <Input label="Phone" type="tel" value={profileData.phone} onChange={e => setProfileData(prev => ({ ...prev, phone: e.target.value }))} placeholder="+91 98765 43210" />
-              <Input label="Bio" placeholder="Tell us about yourself..." as="textarea" rows={3} value={profileData.bio} onChange={e => setProfileData(prev => ({ ...prev, bio: e.target.value }))} />
+              <Textarea label="Bio" placeholder="Tell us about yourself..." rows={3} value={profileData.bio} onChange={e => setProfileData(prev => ({ ...prev, bio: e.target.value }))} />
               <Button onClick={() => toast.success('Profile updated!')} leftIcon={<Save className="w-4 h-4" />}>Save Changes</Button>
             </div>
           )}

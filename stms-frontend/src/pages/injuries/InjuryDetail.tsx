@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, Button, Input, Badge, Select, Textarea } from '@/components/ui';
-import { ArrowLeft, AlertTriangle, Calendar, Clock, Upload, Save, Edit, Trash2, ArrowUp, ArrowDown, FileText } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Calendar, Clock, Upload, Save, Edit, Trash2, ArrowUp, ArrowDown, FileText, Plus } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 
@@ -9,8 +9,8 @@ export function InjuryDetail() {
   const { id } = useParams();
   const { user, hasPermission } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'rehab' | 'rtp' | 'logs'>('overview');
-
-  const mockInjury = {
+  
+const mockInjury = {
     id: id || '1',
     athleteId: '1',
     athleteName: 'Priya Sharma',
@@ -30,7 +30,7 @@ export function InjuryDetail() {
     updatedAt: '2024-06-20',
   };
 
-  const tabs = [
+  const tabs: Array<{ id: 'overview' | 'rehab' | 'rtp' | 'logs'; label: string; icon: React.ReactNode }> = [
     { id: 'overview', label: 'Overview', icon: <FileText className="w-4 h-4" /> },
     { id: 'rehab', label: 'Rehab Plan', icon: <AlertTriangle className="w-4 h-4" /> },
     { id: 'rtp', label: 'RTP Protocol', icon: <ArrowUp className="w-4 h-4" /> },
@@ -119,7 +119,7 @@ export function InjuryDetail() {
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
                     {mockInjury.imaging.map((img, i) => (
-                      <Badge key={i} variant="outline" leftIcon={<FileText className="w-3 h-3" />}>{img}</Badge>
+                      <Badge key={i} variant="outline" className="flex items-center gap-1.5"><FileText className="w-3 h-3" />{img}</Badge>
                     ))}
                   </div>
                 </CardContent>

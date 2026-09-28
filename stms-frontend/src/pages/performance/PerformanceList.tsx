@@ -17,13 +17,13 @@ const mockResults = [
 ];
 
 const mockFitnessTests: FitnessTest[] = [
-  { id: '1', athleteId: '1', athleteName: 'Priya Sharma', testType: '30m_fly', value: 3.45, unit: 's', date: '2024-06-01', percentile: 92, notes: 'Excellent acceleration' },
-  { id: '2', athleteId: '2', athleteName: 'Rahul Kumar', testType: '30m_fly', value: 3.20, unit: 's', date: '2024-06-01', percentile: 98, notes: 'Elite level' },
+  { id: '1', clubId: '1', athleteId: '1', athleteName: 'Priya Sharma', testType: '30m_fly', value: 3.45, unit: 's', date: '2024-06-01', percentile: 92, notes: 'Excellent acceleration' },
+  { id: '2', clubId: '1', athleteId: '2', athleteName: 'Rahul Kumar', testType: '30m_fly', value: 3.20, unit: 's', date: '2024-06-01', percentile: 98, notes: 'Elite level' },
 ];
 
 const mockGoals: Goal[] = [
-  { id: '1', athleteId: '1', athleteName: 'Priya Sharma', event: '100m', target: '11.70s', deadline: '2024-12-31', status: 'active', coachNotes: 'Focus on start and acceleration', createdAt: '2024-01-15', updatedAt: '2024-06-01' },
-  { id: '2', athleteId: '2', athleteName: 'Rahul Kumar', event: '400m', target: '46.50s', deadline: '2024-10-15', status: 'active', coachNotes: 'Work on speed endurance', createdAt: '2024-02-01', updatedAt: '2024-06-01' },
+  { id: '1', clubId: '1', athleteId: '1', athleteName: 'Priya Sharma', event: '100m', targetValue: '11.70s', targetDate: '2024-12-31', status: 'active', coachNotes: 'Focus on start and acceleration', createdAt: '2024-01-15', updatedAt: '2024-06-01' },
+  { id: '2', clubId: '1', athleteId: '2', athleteName: 'Rahul Kumar', event: '400m', targetValue: '46.50s', targetDate: '2024-10-15', status: 'active', coachNotes: 'Work on speed endurance', createdAt: '2024-02-01', updatedAt: '2024-06-01' },
 ];
 
 export function PerformanceList() {
@@ -136,8 +136,8 @@ export function PerformanceList() {
               columns={[
                 { key: 'athlete', header: 'Athlete', accessor: (g) => g.athleteName },
                 { key: 'event', header: 'Event', accessor: 'event' },
-                { key: 'target', header: 'Target', accessor: 'target' },
-                { key: 'deadline', header: 'Deadline', accessor: 'deadline' },
+                { key: 'target', header: 'Target', accessor: 'targetValue' },
+                { key: 'deadline', header: 'Deadline', accessor: 'targetDate' },
                 { key: 'status', header: 'Status', accessor: 'status', render: (_, s) => <Badge variant={s === 'active' ? 'primary' : s === 'achieved' ? 'success' : 'neutral'}>{s}</Badge> },
               ]}
               data={mockGoals}

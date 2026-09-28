@@ -2,12 +2,12 @@ import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/utils/helpers';
 import { useAuth } from '@/context/AuthContext';
+import { LaneTabs } from '@/components/ui/Split';
 import {
   Home,
   Users,
   Dumbbell,
   Calendar,
-  ClipboardList,
   Activity,
   AlertTriangle,
   FileText,
@@ -19,22 +19,26 @@ import {
 } from 'lucide-react';
 
 interface NavItem {
+  id: string;
   label: string;
   path: string;
   icon: React.ReactNode;
   roles?: string[];
   permissions?: string[];
   children?: NavItem[];
+  injuryCount?: number;
 }
 
 const navigationConfig: NavItem[] = [
   {
+    id: 'dashboard',
     label: 'Dashboard',
     path: '/dashboard',
     icon: <Home className="w-5 h-5" />,
     roles: ['athlete', 'coach', 'club_admin', 'system_admin'],
   },
   {
+    id: 'athletes',
     label: 'Athletes',
     path: '/athletes',
     icon: <Users className="w-5 h-5" />,
@@ -42,6 +46,7 @@ const navigationConfig: NavItem[] = [
     permissions: ['athlete:read'],
   },
   {
+    id: 'workouts',
     label: 'Workouts',
     path: '/workouts',
     icon: <Dumbbell className="w-5 h-5" />,
@@ -49,6 +54,7 @@ const navigationConfig: NavItem[] = [
     permissions: ['workout:read'],
   },
   {
+    id: 'attendance',
     label: 'Attendance',
     path: '/attendance',
     icon: <Calendar className="w-5 h-5" />,
@@ -56,6 +62,7 @@ const navigationConfig: NavItem[] = [
     permissions: ['attendance:read'],
   },
   {
+    id: 'performance',
     label: 'Performance',
     path: '/performance',
     icon: <Activity className="w-5 h-5" />,
@@ -63,13 +70,16 @@ const navigationConfig: NavItem[] = [
     permissions: ['performance:read'],
   },
   {
+    id: 'injuries',
     label: 'Injuries',
     path: '/injuries',
     icon: <AlertTriangle className="w-5 h-5" />,
     roles: ['coach', 'club_admin', 'system_admin'],
     permissions: ['injury:read'],
+    injuryCount: 0, // Would come from API
   },
   {
+    id: 'permissions',
     label: 'Permissions',
     path: '/permissions',
     icon: <FileText className="w-5 h-5" />,
@@ -77,6 +87,7 @@ const navigationConfig: NavItem[] = [
     permissions: ['permission:read'],
   },
   {
+    id: 'announcements',
     label: 'Announcements',
     path: '/announcements',
     icon: <Megaphone className="w-5 h-5" />,
@@ -84,6 +95,7 @@ const navigationConfig: NavItem[] = [
     permissions: ['announcement:read'],
   },
   {
+    id: 'analytics',
     label: 'Analytics',
     path: '/analytics',
     icon: <BarChart3 className="w-5 h-5" />,
@@ -92,9 +104,9 @@ const navigationConfig: NavItem[] = [
   },
 ];
 
-// Club Admin only items
 const clubAdminNavItems: NavItem[] = [
   {
+    id: 'users',
     label: 'User Management',
     path: '/settings/users',
     icon: <Shield className="w-5 h-5" />,
@@ -102,6 +114,7 @@ const clubAdminNavItems: NavItem[] = [
     permissions: ['user:read'],
   },
   {
+    id: 'club-settings',
     label: 'Club Settings',
     path: '/settings/club',
     icon: <Settings className="w-5 h-5" />,
@@ -110,9 +123,9 @@ const clubAdminNavItems: NavItem[] = [
   },
 ];
 
-// System Admin only items
 const systemAdminNavItems: NavItem[] = [
   {
+    id: 'platform-admin',
     label: 'Platform Admin',
     path: '/admin',
     icon: <Shield className="w-5 h-5" />,
@@ -120,6 +133,7 @@ const systemAdminNavItems: NavItem[] = [
     permissions: ['*'],
   },
   {
+    id: 'create-club',
     label: 'Create Club',
     path: '/admin/clubs/new',
     icon: <PlusCircle className="w-5 h-5" />,
@@ -127,7 +141,7 @@ const systemAdminNavItems: NavItem[] = [
   },
 ];
 
-export function Sidebar() {
+export function Sidebar({ className, onNavigate }: { className?: string; onNavigate?: (path: string) => void }) {
   const location = useLocation();
   const { user, hasPermission, hasRole } = useAuth();
 
@@ -151,143 +165,66 @@ export function Sidebar() {
     return true;
   });
 
-  const allNavItems = [
+  const allNavItems: NavItem[] = [
     ...filteredNavItems,
-    ...(filteredClubAdminItems.length > 0 ? [{ label: 'Administration', path: '', icon: <Settings className="w-5 h-5" />, children: filteredClubAdminItems }] : []),
-    ...(filteredSystemAdminItems.length > 0 ? [{ label: 'System', path: '', icon: <Shield className="w-5 h-5" />, children: filteredSystemAdminItems }] : []),
+    ...(filteredClubAdminItems.length > 0 ? [{ id: 'admin-section', label: 'Administration', path: '', icon: <Settings className="w-5 h-5" />, children: filteredClubAdminItems }] : []),
+    ...(filteredSystemAdminItems.length > 0 ? [{ id: 'system-section', label: 'System', path: '', icon: <Shield className="w-5 h-5" />, children: filteredSystemAdminItems }] : []),
   ];
 
+  const tabs = allNavItems.map(item => ({
+    id: item.id,
+    label: item.label,
+    count: item.injuryCount,
+    icon: item.icon,
+    injury: item.id === 'injuries' && (item.injuryCount || 0) > 0,
+  }));
+
+  const handleTabChange = (id: string) => {
+    const item = allNavItems.find(i => i.id === id);
+    if (item?.path) {
+      onNavigate?.(item.path);
+    }
+  };
+
   return (
-    <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-white dark:bg-surface-950 border-r border-surface-200 dark:border-surface-800 flex flex-col transition-transform duration-300 lg:translate-x-0">
+    <aside className={cn('fixed left-0 top-0 z-40 h-screen w-lane bg-track-900 border-r border-lane-700 flex flex-col transition-transform duration-300 lg:translate-x-0', className)}>
       {/* Logo */}
-      <div className="flex items-center justify-between h-16 px-4 border-b border-surface-200 dark:border-surface-800">
-        <NavLink to="/dashboard" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary-800 flex items-center justify-center">
-            <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+      <div className="h-16 px-split border-b border-lane-700 flex items-center">
+        <NavLink to="/dashboard" className="flex items-center gap-3" onClick={() => onNavigate?.('/dashboard')}>
+          <div className="w-8 h-8 rounded-split bg-split-500 flex items-center justify-center">
+            <svg className="w-5 h-5 text-track-900" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
             </svg>
           </div>
-          <span className="text-heading-md font-bold text-surface-900 dark:text-surface-100">STMS</span>
+          <span className="text-split-md font-bold text-chalk-100 tracking-tight">STMS</span>
         </NavLink>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-4 px-3" aria-label="Main navigation">
-        <ul className="space-y-1" role="list">
-          {allNavItems.map((item, index) => (
-            <React.Fragment key={item.path || item.label + index}>
-              {item.children ? (
-                <CollapsibleNavItem item={item} location={location} />
-              ) : (
-                <NavItemComponent item={item} location={location} />
-              )}
-            </React.Fragment>
-          ))}
-        </ul>
+      {/* Navigation Lanes */}
+      <nav className="flex-1 overflow-y-auto py-split px-3" aria-label="Main navigation" role="navigation">
+        <LaneTabs
+          tabs={tabs}
+          activeId={location.pathname.split('/')[1] || 'dashboard'}
+          onChange={handleTabChange}
+        />
       </nav>
 
       {/* User info at bottom */}
-      <div className="p-4 border-t border-surface-200 dark:border-surface-800">
+      <div className="p-split border-t border-lane-700">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center text-primary-800 dark:text-primary-200 font-medium">
+          <div className="w-10 h-10 rounded-full bg-lane-700 flex items-center justify-center text-chalk-100 font-medium">
             {user.name.charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-body-sm font-medium text-surface-900 dark:text-surface-100 truncate">
+            <p className="text-body-sm font-medium text-chalk-100 truncate">
               {user.name}
             </p>
-            <p className="text-caption text-surface-500 dark:text-surface-400 truncate capitalize">
+            <p className="text-caption text-chalk-400 truncate capitalize">
               {user.role.replace('_', ' ')}
             </p>
           </div>
         </div>
       </div>
     </aside>
-  );
-}
-
-function NavItemComponent({ item, location }: { item: NavItem; location: Location }) {
-  const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
-
-  return (
-    <li>
-      <NavLink
-        to={item.path}
-        className={({ isActive }) => cn(
-          'flex items-center gap-3 px-3 py-2.5 rounded-lg text-body font-medium transition-colors',
-          isActive
-            ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
-            : 'text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800'
-        )}
-        aria-current={isActive ? 'page' : undefined}
-      >
-        <span className={cn('flex-shrink-0', isActive ? 'text-primary-800 dark:text-primary-300' : 'text-surface-400')}>
-          {item.icon}
-        </span>
-        <span className="truncate">{item.label}</span>
-        {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary-500" />}
-      </NavLink>
-    </li>
-  );
-}
-
-function CollapsibleNavItem({ item, location }: { item: NavItem; location: Location }) {
-  const [isOpen, setIsOpen] = React.useState(false);
-  const isActive = item.children?.some(child => location.pathname === child.path || location.pathname.startsWith(child.path + '/'));
-
-  // Auto-open if any child is active
-  React.useEffect(() => {
-    if (isActive) setIsOpen(true);
-  }, [isActive]);
-
-  return (
-    <li>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          'flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-body font-medium transition-colors',
-          isActive
-            ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
-            : 'text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800'
-        )}
-        aria-expanded={isOpen}
-      >
-        <span className="flex items-center gap-3">
-          <span className={cn('flex-shrink-0', isActive ? 'text-primary-800 dark:text-primary-300' : 'text-surface-400')}>
-            {item.icon}
-          </span>
-          <span className="truncate">{item.label}</span>
-        </span>
-        <svg
-          className={cn('w-4 h-4 transition-transform', isOpen ? 'rotate-180' : '')}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      {isOpen && (
-        <ul className="ml-8 mt-1 space-y-1" role="list">
-          {item.children?.map(child => (
-            <li key={child.path}>
-              <NavLink
-                to={child.path}
-                className={({ isActive }) => cn(
-                  'flex items-center gap-3 px-3 py-2 rounded-lg text-body-sm font-medium transition-colors',
-                  isActive
-                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
-                    : 'text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800'
-                )}
-              >
-                <span className="w-5" />
-                {child.icon && <span className="flex-shrink-0 w-5 text-surface-400">{child.icon}</span>}
-                <span className="truncate">{child.label}</span>
-              </NavLink>
-            </li>
-          ))}
-        </ul>
-      )}
-    </li>
   );
 }

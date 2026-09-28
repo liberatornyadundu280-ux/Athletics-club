@@ -126,9 +126,9 @@ export function createApiSchema<T extends z.ZodRawShape>(shape: {
   params?: z.ZodObject<T>;
 }) {
   return z.object({
-    body: shape.body?.optional(),
-    query: shape.query?.optional(),
-    params: shape.params?.optional(),
+    body: shape.body ? z.optional(shape.body) : z.optional(z.object({})),
+    query: shape.query ? z.optional(shape.query) : z.optional(z.object({})),
+    params: shape.params ? z.optional(shape.params) : z.optional(z.object({})),
   });
 }
 
@@ -191,11 +191,11 @@ export function requiredSchema<T extends z.ZodRawShape>(schema: z.ZodObject<T>) 
   const requiredShape: Record<string, z.ZodTypeAny> = {};
   for (const [key, value] of Object.entries(shape)) {
     if (value instanceof z.ZodOptional) {
-      requiredShape[key] = value.unwrap();
+      requiredShape[key] = value._def.innerType;
     } else if (value instanceof z.ZodNullable) {
-      requiredShape[key] = value.unwrap();
+      requiredShape[key] = value._def.innerType;
     } else if (value instanceof z.ZodDefault) {
-      requiredShape[key] = value.unwrap();
+      requiredShape[key] = value._def.innerType;
     } else {
       requiredShape[key] = value;
     }

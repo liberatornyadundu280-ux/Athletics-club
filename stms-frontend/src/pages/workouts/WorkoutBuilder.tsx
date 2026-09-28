@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Card, CardHeader, CardTitle, CardContent, Button, Input, Badge, Select, SelectOption } from '@/components/ui';
+import { Card, CardHeader, CardTitle, CardContent, Button, Input, Textarea, Badge, Select, SelectOption } from '@/components/ui';
 import { ArrowLeft, Plus, GripVertical, Trash2, Dumbbell, Clock, Save, Download, Search } from 'lucide-react';
 import { Exercise } from '@/types';
 
@@ -24,7 +24,7 @@ interface WorkoutExercise {
 
 export function WorkoutBuilder() {
   const navigate = useNavigate();
-  const { id } = React.useParams<{ id: string }>();
+  const { id } = useParams<{ id: string }>();
   const isEditing = !!id;
 
   const [workout, setWorkout] = React.useState({
@@ -144,11 +144,11 @@ export function WorkoutBuilder() {
             <CardContent className="space-y-4">
               <Input label="Workout Name" placeholder="e.g., Sprint Intervals - Week 3" value={workout.name} onChange={e => setWorkout(prev => ({ ...prev, name: e.target.value }))} />
               <div className="grid gap-4 sm:grid-cols-3">
-                <Select label="Difficulty" options={[{ value: 'beginner', label: 'Beginner' }, { value: 'intermediate', label: 'Intermediate' }, { value: 'advanced', label: 'Advanced' }]} value={workout.difficulty} onChange={e => setWorkout(prev => ({ ...prev, difficulty: e.target.value }))} />
+                <Select label="Difficulty" options={[{ value: 'beginner', label: 'Beginner' }, { value: 'intermediate', label: 'Intermediate' }, { value: 'advanced', label: 'Advanced' }]} value={workout.difficulty} onChange={e => setWorkout(prev => ({ ...prev, difficulty: e.target.value as 'beginner' | 'intermediate' | 'advanced' }))} />
                 <Input label="Duration (min)" type="number" placeholder="90" />
-                <Input label="Tags (comma separated)" placeholder="speed, sprint, intervals" />
-              </div>
-              <Input label="Description" placeholder="Describe the workout focus and goals" as="textarea" rows={3} value={workout.description} onChange={e => setWorkout(prev => ({ ...prev, description: e.target.value }))} />
+<Input label="Tags (comma separated)" placeholder="speed, sprint, intervals" />
+            </div>
+              <Textarea label="Description" placeholder="Describe the workout focus and goals" rows={3} value={workout.description} onChange={e => setWorkout(prev => ({ ...prev, description: e.target.value }))} />
             </CardContent>
           </Card>
 

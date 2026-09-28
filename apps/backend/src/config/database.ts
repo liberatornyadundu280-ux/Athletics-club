@@ -10,7 +10,7 @@ let db: Db;
 export async function connectToDatabase(): Promise<Db> {
   if (db) return db;
 
-  client = new MongoClient(env.MONGODB_URI, {
+  client = new MongoClient(env.MONGODB_URI as string, {
     serverApi: {
       version: ServerApiVersion.v1,
       strict: true,

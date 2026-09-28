@@ -39,7 +39,7 @@ export const authenticate = async (
     const token = authHeader.slice(7); // Remove 'Bearer '
 
     // Verify RS256 token
-    const payload = jwt.verify(token, env.JWT_PUBLIC_KEY, {
+    const payload = jwt.verify(token, env.JWT_PUBLIC_KEY as string, {
       algorithms: ['RS256'],
       issuer: 'stms-backend',
       audience: 'stms-frontend',
@@ -80,7 +80,7 @@ export const optionalAuth = async (
     }
 
     const token = authHeader.slice(7);
-    const payload = jwt.verify(token, env.JWT_PUBLIC_KEY, {
+    const payload = jwt.verify(token, env.JWT_PUBLIC_KEY as string, {
       algorithms: ['RS256'],
       issuer: 'stms-backend',
       audience: 'stms-frontend',

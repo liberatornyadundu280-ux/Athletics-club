@@ -64,7 +64,7 @@ const updateAthleteSchema = z.object({
     grade: z.string().optional(),
     status: z.enum(['active', 'injured', 'inactive', 'transferred', 'alumni']).optional(),
   }),
-};
+});
 
 const bulkImportSchema = z.object({
   body: z.object({
@@ -90,7 +90,7 @@ const bulkImportSchema = z.object({
     })).min(1),
     clubId: z.string().regex(/^[0-9a-fA-F]{24}$/),
   }),
-};
+});
 
 const athleteListQuerySchema = z.object({
   query: z.object({

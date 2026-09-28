@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent, Button, Badge, Input, Avatar, AvatarGroup, Select, SelectOption } from '@/components/ui';
-import { ArrowLeft, Check, X, Minus, Plus, QrCode, Download, Search, UserPlus, UserMinus, Camera, Loader2 } from 'lucide-react';
+import { ArrowLeft, Check, X, Minus, Plus, QrCode, Download, Search, UserPlus, UserMinus, Camera, Loader2, Clock } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 const mockAthletes = [
@@ -13,19 +13,19 @@ const mockAthletes = [
 ];
 
 const statusOptions = [
-  { value: 'present', label: 'Present', color: 'success' },
-  { value: 'absent', label: 'Absent', color: 'danger' },
-  { value: 'late', label: 'Late', color: 'gold' },
-  { value: 'excused', label: 'Excused', color: 'primary' },
-  { value: 'official_sports_leave', label: 'Sports Leave', color: 'gold' },
+  { value: 'present', label: 'Present', color: 'success' as const },
+  { value: 'absent', label: 'Absent', color: 'danger' as const },
+  { value: 'late', label: 'Late', color: 'gold' as const },
+  { value: 'excused', label: 'Excused', color: 'primary' as const },
+  { value: 'official_sports_leave', label: 'Sports Leave', color: 'gold' as const },
 ];
 
 export function AttendanceSession() {
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
-  const { id } = React.useParams<{ id: string }>();
-  const [search, setSearch] = React.useState('');
-  const [filterStatus, setFilterStatus] = React.useState('');
+  const { id } = useParams<{ id: string }>();
+  const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
 
   const mockSession = {
     id: '1',

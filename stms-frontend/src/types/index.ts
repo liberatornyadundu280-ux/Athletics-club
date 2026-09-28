@@ -351,6 +351,7 @@ export interface FitnessTest {
   id: string;
   clubId: string;
   athleteId: string;
+  athleteName?: string;
   testType: FitnessTestType;
   value: number;
   unit: string;
@@ -373,6 +374,7 @@ export interface Goal {
   id: string;
   clubId: string;
   athleteId: string;
+  athleteName?: string;
   event: string;
   targetValue: string;
   targetDate: string;
@@ -387,6 +389,7 @@ export interface Injury {
   id: string;
   clubId: string;
   athleteId: string;
+  athleteName?: string;
   type: string;
   bodyPart: string;
   laterality: 'left' | 'right' | 'bilateral';

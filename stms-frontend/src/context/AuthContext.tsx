@@ -53,39 +53,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Check for stored user
         const storedUser = api.getStoredUser();
         const storedPermissions = api.getStoredPermissions();
+        const accessToken = localStorage.getItem('accessToken');
+        const isDemoMode = accessToken === 'demo-token';
 
         if (storedUser && !api.isTokenExpired()) {
-          // Validate token with backend
-          try {
-            const { user, permissions } = await authApi.getMe();
+          if (isDemoMode) {
+            // Demo mode: skip API validation, use localStorage directly
             if (mounted) {
-              setState({
-                user,
-                permissions,
+              setState(prev => ({
+                ...prev,
+                user: storedUser,
+                permissions: storedPermissions,
                 isAuthenticated: true,
                 isLoading: false,
                 error: null,
-              });
+              }));
             }
-          } catch {
-            // Token invalid, try to refresh
+          } else {
+            // Validate token with backend
             try {
-              await api.refreshAccessToken();
               const { user, permissions } = await authApi.getMe();
               if (mounted) {
-                setState({
+                setState(prev => ({
+                  ...prev,
                   user,
                   permissions,
                   isAuthenticated: true,
                   isLoading: false,
                   error: null,
-                });
+                }));
               }
             } catch {
-              // Refresh failed, clear auth
-              api.clearAuth();
-              if (mounted) {
-                setState(prev => ({ ...prev, isLoading: false }));
+              // Token invalid, try to refresh
+              try {
+                await api.refreshAccessToken();
+                const { user, permissions } = await authApi.getMe();
+                if (mounted) {
+                  setState(prev => ({
+                    ...prev,
+                    user,
+                    permissions,
+                    isAuthenticated: true,
+                    isLoading: false,
+                    error: null,
+                  }));
+                }
+              } catch {
+                // Refresh failed, clear auth
+                api.clearAuth();
+                if (mounted) {
+                  setState(prev => ({ ...prev, isLoading: false }));
+                }
               }
             }
           }
@@ -115,26 +133,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (idToken && mounted) {
             await authApi.loginWithGoogle(idToken);
             const { user, permissions } = await authApi.getMe();
-            setState({
+            setState(prev => ({
+              ...prev,
               user,
               permissions,
               isAuthenticated: true,
               isLoading: false,
               error: null,
-            });
+            }));
           }
         } catch (error) {
           console.error('Firebase auth sync error:', error);
         }
       } else if (!firebaseUser && mounted && state.isAuthenticated) {
         // Firebase user signed out - clear our state
-        setState({
+        setState(prev => ({
+          ...prev,
           user: null,
           permissions: [],
           isAuthenticated: false,
           isLoading: false,
           error: null,
-        });
+        }));
       }
     });
 
@@ -153,13 +173,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [setError]);
 
   const updateAuthState = useCallback((tokens: AuthTokens & { user: User; permissions: string[] }) => {
-    setState({
+    setState(prev => ({
+      ...prev,
       user: tokens.user,
       permissions: tokens.permissions,
       isAuthenticated: true,
       isLoading: false,
       error: null,
-    });
+    }));
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
@@ -204,13 +225,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      setState({
+      setState(prev => ({
+        ...prev,
         user: null,
         permissions: [],
         isAuthenticated: false,
         isLoading: false,
         error: null,
-      });
+      }));
     }
   }, []);
 

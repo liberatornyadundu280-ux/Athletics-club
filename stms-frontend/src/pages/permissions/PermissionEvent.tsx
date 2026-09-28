@@ -9,6 +9,12 @@ export function PermissionEvent() {
   const { id } = useParams();
   const { user, hasPermission } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'letters' | 'approvals'>('overview');
+  
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: <FileText className="w-4 h-4" /> },
+    { id: 'letters', label: 'Letters', icon: <Users className="w-4 h-4" /> },
+    { id: 'approvals', label: 'Approvals', icon: <Check className="w-4 h-4" /> },
+  ] as const;
 
   const mockEvent = {
     id: id || '1',
@@ -26,12 +32,6 @@ export function PermissionEvent() {
     { id: '1', athleteId: '1', athleteName: 'Priya Sharma', template: 'HOD Permission', status: 'approved', qrCode: 'QR001', submittedAt: '2024-09-10', approvedAt: '2024-09-12' },
     { id: '2', athleteId: '2', athleteName: 'Rahul Kumar', template: 'HOD Permission', status: 'pending', qrCode: 'QR002', submittedAt: '2024-09-11', approvedAt: null },
     { id: '3', athleteId: '3', athleteName: 'Anita Singh', template: 'Hostel Permission', status: 'rejected', qrCode: 'QR003', submittedAt: '2024-09-11', approvedAt: null },
-  ];
-
-  const tabs = [
-    { id: 'overview', label: 'Overview', icon: <FileText className="w-4 h-4" /> },
-    { id: 'letters', label: 'Letters', icon: <Users className="w-4 h-4" /> },
-    { id: 'approvals', label: 'Approvals', icon: <Check className="w-4 h-4" /> },
   ];
 
   return (
@@ -138,45 +138,29 @@ export function PermissionEvent() {
                 <Button leftIcon={<Plus className="w-4 h-4" />}>Generate Letters</Button>
               </div>
               <div className="overflow-x-auto">
-                <Table>
-                  <thead>
-                    <tr>
-                      <th>Athlete</th>
-                      <th>Template</th>
-                      <th>Status</th>
-                      <th>QR Code</th>
-                      <th>Submitted</th>
-                      <th>Approved</th>
-                      <th className="text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mockLetters.map((letter) => (
-                      <tr key={letter.id}>
-                        <td className="font-medium">{letter.athleteName}</td>
-                        <td>{letter.template}</td>
-                        <td>
-                          <Badge variant={
-                            letter.status === 'approved' ? 'success' :
-                            letter.status === 'pending' ? 'gold' :
-                            letter.status === 'rejected' ? 'danger' : 'neutral'
-                          } size="sm">
-                            {letter.status.charAt(0).toUpperCase() + letter.status.slice(1)}
-                          </Badge>
-                        </td>
-                        <td className="font-mono text-sm">{letter.qrCode}</td>
-                        <td>{letter.submittedAt}</td>
-                        <td>{letter.approvedAt || '\u2014'}</td>
-                        <td className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button variant="ghost" size="sm" leftIcon={<Eye className="w-4 h-4" />}>View</Button>
-                            <Button variant="ghost" size="sm" leftIcon={<Download className="w-4 h-4" />}>Download</Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
+                <Table
+                  columns={[
+                    { key: 'athlete', header: 'Athlete', accessor: 'athleteName', render: (l) => <span className="font-medium">{l.athleteName}</span> },
+                    { key: 'template', header: 'Template', accessor: 'template' },
+                    { key: 'status', header: 'Status', accessor: 'status', render: (l) => (
+                      <Badge variant={l.status === 'approved' ? 'success' : l.status === 'pending' ? 'gold' : l.status === 'rejected' ? 'danger' : 'neutral'} size="sm">
+                        {l.status.charAt(0).toUpperCase() + l.status.slice(1)}
+                      </Badge>
+                    )},
+                    { key: 'qrCode', header: 'QR Code', accessor: 'qrCode', render: (l) => <span className="font-mono text-sm">{l.qrCode}</span> },
+                    { key: 'submitted', header: 'Submitted', accessor: 'submittedAt' },
+                    { key: 'approved', header: 'Approved', accessor: 'approvedAt', render: (l) => l.approvedAt || '\u2014' },
+                    { key: 'actions', header: 'Actions', render: () => (
+                      <div className="flex items-center justify-end gap-2">
+                        <Button variant="ghost" size="sm" leftIcon={<Eye className="w-4 h-4" />}>View</Button>
+                        <Button variant="ghost" size="sm" leftIcon={<Download className="w-4 h-4" />}>Download</Button>
+                      </div>
+                    )},
+                  ]}
+                  data={mockLetters}
+                  keyExtractor={(l) => l.id}
+                  emptyMessage="No letters generated"
+                />
               </div>
             </div>
           )}

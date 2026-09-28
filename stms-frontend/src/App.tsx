@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { MainLayout, AuthLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/context/AuthContext';
 import LoadingScreen from '@/components/common/LoadingScreen';
@@ -78,9 +78,8 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 // ==================== APP ====================
 function App() {
   return (
-    <BrowserRouter>
-      <Suspense fallback={<LoadingScreen />}>
-        <Routes>
+    <Suspense fallback={<LoadingScreen />}>
+      <Routes>
           {/* Public routes */}
           <Route element={<AuthLayout />}>
             <Route
@@ -296,7 +295,6 @@ function App() {
           </Route>
         </Routes>
       </Suspense>
-    </BrowserRouter>
   );
 }
 

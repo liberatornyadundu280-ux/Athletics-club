@@ -6,16 +6,16 @@ import { env } from './env';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 
 // Parse private key (handles \n in env var)
-const privateKey = env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n');
+const privateKey = (env.FIREBASE_PRIVATE_KEY as string).replace(/\\n/g, '\n');
 
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert({
-      projectId: env.FIREBASE_PROJECT_ID,
-      clientEmail: env.FIREBASE_CLIENT_EMAIL,
+      projectId: env.FIREBASE_PROJECT_ID as string,
+      clientEmail: env.FIREBASE_CLIENT_EMAIL as string,
       privateKey,
     }),
-    projectId: env.FIREBASE_PROJECT_ID,
+    projectId: env.FIREBASE_PROJECT_ID as string,
   });
 }
 

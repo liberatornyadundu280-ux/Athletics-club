@@ -25,7 +25,7 @@ const createCompetitionSchema = z.object({
       ageGroup: z.string(),
     })).optional(),
   }),
-};
+});
 
 const createResultSchema = z.object({
   body: z.object({
@@ -37,7 +37,7 @@ const createResultSchema = z.object({
     wind: z.number().optional(),
     position: z.number().int().optional(),
   }),
-};
+});
 
 const createFitnessTestSchema = z.object({
   body: z.object({
@@ -49,7 +49,7 @@ const createFitnessTestSchema = z.object({
     percentile: z.number().int().min(0).max(100).optional(),
     notes: z.string().optional(),
   }),
-};
+});
 
 const createGoalSchema = z.object({
   body: z.object({
@@ -59,7 +59,7 @@ const createGoalSchema = z.object({
     targetDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     coachNotes: z.string().optional(),
   }),
-};
+});
 
 const updateGoalSchema = z.object({
   params: z.object({
@@ -71,10 +71,9 @@ const updateGoalSchema = z.object({
     status: z.enum(['active', 'achieved', 'missed', 'archived']).optional(),
     coachNotes: z.string().optional(),
   }),
-};
+});
 
 // ==================== ROUTES ====================
-const router = Router();
 
 /**
  * POST /competitions
@@ -370,5 +369,6 @@ router.patch('/goals/:id',
       data: { ...result, id: result._id.toString(), athleteId: result.athleteId.toString(), clubId: result.clubId.toString() },
     });
   })
+);
 
 export default router;

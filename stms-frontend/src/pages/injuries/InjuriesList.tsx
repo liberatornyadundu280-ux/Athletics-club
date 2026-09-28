@@ -13,11 +13,11 @@ const mockInjuries: Injury[] = [
 
 const severityLabels = { 1: 'Grade 1 (Mild)', 2: 'Grade 2 (Moderate)', 3: 'Grade 3 (Severe)' };
 const statusOptions = [
-  { value: 'active', label: 'Active', color: 'danger' },
-  { value: 'rehabilitating', label: 'Rehabilitating', color: 'primary' },
-  { value: 'returning', label: 'Returning to Play', color: 'gold' },
-  { value: 'resolved', label: 'Resolved', color: 'success' },
-  { value: 'chronic', label: 'Chronic', color: 'neutral' },
+  { value: 'active', label: 'Active', color: 'danger' as const },
+  { value: 'rehabilitating', label: 'Rehabilitating', color: 'primary' as const },
+  { value: 'returning', label: 'Returning to Play', color: 'gold' as const },
+  { value: 'resolved', label: 'Resolved', color: 'success' as const },
+  { value: 'chronic', label: 'Chronic', color: 'neutral' as const },
 ];
 
 export function InjuriesList() {
