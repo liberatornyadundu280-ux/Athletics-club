@@ -1,14 +1,17 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import { VitePWA } from 'vite-plugin-pwa';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), 'VITE_');
+
+  return {
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      includeAssets: ['favicon.svg'],
       manifest: {
         name: 'Smart Trainer Management System',
         short_name: 'STMS',
@@ -21,15 +24,15 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: 'pwa-192x192.png',
-            sizes: '192x192',
-            type: 'image/png',
+            src: 'favicon.svg',
+            sizes: 'any',
+            type: 'image/svg+xml',
             purpose: 'any maskable'
           },
           {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
+            src: 'favicon.svg',
+            sizes: 'any',
+            type: 'image/svg+xml',
             purpose: 'any maskable'
           }
         ],
@@ -40,14 +43,14 @@ export default defineConfig({
             short_name: 'Workout',
             description: 'View today\'s assigned workout',
             url: '/workouts/today',
-            icons: [{ src: 'workout-icon.png', sizes: '192x192' }]
+            icons: [{ src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml' }]
           },
           {
             name: 'Attendance',
             short_name: 'Attendance',
             description: 'Mark attendance',
             url: '/attendance',
-            icons: [{ src: 'attendance-icon.png', sizes: '192x192' }]
+            icons: [{ src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml' }]
           }
         ]
       },
@@ -104,9 +107,8 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: env.VITE_API_PROXY_TARGET || 'http://localhost:5000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '/api/v1')
       }
     }
   },
@@ -126,4 +128,5 @@ export default defineConfig({
       }
     }
   }
+  };
 });

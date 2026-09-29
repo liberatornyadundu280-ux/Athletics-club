@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { api, authApi } from '@/services/api';
-import { signInWithGoogle, getIdToken, onAuthStateChanged, signOut as firebaseSignOut } from '@/services/firebase';
+import { signInWithEmail, signInWithGoogle, signOut as firebaseSignOut } from '@/services/firebase';
 import { User, AuthState, AuthTokens, Club } from '@/types';
 
 export interface AuthContextType extends AuthState {
@@ -12,11 +12,13 @@ export interface AuthContextType extends AuthState {
   clubs: Club[];
   activeClubId: string | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (data: { email: string; password: string; role: 'athlete' | 'coach'; name: string; clubId?: string }) => Promise<void>;
-  loginWithGoogle: (clubId?: string) => Promise<void>;
+  register: (data: { email: string; password: string; role: 'athlete' | 'coach'; name: string }) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   switchClub: (clubId: string) => Promise<void>;
   refreshUser: () => Promise<void>;
+  updateProfile: (data: { name: string }) => Promise<void>;
+  acceptInvitation: (token: string) => Promise<void>;
   hasPermission: (permission: string) => boolean;
   hasRole: (role: string | string[]) => boolean;
   clearError: () => void;
@@ -39,6 +41,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout: async () => {},
     switchClub: async () => {},
     refreshUser: async () => {},
+    updateProfile: async () => {},
+    acceptInvitation: async () => {},
     hasPermission: () => false,
     hasRole: () => false,
     clearError: () => {},
@@ -50,67 +54,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const initAuth = async () => {
       try {
-        // Check for stored user
-        const storedUser = api.getStoredUser();
-        const storedPermissions = api.getStoredPermissions();
-        const accessToken = localStorage.getItem('accessToken');
-        const isDemoMode = accessToken === 'demo-token';
+        // Discard legacy mock sessions; Sprint 1 requires a backend-issued JWT.
+        if (localStorage.getItem('accessToken') === 'demo-token') {
+          api.clearAuth();
+        }
 
-        if (storedUser && !api.isTokenExpired()) {
-          if (isDemoMode) {
-            // Demo mode: skip API validation, use localStorage directly
+        const storedUser = api.getStoredUser();
+        if (!storedUser || api.isTokenExpired()) {
+          if (mounted) setState(prev => ({ ...prev, isLoading: false }));
+          return;
+        }
+
+        try {
+          const { user, permissions } = await authApi.getMe();
+          if (mounted) {
+            setState(prev => ({
+              ...prev,
+              user,
+              permissions,
+              activeClubId: user.activeClubId || null,
+              isAuthenticated: true,
+              isLoading: false,
+              error: null,
+            }));
+          }
+        } catch {
+          try {
+            await api.refreshAccessToken();
+            const { user, permissions } = await authApi.getMe();
             if (mounted) {
               setState(prev => ({
                 ...prev,
-                user: storedUser,
-                permissions: storedPermissions,
+                user,
+                permissions,
+                activeClubId: user.activeClubId || null,
                 isAuthenticated: true,
                 isLoading: false,
                 error: null,
               }));
             }
-          } else {
-            // Validate token with backend
-            try {
-              const { user, permissions } = await authApi.getMe();
-              if (mounted) {
-                setState(prev => ({
-                  ...prev,
-                  user,
-                  permissions,
-                  isAuthenticated: true,
-                  isLoading: false,
-                  error: null,
-                }));
-              }
-            } catch {
-              // Token invalid, try to refresh
-              try {
-                await api.refreshAccessToken();
-                const { user, permissions } = await authApi.getMe();
-                if (mounted) {
-                  setState(prev => ({
-                    ...prev,
-                    user,
-                    permissions,
-                    isAuthenticated: true,
-                    isLoading: false,
-                    error: null,
-                  }));
-                }
-              } catch {
-                // Refresh failed, clear auth
-                api.clearAuth();
-                if (mounted) {
-                  setState(prev => ({ ...prev, isLoading: false }));
-                }
-              }
-            }
-          }
-        } else {
-          // No stored user or expired token
-          if (mounted) {
-            setState(prev => ({ ...prev, isLoading: false }));
+          } catch {
+            api.clearAuth();
+            if (mounted) setState(prev => ({ ...prev, isLoading: false }));
           }
         }
       } catch (error) {
@@ -123,49 +108,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     initAuth();
 
-    // Listen for Firebase auth changes
-    const unsubscribe = onAuthStateChanged(async (firebaseUser) => {
-      if (firebaseUser && mounted) {
-        // Firebase user signed in but we might not have backend session yet
-        // This happens after Google OAuth redirect
-        try {
-          const idToken = await getIdToken(true);
-          if (idToken && mounted) {
-            await authApi.loginWithGoogle(idToken);
-            const { user, permissions } = await authApi.getMe();
-            setState(prev => ({
-              ...prev,
-              user,
-              permissions,
-              isAuthenticated: true,
-              isLoading: false,
-              error: null,
-            }));
-          }
-        } catch (error) {
-          console.error('Firebase auth sync error:', error);
-        }
-      } else if (!firebaseUser && mounted && state.isAuthenticated) {
-        // Firebase user signed out - clear our state
-        setState(prev => ({
-          ...prev,
-          user: null,
-          permissions: [],
-          isAuthenticated: false,
-          isLoading: false,
-          error: null,
-        }));
-      }
-    });
-
     return () => {
       mounted = false;
-      unsubscribe();
     };
   }, []);
 
   const setError = useCallback((error: string | null) => {
-    setState(prev => ({ ...prev, error }));
+    setState(prev => ({ ...prev, error, ...(error ? { isLoading: false } : {}) }));
   }, []);
 
   const clearError = useCallback(() => {
@@ -177,6 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ...prev,
       user: tokens.user,
       permissions: tokens.permissions,
+      activeClubId: tokens.user.activeClubId || null,
       isAuthenticated: true,
       isLoading: false,
       error: null,
@@ -186,49 +136,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     try {
-      const tokens = await authApi.login(email, password);
-      updateAuthState({ ...tokens, permissions: tokens.user.permissions || [] });
+      const credential = await signInWithEmail(email, password);
+      const idToken = await credential.user.getIdToken(true);
+      const tokens = await authApi.loginWithFirebase(idToken);
+      updateAuthState({ ...tokens, permissions: tokens.permissions || tokens.user.permissions || [] });
     } catch (error: any) {
       setError(error.message || 'Login failed');
       throw error;
     }
   }, [updateAuthState, setError]);
 
-  const register = useCallback(async (data: { email: string; password: string; role: 'athlete' | 'coach'; name: string; clubId?: string }) => {
+  const register = useCallback(async (data: { email: string; password: string; role: 'athlete' | 'coach'; name: string }) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     try {
       const tokens = await authApi.register(data);
-      updateAuthState({ ...tokens, permissions: tokens.user.permissions || [] });
+      updateAuthState({ ...tokens, permissions: tokens.permissions || tokens.user.permissions || [] });
     } catch (error: any) {
       setError(error.message || 'Registration failed');
       throw error;
     }
   }, [updateAuthState, setError]);
 
-  const loginWithGoogle = useCallback(async (clubId?: string) => {
+  const loginWithGoogle = useCallback(async () => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     try {
-      // This triggers Firebase popup, which will trigger onAuthStateChanged
-      await signInWithGoogle();
-      // The actual login happens in the onAuthStateChanged handler
+      const credential = await signInWithGoogle();
+      const idToken = await credential.user.getIdToken(true);
+      const tokens = await authApi.loginWithGoogle(idToken);
+      updateAuthState({ ...tokens, permissions: tokens.permissions || tokens.user.permissions || [] });
     } catch (error: any) {
       setError(error.message || 'Google sign-in failed');
       throw error;
     }
-  }, [setError]);
+  }, [updateAuthState, setError]);
 
   const logout = useCallback(async () => {
     setState(prev => ({ ...prev, isLoading: true }));
     try {
       await authApi.logout();
-      await firebaseSignOut();
     } catch (error) {
-      console.error('Logout error:', error);
+      console.warn('Backend logout failed; clearing the local session anyway:', error);
     } finally {
+      try {
+        await firebaseSignOut();
+      } catch (error) {
+        console.warn('Firebase sign-out failed:', error);
+      }
       setState(prev => ({
         ...prev,
         user: null,
         permissions: [],
+        activeClubId: null,
         isAuthenticated: false,
         isLoading: false,
         error: null,
@@ -244,6 +202,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ...prev,
         user,
         permissions,
+        activeClubId: clubId,
         isLoading: false,
       }));
     } catch (error: any) {
@@ -265,6 +224,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const updateProfile = useCallback(async (data: { name: string }) => {
+    const user = await authApi.updateMyProfile(data);
+    setState(prev => ({ ...prev, user }));
+  }, []);
+
+  const acceptInvitation = useCallback(async (token: string) => {
+    const result = await authApi.acceptInvitation(token);
+    setState(prev => ({
+      ...prev,
+      user: result.user,
+      permissions: result.permissions,
+      activeClubId: result.user.activeClubId || null,
+      isAuthenticated: true,
+    }));
+  }, []);
+
   const hasPermission = useCallback((permission: string) => {
     return state.permissions.includes(permission) || state.permissions.includes('*');
   }, [state.permissions]);
@@ -283,6 +258,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout,
     switchClub,
     refreshUser,
+    updateProfile,
+    acceptInvitation,
     hasPermission,
     hasRole,
     clearError,

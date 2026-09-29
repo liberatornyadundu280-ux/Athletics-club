@@ -1,30 +1,34 @@
 import React, { forwardRef, useState, useEffect, useRef } from 'react';
 import { cn } from '@/utils/helpers';
 
-// ==================== SPLIT (replaces Card) ====================
-export interface SplitProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: 'default' | 'hover' | 'elevated' | 'interactive';
-  padding?: 'none' | 'sm' | 'md' | 'lg';
-  delay?: number; // for stagger animation
+// ==================== SURFACE (replaces Card/Split) ====================
+export interface SurfaceProps extends React.HTMLAttributes<HTMLDivElement> {
+  variant?: 'default' | 'raised' | 'overlay' | 'glass' | 'hover' | 'interactive';
+  padding?: 'none' | 'sm' | 'md' | 'lg' | 'xl';
+  delay?: number;
 }
 
-export const Split = forwardRef<HTMLDivElement, SplitProps>(
+export const Surface = forwardRef<HTMLDivElement, SurfaceProps>(
   ({ children, variant = 'default', padding = 'md', delay = 0, className, ...props }, ref) => {
     const variantClasses = {
-      default: 'split',
-      hover: 'split-hover',
-      elevated: 'split-elevated',
-      interactive: 'split-interactive',
+      default: 'surface card-pad-md',
+      raised: 'surface-raised card-pad-md',
+      overlay: 'surface-overlay card-pad-md',
+      glass: 'surface-glass card-pad-md',
+      hover: 'surface-hover card-pad-md',
+      interactive: 'surface-interactive card-pad-md',
     };
 
     const paddingClasses = {
-      none: '',
-      sm: 'p-4',
-      md: 'p-split',
-      lg: 'p-split-lg',
+      none: 'card-pad-none',
+      sm: 'card-pad-sm',
+      md: 'card-pad-md',
+      lg: 'card-pad-lg',
+      xl: 'card-pad-xl',
     };
 
-    const delayClass = delay > 0 ? `split-reveal-${Math.min(Math.ceil(delay / 60), 6)}` : '';
+    const delayStyle = delay > 0 ? { animationDelay: `${delay}ms` } : undefined;
+    const delayClass = delay > 0 ? 'animate-in' : '';
 
     return (
       <div
@@ -35,7 +39,7 @@ export const Split = forwardRef<HTMLDivElement, SplitProps>(
           delayClass,
           className
         )}
-        style={delay > 0 ? { animationDelay: `${delay}ms` } : undefined}
+        style={delayStyle}
         {...props}
       >
         {children}
@@ -44,31 +48,43 @@ export const Split = forwardRef<HTMLDivElement, SplitProps>(
   }
 );
 
-Split.displayName = 'Split';
+Surface.displayName = 'Surface';
 
-// ==================== SPLIT HEADER ====================
-export interface SplitHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
+// ==================== SURFACE HEADER ====================
+export interface SurfaceHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
   label: string;
   value?: string | number;
   action?: React.ReactNode;
+  trend?: 'up' | 'down' | 'neutral';
+  trendValue?: string;
 }
 
-export const SplitHeader = forwardRef<HTMLDivElement, SplitHeaderProps>(
-  ({ label, value, action, className, ...props }, ref) => (
-    <div ref={ref} className={cn('split-header', className)} {...props}>
-      <span className="split-label">{label}</span>
+export const SurfaceHeader = forwardRef<HTMLDivElement, SurfaceHeaderProps>(
+  ({ label, value, action, trend, trendValue, className, ...props }, ref) => (
+    <div ref={ref} className={cn('flex items-center justify-between mb-4 pb-3 border-b border-border', className)} {...props}>
+      <span className="stat-label">{label}</span>
       <div className="flex items-center gap-3">
-        {value !== undefined && <span className="split-value tnum">{value}</span>}
+        {value !== undefined && <span className="stat-value tnum">{value}</span>}
+        {trend && trendValue && (
+          <span className={cn(
+            'stat-trend',
+            trend === 'up' && 'stat-trend-up',
+            trend === 'down' && 'stat-trend-down',
+            trend === 'neutral' && 'stat-trend-neutral'
+          )}>
+            {trend === 'up' ? '▲' : trend === 'down' ? '▼' : '—'} {trendValue}
+          </span>
+        )}
         {action}
       </div>
     </div>
   )
 );
 
-SplitHeader.displayName = 'SplitHeader';
+SurfaceHeader.displayName = 'SurfaceHeader';
 
-// ==================== SPLIT CONTENT ====================
-export const SplitContent = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+// ==================== SURFACE CONTENT ====================
+export const SurfaceContent = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ children, className, ...props }, ref) => (
     <div ref={ref} className={cn('', className)} {...props}>
       {children}
@@ -76,81 +92,111 @@ export const SplitContent = forwardRef<HTMLDivElement, React.HTMLAttributes<HTML
   )
 );
 
-SplitContent.displayName = 'SplitContent';
+SurfaceContent.displayName = 'SurfaceContent';
 
-// ==================== HERO SPLIT (Dashboard metric) ====================
-export interface HeroSplitProps extends React.HTMLAttributes<HTMLDivElement> {
+// ==================== STAT CARD (Dashboard metric) ====================
+export interface StatCardProps extends React.HTMLAttributes<HTMLDivElement> {
   label: string;
   value: string | number;
   sub?: string;
   trend?: 'up' | 'down' | 'neutral';
   trendValue?: string;
-  accent?: 'split' | 'gold' | 'danger';
+  accent?: 'sky' | 'success' | 'danger' | 'amber' | 'info';
   delay?: number;
+  icon?: React.ReactNode;
+  onClick?: () => void;
+  clickable?: boolean;
 }
 
-export const HeroSplit = forwardRef<HTMLDivElement, HeroSplitProps>(
-  ({ label, value, sub, trend, trendValue, accent = 'split', delay = 0, className, ...props }, ref) => {
-    const delayClass = delay > 0 ? `split-reveal-${Math.min(Math.ceil(delay / 60), 6)}` : '';
+export const StatCard = forwardRef<HTMLDivElement, StatCardProps>(
+  ({ label, value, sub, trend, trendValue, accent = 'sky', delay = 0, icon, className, onClick, clickable = false, ...props }, ref) => {
+    const delayStyle = delay > 0 ? { animationDelay: `${delay}ms` } : undefined;
+    const delayClass = delay > 0 ? 'animate-in' : '';
+
+    const accentClasses = {
+      sky: 'stat-card',
+      success: 'stat-card stat-card-success',
+      danger: 'stat-card stat-card-danger',
+      amber: 'stat-card stat-card-amber',
+      info: 'stat-card stat-card-info',
+    };
+
+    const baseClasses = cn(
+      'surface p-space-lg relative overflow-hidden',
+      accentClasses[accent],
+      delayClass,
+      clickable && 'cursor-pointer hover:shadow-shadow-glow-sm transition-all',
+      className
+    );
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+      if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+        e.preventDefault();
+        onClick();
+      }
+    };
 
     return (
       <div
         ref={ref}
-        className={cn('hero-split', `hero-split.${accent}`, delayClass, className)}
-        style={delay > 0 ? { animationDelay: `${delay}ms` } : undefined}
+        className={baseClasses}
+        style={delayStyle}
+        onClick={onClick}
+        onKeyDown={handleKeyDown}
+        tabIndex={clickable ? 0 : undefined}
+        role={clickable ? 'button' : undefined}
+        aria-pressed={clickable ? undefined : undefined}
         {...props}
       >
-        <span className="hero-split-label">{label}</span>
-        <div className="flex items-baseline gap-3 flex-wrap">
-          <span className="hero-split-value tnum">{value}</span>
-          {trend && trendValue && (
-            <span className={cn(
-              'text-body-sm font-medium tnum',
-              trend === 'up' && 'text-split-400',
-              trend === 'down' && 'text-danger-400',
-              trend === 'neutral' && 'text-chalk-400'
-            )}>
-              {trend === 'up' ? '▲' : trend === 'down' ? '▼' : '—'} {trendValue}
-            </span>
-          )}
+        <div className="flex items-start justify-between">
+          <div>
+            <span className="stat-label">{label}</span>
+            <div className="flex items-baseline gap-3 flex-wrap mt-1">
+              <span className="stat-value tnum">{value}</span>
+              {trend && trendValue && (
+                <span className={cn(
+                  'stat-trend',
+                  trend === 'up' && 'stat-trend-up',
+                  trend === 'down' && 'stat-trend-down',
+                  trend === 'neutral' && 'stat-trend-neutral'
+                )}>
+                  {trend === 'up' ? '▲' : trend === 'down' ? '▼' : '—'} {trendValue}
+                </span>
+              )}
+            </div>
+            {sub && <p className="stat-sub">{sub}</p>}
+          </div>
+          {icon && <div className="text-cold-500">{icon}</div>}
         </div>
-        {sub && <p className="hero-split-sub">{sub}</p>}
       </div>
     );
   }
 );
 
-HeroSplit.displayName = 'HeroSplit';
+StatCard.displayName = 'StatCard';
 
 // ==================== BADGE ====================
-export type BadgeVariant = 'split' | 'gold' | 'danger' | 'lane' | 'injury'
-  // Legacy aliases
-  | 'primary' | 'success' | 'neutral' | 'outline';
+export type BadgeVariant = 'primary' | 'success' | 'danger' | 'amber' | 'info' | 'neutral' | 'outline' | 'gold' | 'split' | 'lane';
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant?: BadgeVariant;
   size?: 'sm' | 'md' | 'lg';
+  dot?: boolean;
 }
 
 export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
-  ({ children, variant = 'lane', size = 'md', className, ...props }, ref) => {
-    // Map legacy variants to new ones
-    const normalizedVariant = (() => {
-      switch (variant) {
-        case 'primary': return 'split';
-        case 'success': return 'split';
-        case 'neutral': return 'lane';
-        case 'outline': return 'lane';
-        default: return variant;
-      }
-    })();
-
-    const variantClasses: Record<string, string> = {
-      split: 'badge-split',
-      gold: 'badge-gold',
+  ({ children, variant = 'neutral', size = 'md', dot = false, className, ...props }, ref) => {
+    const variantClasses: Record<BadgeVariant, string> = {
+      primary: 'badge-primary',
+      success: 'badge-success',
       danger: 'badge-danger',
-      lane: 'badge-lane',
-      injury: 'badge-injury',
+      amber: 'badge-amber',
+      info: 'badge-info',
+      neutral: 'badge-neutral',
+      outline: 'badge-outline',
+      gold: 'badge-amber',
+      split: 'badge-primary',
+      lane: 'badge-neutral',
     };
 
     const sizeClasses = {
@@ -162,9 +208,21 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
     return (
       <span
         ref={ref}
-        className={cn('badge', variantClasses[normalizedVariant], sizeClasses[size], className)}
+        className={cn('badge', variantClasses[variant], sizeClasses[size], className)}
         {...props}
       >
+        {dot && (
+          <span className={cn(
+            'w-1.5 h-1.5 rounded-full mr-1.5',
+            variant === 'primary' && 'bg-sky-500',
+            variant === 'success' && 'bg-success-500',
+            variant === 'danger' && 'bg-danger-500',
+            variant === 'amber' && 'bg-amber-500',
+            variant === 'info' && 'bg-info-500',
+            variant === 'neutral' && 'bg-cold-500',
+            variant === 'outline' && 'bg-current'
+          )} />
+        )}
         {children}
       </span>
     );
@@ -173,17 +231,18 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
 
 Badge.displayName = 'Badge';
 
-// ==================== AVATAR (Lane Marker) ====================
+// ==================== AVATAR ====================
 export interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {
   src?: string | null;
   alt?: string;
   name?: string;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
-  status?: 'active' | 'injured' | 'away';
+  status?: 'active' | 'busy' | 'away' | 'offline';
+  statusDot?: boolean;
 }
 
 export const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
-  ({ src, alt, name, size = 'md', status, className, ...props }, ref) => {
+  ({ src, alt, name, size = 'md', status, statusDot = true, className, ...props }, ref) => {
     const sizeClasses = {
       xs: 'avatar-xs',
       sm: 'avatar-sm',
@@ -193,9 +252,10 @@ export const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
     };
 
     const statusClasses = {
-      active: 'bg-split-500',
-      injured: 'bg-danger-500',
-      away: 'bg-gold-500',
+      active: 'status-dot-success',
+      busy: 'status-dot-danger',
+      away: 'status-dot-amber',
+      offline: 'status-dot-neutral',
     };
 
     const initials = name ? getInitials(name) : '?';
@@ -213,18 +273,16 @@ export const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
           ) : (
             <span className="font-medium">{initials}</span>
           )}
-          {status && (
-            <span
-              className={cn(
-                'absolute bottom-0 right-0 rounded-full border-2 border-track-900',
-                size === 'xs' && 'w-1.5 h-1.5',
-                size === 'sm' && 'w-2 h-2',
-                size === 'md' && 'w-2.5 h-2.5',
-                size === 'lg' && 'w-3 h-3',
-                size === 'xl' && 'w-4 h-4',
-                statusClasses[status]
-              )}
-            />
+          {statusDot && status && (
+            <span className={cn(
+              'absolute bottom-0 right-0 status-dot-live border-2 border-track-900',
+              size === 'xs' && 'w-1.5 h-1.5',
+              size === 'sm' && 'w-2 h-2',
+              size === 'md' && 'w-2.5 h-2.5',
+              size === 'lg' && 'w-3 h-3',
+              size === 'xl' && 'w-4 h-4',
+              statusClasses[status]
+            )} />
           )}
         </div>
       </div>
@@ -235,7 +293,7 @@ export const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
 Avatar.displayName = 'Avatar';
 
 export function AvatarGroup({ avatars, max = 5, size = 'md', className }: {
-  avatars: Array<{ src?: string; name: string; status?: 'active' | 'injured' | 'away' }>;
+  avatars: Array<{ src?: string; name: string; status?: 'active' | 'busy' | 'away' | 'offline' }>;
   max?: number;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
@@ -244,20 +302,20 @@ export function AvatarGroup({ avatars, max = 5, size = 'md', className }: {
   const remainingCount = avatars.length - max;
 
   return (
-    <div className={cn('flex -space-x-2', className)}>
+    <div className={cn('avatar-group', className)}>
       {visibleAvatars.map((avatar, index) => (
         <Avatar
           key={index}
           {...avatar}
           size={size}
-          className="ring-2 ring-track-900"
+          className="avatar-group-item"
         />
       ))}
       {remainingCount > 0 && (
         <div
           className={cn(
-            'avatar flex-items-center justify-center font-medium text-chalk-300',
-            'bg-lane-700 ring-2 ring-track-900',
+            'avatar flex-items-center justify-center font-medium text-text-secondary',
+            'bg-cold-700 ring-2 ring-track-900',
             size === 'xs' && 'avatar-xs',
             size === 'sm' && 'avatar-sm',
             size === 'md' && 'avatar-md',
@@ -272,24 +330,25 @@ export function AvatarGroup({ avatars, max = 5, size = 'md', className }: {
   );
 }
 
-// ==================== LANE TABS (Navigation) ====================
-export interface LaneTabProps extends React.HTMLAttributes<HTMLButtonElement> {
+// ==================== VERTICAL TABS (Navigation) ====================
+export interface VTabProps extends React.HTMLAttributes<HTMLButtonElement> {
   label: string;
   count?: number;
   icon?: React.ReactNode;
   active?: boolean;
-  injury?: boolean;
+  variant?: 'default' | 'danger' | 'amber';
   onClick?: () => void;
 }
 
-export const LaneTab = forwardRef<HTMLButtonElement, LaneTabProps>(
-  ({ label, count, icon, active = false, injury = false, onClick, className, ...props }, ref) => (
+export const VTab = forwardRef<HTMLButtonElement, VTabProps>(
+  ({ label, count, icon, active = false, variant = 'default', onClick, className, ...props }, ref) => (
     <button
       ref={ref}
       className={cn(
-        'lane-tab',
-        active && 'lane-tab-active',
-        injury && 'lane-tab-injury',
+        'v-tab',
+        active && 'v-tab-active',
+        variant === 'danger' && 'v-tab-danger',
+        variant === 'amber' && 'v-tab-amber',
         className
       )}
       onClick={onClick}
@@ -299,7 +358,7 @@ export const LaneTab = forwardRef<HTMLButtonElement, LaneTabProps>(
         {icon && <span className="flex-shrink-0">{icon}</span>}
         <span className="flex-1 truncate">{label}</span>
         {count !== undefined && (
-          <span className={cn('tnum font-medium', active ? 'text-split-400' : 'text-chalk-400')}>
+          <span className={cn('tnum font-medium', active ? 'text-sky-400' : 'text-text-muted')}>
             {count}
           </span>
         )}
@@ -308,20 +367,20 @@ export const LaneTab = forwardRef<HTMLButtonElement, LaneTabProps>(
   )
 );
 
-LaneTab.displayName = 'LaneTab';
+VTab.displayName = 'VTab';
 
-export interface LaneTabsProps {
-  tabs: Array<{ id: string; label: string; count?: number; icon?: React.ReactNode; injury?: boolean }>;
+export interface VTabsProps {
+  tabs: Array<{ id: string; label: string; count?: number; icon?: React.ReactNode; variant?: 'default' | 'danger' | 'amber' }>;
   activeId: string;
   onChange: (id: string) => void;
   className?: string;
 }
 
-export function LaneTabs({ tabs, activeId, onChange, className }: LaneTabsProps) {
+export function VTabs({ tabs, activeId, onChange, className }: VTabsProps) {
   return (
-    <nav className={cn('lane-tabs', className)} role="tablist" aria-label="Main navigation">
+    <nav className={cn('v-tabs', className)} role="tablist" aria-label="Navigation">
       {tabs.map((tab) => (
-        <LaneTab
+        <VTab
           key={tab.id}
           id={`tab-${tab.id}`}
           role="tab"
@@ -331,7 +390,7 @@ export function LaneTabs({ tabs, activeId, onChange, className }: LaneTabsProps)
           count={tab.count}
           icon={tab.icon}
           active={tab.id === activeId}
-          injury={tab.injury}
+          variant={tab.variant}
           onClick={() => onChange(tab.id)}
         />
       ))}
@@ -351,7 +410,7 @@ export const Divider = forwardRef<HTMLHRElement, DividerProps>(
       return (
         <div
           ref={ref}
-          className={cn('h-full w-px bg-lane-700', className)}
+          className={cn('divider-vertical', className)}
           role="separator"
           {...props}
         />
@@ -360,15 +419,124 @@ export const Divider = forwardRef<HTMLHRElement, DividerProps>(
 
     return (
       <div className={cn('flex items-center gap-4', className)} role="separator" {...props}>
-        <div className="flex-1 h-px bg-lane-700" />
-        {label && <span className="text-caption text-chalk-400 uppercase tracking-wider shrink-0">{label}</span>}
-        <div className="flex-1 h-px bg-lane-700" />
+        <div className="flex-1 divider" />
+        {label && <span className="text-caption text-text-muted uppercase tracking-wider shrink-0">{label}</span>}
+        <div className="flex-1 divider" />
       </div>
     );
   }
 );
 
 Divider.displayName = 'Divider';
+
+// ==================== PROGRESS BAR ====================
+export interface ProgressBarProps {
+  value: number;
+  max?: number;
+  variant?: 'success' | 'danger' | 'amber' | 'info' | 'sky' | 'neutral';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  striped?: boolean;
+  animated?: boolean;
+  showLabel?: boolean;
+  label?: string;
+  className?: string;
+}
+
+export function ProgressBar({ value, max = 100, variant = 'sky', size = 'md', striped = false, animated = false, showLabel = false, label, className }: ProgressBarProps) {
+  const percentage = Math.min(Math.max((value / max) * 100, 0), 100);
+
+  const sizeClasses = {
+    sm: 'progress-bar-sm',
+    md: 'progress-bar',
+    lg: 'progress-bar-lg',
+    xl: 'progress-bar-xl',
+  };
+
+  const variantClasses = {
+    success: 'progress-fill-gradient-success',
+    danger: 'progress-fill-gradient-danger',
+    amber: 'progress-fill-gradient-amber',
+    info: 'progress-fill-gradient-info',
+    sky: 'progress-fill-gradient-sky',
+    neutral: 'progress-fill-neutral',
+  };
+
+  return (
+    <div className={cn('w-full', className)}>
+      {(label || showLabel) && (
+        <div className="flex items-center justify-between mb-space-2xs">
+          {label && <span className="text-body-sm font-medium text-text-secondary">{label}</span>}
+          {showLabel && <span className="text-body-sm font-medium tnum text-text-primary">{Math.round(percentage)}%</span>}
+        </div>
+      )}
+      <div className={cn('progress-bar', sizeClasses[size])} role="progressbar" aria-valuenow={percentage} aria-valuemin={0} aria-valuemax={100}>
+        <div
+          className={cn('progress-fill', variantClasses[variant], striped && 'progress-striped', animated && 'animate-pulse-soft')}
+          style={{ width: `${percentage}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ==================== CIRCULAR PROGRESS ====================
+export interface CircularProgressProps {
+  value: number;
+  max?: number;
+  size?: number;
+  strokeWidth?: number;
+  variant?: 'success' | 'danger' | 'amber' | 'info' | 'sky' | 'neutral';
+  showValue?: boolean;
+  children?: React.ReactNode;
+  className?: string;
+}
+
+export function CircularProgress({ value, max = 100, size = 64, strokeWidth = 6, variant = 'sky', showValue = true, children, className }: CircularProgressProps) {
+  const percentage = Math.min(Math.max((value / max) * 100, 0), 100);
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (percentage / 100) * circumference;
+
+  const variantColors = {
+    success: 'stroke-success-500',
+    danger: 'stroke-danger-500',
+    amber: 'stroke-amber-500',
+    info: 'stroke-info-500',
+    sky: 'stroke-sky-500',
+    neutral: 'stroke-cold-500',
+  };
+
+  return (
+    <div className={cn('relative inline-flex items-center justify-center', className)} style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="transform -rotate-90">
+        <circle
+          className="stroke-cold-700 fill-none"
+          strokeWidth={strokeWidth}
+          r={radius}
+          cx={size / 2}
+          cy={size / 2}
+        />
+        <circle
+          className={cn('fill-none transition-all duration-500 ease-out', variantColors[variant])}
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          r={radius}
+          cx={size / 2}
+          cy={size / 2}
+        />
+      </svg>
+      {(showValue || children) && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          {children || (
+            <span className="text-heading-sm font-bold tnum text-text-primary">{Math.round(percentage)}%</span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ==================== HELPER FUNCTIONS ====================
 function getInitials(name: string): string {
@@ -386,40 +554,46 @@ function stringToColor(str: string): string {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
   }
   const hue = hash % 360;
-  return `hsl(${hue}, 55%, 35%)`; // darker for track background
+  return `hsl(${hue}, 55%, 45%)`;
 }
 
-// ==================== LEGACY CARD COMPATIBILITY ====================
-// These map to Split for backward compatibility
+// ==================== LEGACY COMPATIBILITY EXPORTS ====================
+// Card -> Surface mapping
+export type CardVariant = 'default' | 'hover' | 'elevated' | 'interactive';
+export type CardPadding = 'none' | 'sm' | 'md' | 'lg' | 'xl';
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: 'default' | 'hover' | 'elevated';
-  padding?: 'none' | 'sm' | 'md' | 'lg';
+  variant?: CardVariant;
+  padding?: CardPadding;
+  delay?: number;
 }
 
 export const Card = forwardRef<HTMLDivElement, CardProps>(
-  ({ children, variant = 'default', padding = 'md', className, ...props }, ref) => {
-    const variantMap: Record<string, string> = {
+  ({ children, variant = 'default', padding = 'md', delay = 0, className, ...props }, ref) => {
+    const variantMap: Record<CardVariant, SurfaceProps['variant']> = {
       default: 'default',
       hover: 'hover',
-      elevated: 'elevated',
+      elevated: 'raised',
+      interactive: 'interactive',
     };
-    const paddingMap: Record<string, string> = {
+    const paddingMap: Record<CardPadding, SurfaceProps['padding']> = {
       none: 'none',
       sm: 'sm',
       md: 'md',
       lg: 'lg',
+      xl: 'xl',
     };
     return (
-      <Split
+      <Surface
         ref={ref}
-        variant={variantMap[variant] as any}
-        padding={paddingMap[padding] as any}
+        variant={variantMap[variant]}
+        padding={paddingMap[padding]}
+        delay={delay}
         className={className}
         {...props}
       >
         {children}
-      </Split>
+      </Surface>
     );
   }
 );
@@ -438,7 +612,7 @@ CardHeader.displayName = 'CardHeader';
 
 export const CardTitle = forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTMLHeadingElement>>(
   ({ children, className, ...props }, ref) => (
-    <h3 ref={ref} className={cn('text-split-md font-semibold text-chalk-100', className)} {...props}>
+    <h3 ref={ref} className={cn('text-heading-md font-semibold text-text-primary', className)} {...props}>
       {children}
     </h3>
   )
@@ -448,7 +622,7 @@ CardTitle.displayName = 'CardTitle';
 
 export const CardDescription = forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
   ({ children, className, ...props }, ref) => (
-    <p ref={ref} className={cn('text-body-sm text-chalk-400 mt-1', className)} {...props}>
+    <p ref={ref} className={cn('text-body-sm text-text-secondary mt-1', className)} {...props}>
       {children}
     </p>
   )
@@ -470,7 +644,7 @@ export const CardFooter = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDi
   ({ children, className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn('flex items-center gap-3 mt-4 pt-4 border-t border-lane-700', className)}
+      className={cn('flex items-center gap-3 mt-4 pt-4 border-t border-border', className)}
       {...props}
     >
       {children}
@@ -480,83 +654,47 @@ export const CardFooter = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDi
 
 CardFooter.displayName = 'CardFooter';
 
-// ==================== DROPDOWN ====================
+// Legacy Badge variants
+export type LegacyBadgeVariant = BadgeVariant | 'gold' | 'split' | 'lane' | 'injury' | 'primary-legacy' | 'success-legacy' | 'neutral-legacy' | 'outline-legacy';
 
-export interface DropdownItem {
-  label?: string;
-  onClick?: () => void;
-  icon?: React.ReactNode;
-  disabled?: boolean;
-  danger?: boolean;
-  divider?: boolean;
+export interface LegacyBadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
+  variant?: LegacyBadgeVariant;
+  size?: 'sm' | 'md' | 'lg';
+  dot?: boolean;
 }
 
-export interface DropdownProps {
-  trigger: React.ReactNode;
-  items: DropdownItem[];
-  align?: 'left' | 'right';
-  className?: string;
-}
-
-export function Dropdown({ trigger, items, align = 'right', className }: DropdownProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        if (triggerRef.current && !triggerRef.current.contains(e.target as Node)) {
-          setIsOpen(false);
-        }
-      }
+export const LegacyBadge = forwardRef<HTMLSpanElement, LegacyBadgeProps>(
+  ({ children, variant = 'neutral', size = 'md', dot = false, className, ...props }, ref) => {
+    const variantMap: Record<LegacyBadgeVariant, BadgeVariant> = {
+      primary: 'primary',
+      'primary-legacy': 'primary',
+      success: 'success',
+      'success-legacy': 'success',
+      danger: 'danger',
+      amber: 'amber',
+      gold: 'amber',
+      info: 'info',
+      neutral: 'neutral',
+      'neutral-legacy': 'neutral',
+      outline: 'outline',
+      'outline-legacy': 'outline',
+      split: 'primary',
+      lane: 'neutral',
+      injury: 'danger',
     };
+    return <Badge ref={ref} variant={variantMap[variant]} size={size} dot={dot} className={className} {...props}>{children}</Badge>
+  }
+);
 
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
+LegacyBadge.displayName = 'LegacyBadge';
 
-  return (
-    <div className={cn('dropdown relative inline-block', className)}>
-      <div ref={triggerRef} onClick={() => setIsOpen(!isOpen)}>
-        {trigger}
-      </div>
-      {isOpen && (
-        <div
-          ref={dropdownRef}
-          className={cn(
-            'dropdown-menu',
-            align === 'right' ? 'right-0' : 'left-0'
-          )}
-          role="menu"
-        >
-          {items.map((item, index) => (
-            <React.Fragment key={index}>
-              {item.divider && <div className="dropdown-divider" role="separator" />}
-              {!item.divider && (
-                <button
-                  role="menuitem"
-                  onClick={() => {
-                    item.onClick?.();
-                    setIsOpen(false);
-                  }}
-                  disabled={item.disabled}
-                  className={cn(
-                    'dropdown-item w-full',
-                    item.danger && 'text-danger-400',
-                    item.disabled && 'opacity-40 cursor-not-allowed'
-                  )}
-                >
-                  {item.icon && <span className="mr-3 flex-shrink-0">{item.icon}</span>}
-                  {item.label}
-                </button>
-              )}
-            </React.Fragment>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+// Re-export Badge as default for new code, LegacyBadge for old
+export { Badge as NewBadge };
+
+// Export Dropdown and DropdownItem from Modal (legacy compatibility)
+export type { DropdownItem, DropdownProps } from './Modal';
+export { Dropdown } from './Modal';
+
+// Export VTabs as LaneTabs for legacy compatibility
+export type { VTabProps as LaneTabProps, VTabsProps as LaneTabsProps };
+export { VTab as LaneTab, VTabs as LaneTabs };

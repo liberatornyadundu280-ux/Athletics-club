@@ -60,7 +60,8 @@ export const errorHandler = (
       response.errors = err.errors;
     }
 
-    return res.status(statusCode).json(response);
+    res.status(statusCode).json(response);
+    return;
   }
 
   // Handle Zod errors (should be caught by validate middleware, but safety net)
@@ -70,11 +71,12 @@ export const errorHandler = (
       url: req.url,
       method: req.method,
     });
-    return res.status(400).json({
+    res.status(400).json({
       status: 'error',
       message: 'Validation failed',
       code: ERROR_CODES.VALIDATION_ERROR,
     });
+    return;
   }
 
   // Handle JWT errors
@@ -85,11 +87,12 @@ export const errorHandler = (
       method: req.method,
       ip: req.ip,
     });
-    return res.status(401).json({
+    res.status(401).json({
       status: 'error',
       message: err.name === 'TokenExpiredError' ? 'Token expired' : 'Invalid token',
       code: err.name === 'TokenExpiredError' ? ERROR_CODES.TOKEN_EXPIRED : ERROR_CODES.TOKEN_INVALID,
     });
+    return;
   }
 
   // Handle MongoDB duplicate key errors
@@ -101,11 +104,12 @@ export const errorHandler = (
       url: req.url,
       method: req.method,
     });
-    return res.status(409).json({
+    res.status(409).json({
       status: 'error',
       message: `${field} already exists`,
       code: ERROR_CODES.CONFLICT,
     });
+    return;
   }
 
   // Log unexpected errors

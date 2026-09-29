@@ -12,11 +12,24 @@ const redisClient = createClient({
   url: env.REDIS_URL,
 });
 
+let isClosingRedisClient = false;
 redisClient.on('error', (err) => {
-  console.error('Rate limit Redis error:', err);
+  if (!isClosingRedisClient) console.error('Rate limit Redis error:', err);
 });
 
-redisClient.connect().catch(console.error);
+const redisConnection = redisClient.connect().catch((err) => {
+  if (!isClosingRedisClient) console.error('Rate limit Redis connection failed:', err);
+});
+
+export async function closeRateLimitRedisClient(): Promise<void> {
+  isClosingRedisClient = true;
+  if (redisClient.isReady) {
+    await redisClient.close();
+  } else if (redisClient.isOpen) {
+    redisClient.destroy();
+  }
+  await redisConnection;
+}
 
 const getRateLimitStore = () => new RedisStore({
   sendCommand: (...args: string[]) => redisClient.sendCommand(args),

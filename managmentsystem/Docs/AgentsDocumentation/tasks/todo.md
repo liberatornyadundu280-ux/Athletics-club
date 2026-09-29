@@ -1,0 +1,24 @@
+# Task Checklist: Sprint 1 API Wiring and Page Action Audit
+
+- [x] Fix JWT identity shape and protect authenticated auth routes.
+- [x] Implement Firebase ID-token session exchange for email/password and Google sign-in; use Firebase reset email.
+- [x] Align Firebase UID and Mongo user ID lookups; enforce club membership and role claims.
+- [x] Add expiring, email-bound invitations and protected acceptance.
+- [x] Add API-backed user management and profile/club settings actions.
+- [x] Route unsupported later-sprint screens to honest planned states and remove invalid visible navigation.
+- [x] Improve hierarchy, responsive layouts, and page feedback.
+- [x] Run final frontend/backend builds and diff checks.
+- [x] Append Session 7 summary and record Sprint 1 as in progress.
+- [x] Add system-admin global account management and permanent Firebase/MongoDB deletion.
+- [x] Add a guarded one-time command to promote the first system administrator.
+- [x] Build frontend and backend after the account management changes.
+- [x] Let system-admin platform-account routes bypass active-club injection while retaining authentication and role checks.
+- [x] Rebuild the backend after the route middleware adjustment.
+- [x] Normalize optional legacy account fields in the global platform user list to prevent missing clubIds from causing a 500 response.
+- [x] Build the backend after legacy account normalization.
+- [x] Add coordinated MongoDB and Redis cleanup to backend shutdown and startup failure paths.
+- [x] Remove duplicate database-level signal handlers.
+- [x] Build the backend after shutdown lifecycle changes.
+- [x] Add a system-admin-only global club directory that reports membership access.
+- [x] Let a system administrator add their own active head-coach membership to an existing club and enter its user roster.
+- [x] Build frontend and backend after platform club access changes.

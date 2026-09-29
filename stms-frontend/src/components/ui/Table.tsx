@@ -3,7 +3,7 @@ import { cn } from '@/utils/helpers';
 import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from './Button';
 
-// ==================== TABLE (Results Board) ====================
+// ==================== TABLE (Data Grid) ====================
 export interface Column<T> {
   key: string;
   header: string;
@@ -105,11 +105,11 @@ export function Table<T>({
 
   if (loading) {
     return (
-      <div className="results-table-container">
-        <table className="results-table" role="grid">
+      <div className="data-table-container">
+        <table className="data-table" role="grid">
           <thead>
             <tr>
-              {selectable && <th className="w-12" scope="col"><div className="skeleton w-4 h-4 rounded-split" /></th>}
+              {selectable && <th className="w-12" scope="col"><div className="skeleton w-4 h-4 rounded-radius-sm" /></th>}
               {columns.map(col => (
                 <th key={col.key} scope="col" style={{ width: col.width }} className={cn(col.align && `text-${col.align}`, col.className)}>
                   <div className="skeleton h-4 w-3/4" />
@@ -120,7 +120,7 @@ export function Table<T>({
           <tbody>
             {Array.from({ length: 5 }).map((_, i) => (
               <tr key={i}>
-                {selectable && <td><div className="skeleton w-4 h-4 rounded-split" /></td>}
+                {selectable && <td><div className="skeleton w-4 h-4 rounded-radius-sm" /></td>}
                 {columns.map(col => (
                   <td key={col.key} className={cn(col.align && `text-${col.align}`)}>
                     <div className="skeleton-text" />
@@ -136,11 +136,11 @@ export function Table<T>({
 
   if (sortedData.length === 0) {
     return (
-      <div className="results-table-container">
-        <table className="results-table" role="grid">
+      <div className="data-table-container">
+        <table className="data-table" role="grid">
           <thead>
             <tr>
-              {selectable && <th className="w-12" scope="col"><input type="checkbox" className="w-4 h-4 rounded-split border-lane-600" disabled /></th>}
+              {selectable && <th className="w-12" scope="col"><input type="checkbox" className="w-4 h-4 rounded-radius-sm border-border" disabled /></th>}
               {columns.map(col => (
                 <th key={col.key} scope="col" style={{ width: col.width }} className={cn(col.align && `text-${col.align}`, col.className)}>
                   {col.header}
@@ -150,7 +150,7 @@ export function Table<T>({
           </thead>
           <tbody>
             <tr>
-              <td colSpan={columns.length + (selectable ? 1 : 0)} className="py-split-lg text-center">
+              <td colSpan={columns.length + (selectable ? 1 : 0)} className="py-space-3xl text-center">
                 <div className="empty-state">
                   {emptyIcon || (
                     <svg className="w-12 h-12 empty-state-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -169,8 +169,8 @@ export function Table<T>({
   }
 
   return (
-    <div className={cn('results-table-container', stickyHeader && 'max-h-[600px] overflow-y-auto')}>
-      <table className="results-table" role="grid">
+    <div className={cn('data-table-container', stickyHeader && 'max-h-[600px] overflow-y-auto')}>
+      <table className="data-table" role="grid">
         {caption && <caption className="sr-only">{caption}</caption>}
         <thead className={stickyHeader ? 'sticky top-0 z-10' : ''}>
           <tr>
@@ -180,7 +180,7 @@ export function Table<T>({
                   type="checkbox"
                   checked={allSelected}
                   onChange={handleSelectAll}
-                  className="w-4 h-4 rounded-split border-lane-600 bg-track-900 text-split-500 focus:ring-2 focus:ring-split-500"
+                  className="w-4 h-4 rounded-radius-sm border-border bg-cold-900 text-sky-500 focus:ring-2 focus:ring-sky-500"
                   aria-label="Select all rows"
                 />
               </th>
@@ -192,7 +192,7 @@ export function Table<T>({
                 style={{ width: column.width }}
                 className={cn(
                   column.align && `text-${column.align}`,
-                  column.sortable && sortable && 'cursor-pointer select-none hover:bg-track-700',
+                  column.sortable && sortable && 'cursor-pointer select-none hover:bg-cold-800/50',
                   column.className
                 )}
                 onClick={() => column.sortable && sortable && handleSort(column.key)}
@@ -202,10 +202,10 @@ export function Table<T>({
                   {column.sortable && sortable && (
                     <span className="flex flex-col gap-0">
                       <ChevronUp
-                        className={cn('w-3 h-3', sortKey === column.key && sortDirection === 'asc' ? 'text-split-400' : 'text-chalk-400')}
+                        className={cn('w-3 h-3', sortKey === column.key && sortDirection === 'asc' ? 'text-sky-400' : 'text-text-muted')}
                       />
                       <ChevronDown
-                        className={cn('w-3 h-3 -mt-1', sortKey === column.key && sortDirection === 'desc' ? 'text-split-400' : 'text-chalk-400')}
+                        className={cn('w-3 h-3 -mt-1', sortKey === column.key && sortDirection === 'desc' ? 'text-sky-400' : 'text-text-muted')}
                       />
                     </span>
                   )}
@@ -229,7 +229,7 @@ export function Table<T>({
                       type="checkbox"
                       checked={isSelected(key)}
                       onChange={() => handleSelectRow(key)}
-                      className="w-4 h-4 rounded-split border-lane-600 bg-track-900 text-split-500 focus:ring-2 focus:ring-split-500"
+                      className="w-4 h-4 rounded-radius-sm border-border bg-cold-900 text-sky-500 focus:ring-2 focus:ring-sky-500"
                       aria-label={`Select row ${key}`}
                     />
                   </td>
@@ -250,7 +250,7 @@ export function Table<T>({
                         ? column.render(item, value)
                         : value !== undefined && value !== null
                         ? String(value)
-                        : <span className="text-chalk-400">—</span>}
+                        : <span className="text-text-muted">—</span>}
                     </td>
                   );
                 })}
@@ -310,8 +310,8 @@ export function Pagination({
   }, [currentPage, totalPages]);
 
   return (
-    <nav className={cn('flex flex-col sm:flex-row items-center justify-between gap-4 py-split', className)} aria-label="Pagination">
-      <div className="text-body-sm text-chalk-400">
+    <nav className={cn('flex flex-col sm:flex-row items-center justify-between gap-4 py-space-md', className)} aria-label="Pagination">
+      <div className="text-body-sm text-text-secondary">
         Showing <span className="font-medium tnum">{startItem}</span> to <span className="font-medium tnum">{endItem}</span> of <span className="font-medium tnum">{totalItems}</span> results
       </div>
 
@@ -331,7 +331,7 @@ export function Pagination({
 
         <div className="flex items-center gap-1">
           <Button
-            variant="track"
+            variant="secondary"
             size="sm"
             onClick={() => onPageChange(currentPage - 1)}
             disabled={currentPage === 1}
@@ -343,10 +343,10 @@ export function Pagination({
           {pages.map((page, index) => (
             <React.Fragment key={index}>
               {page === '...' ? (
-                <span className="px-2 text-chalk-400">...</span>
+                <span className="px-2 text-text-muted">...</span>
               ) : (
                 <Button
-                  variant={currentPage === page ? 'split' : 'ghost'}
+                  variant={currentPage === page ? 'primary' : 'ghost'}
                   size="sm"
                   onClick={() => onPageChange(page as number)}
                   className="min-w-[36px]"
@@ -358,7 +358,7 @@ export function Pagination({
           ))}
 
           <Button
-            variant="track"
+            variant="secondary"
             size="sm"
             onClick={() => onPageChange(currentPage + 1)}
             disabled={currentPage === totalPages}

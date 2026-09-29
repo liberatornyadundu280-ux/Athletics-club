@@ -27,7 +27,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         )}
         <div className="relative">
           {leftIcon && (
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-chalk-400">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-muted">
               {leftIcon}
             </div>
           )}
@@ -47,7 +47,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             {...props}
           />
           {rightIcon && (
-            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-chalk-400">
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-text-muted">
               {rightIcon}
             </div>
           )}
@@ -170,7 +170,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
               </option>
             ))}
           </select>
-          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-chalk-400">
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-text-muted">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
@@ -213,9 +213,9 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
             type="checkbox"
             id={checkboxId}
             className={cn(
-              'w-4 h-4 mt-0.5 rounded-split border-lane-600 bg-track-900',
-              'text-split-500 focus:ring-2 focus:ring-split-500 focus:ring-offset-2 focus:ring-offset-track-900',
-              'disabled:opacity-40 disabled:cursor-not-allowed',
+              'w-4 h-4 mt-0.5 rounded-radius-sm border-border bg-cold-900',
+              'text-sky-500 focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-track-900',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
               className
             )}
             aria-invalid={error ? 'true' : 'false'}
@@ -225,7 +225,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
           {(label || description) && (
             <div className="flex flex-col">
               {label && (
-                <label htmlFor={checkboxId} className="text-body text-chalk-200 cursor-pointer">
+                <label htmlFor={checkboxId} className="text-body text-text-secondary cursor-pointer">
                   {label}
                   {props.required && <span className="text-danger-400 ml-1" aria-hidden="true">*</span>}
                 </label>
@@ -289,7 +289,7 @@ export function RadioGroup({ label, error, options, value, onChange, name, requi
             key={option.value}
             className={cn(
               'flex items-center gap-2 cursor-pointer',
-              option.disabled && 'opacity-40 cursor-not-allowed'
+              option.disabled && 'opacity-50 cursor-not-allowed'
             )}
           >
             <input
@@ -301,13 +301,13 @@ export function RadioGroup({ label, error, options, value, onChange, name, requi
               disabled={option.disabled}
               required={required}
               className={cn(
-                'w-4 h-4 border-lane-600 bg-track-900',
-                'text-split-500 focus:ring-2 focus:ring-split-500 focus:ring-offset-2 focus:ring-offset-track-900',
-                'disabled:opacity-40'
+                'w-4 h-4 border-border bg-cold-900',
+                'text-sky-500 focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-track-900',
+                'disabled:opacity-50'
               )}
             />
             <div>
-              <span className="text-body text-chalk-200">{option.label}</span>
+              <span className="text-body text-text-secondary">{option.label}</span>
               {option.description && (
                 <p className="form-hint">{option.description}</p>
               )}
@@ -343,26 +343,26 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(
             id={switchId}
             role="switch"
             className={cn(
-              'peer w-11 h-6 rounded-full border-2 border-lane-600',
-              'bg-lane-700',
-              'appearance-none cursor-pointer transition-all duration-150',
-              'checked:bg-split-500 checked:border-split-500',
-              'focus:outline-none focus:ring-2 focus:ring-split-500 focus:ring-offset-2 focus:ring-offset-track-900',
-              'disabled:opacity-40 disabled:cursor-not-allowed',
+              'peer w-11 h-6 rounded-radius-full border-2 border-border',
+              'bg-cold-700',
+              'appearance-none cursor-pointer transition-all duration-200',
+              'checked:bg-sky-500 checked:border-sky-500',
+              'focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-track-900',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
               className
             )}
             {...props}
           />
           <span className={cn(
-            'absolute top-0.5 left-0.5 w-5 h-5 bg-track-900 rounded-full shadow-split',
-            'transition-transform duration-150',
+            'absolute top-0.5 left-0.5 w-5 h-5 bg-track-900 rounded-radius-full shadow-sm',
+            'transition-transform duration-200',
             'peer-checked:translate-x-full'
           )} />
         </div>
         {(label || description) && (
           <div>
             {label && (
-              <label htmlFor={switchId} className="text-body font-medium text-chalk-200 cursor-pointer">
+              <label htmlFor={switchId} className="text-body font-medium text-text-secondary cursor-pointer">
                 {label}
               </label>
             )}

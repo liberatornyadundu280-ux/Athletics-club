@@ -1,6 +1,7 @@
 // apps/backend/src/server.ts
 // Application entry point
 
+import 'dotenv/config';
 import { env } from './config/env';
 import { logger } from './middleware/logger.middleware';
 import { closeDatabaseConnection } from './config/database';

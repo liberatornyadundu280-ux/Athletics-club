@@ -10,8 +10,11 @@ import { verifyClubAccess } from '../middleware/club.middleware';
 import { z } from 'zod';
 import { NotFoundError, ForbiddenError, ConflictError } from '../utils/errors';
 import { ERROR_CODES } from '../utils/errors';
+import type { MembershipDocument, UserDocument } from '../types';
 
 const router = Router();
+const getClubIds = (user: Partial<UserDocument>): string[] =>
+  Array.isArray(user.clubIds) ? user.clubIds.filter(Boolean).map(id => id.toString()) : [];
 
 // ==================== ZOD SCHEMAS ====================
 const createClubSchema = z.object({
@@ -62,6 +65,77 @@ const clubMembersQuerySchema = z.object({
 // ==================== ROUTES ====================
 
 /**
+ * GET /clubs/platform
+ * List existing clubs and current system-admin membership state.
+ */
+router.get('/platform',
+  requireRole('system_admin'),
+  asyncHandler(async (req, res) => {
+    const db = (await import('../config/database')).getDatabase();
+    const user = await db.collection<UserDocument>('users').findOne({ firebaseUid: req.user!.uid });
+    if (!user) throw new ForbiddenError('User profile not found');
+
+    const [clubs, memberships] = await Promise.all([
+      db.collection('clubs').find({}).sort({ name: 1 }).toArray(),
+      db.collection('club_memberships').find({ userId: user._id }).toArray(),
+    ]);
+    const membershipByClubId = new Map(memberships.map(membership => [membership.clubId.toString(), membership]));
+
+    res.json({
+      status: 'success',
+      data: clubs.map(club => {
+        const membership = membershipByClubId.get(club._id.toString());
+        return {
+          id: club._id.toString(),
+          name: club.name,
+          slug: club.slug,
+          branding: club.branding,
+          settings: club.settings,
+          createdAt: club.createdAt instanceof Date ? club.createdAt.toISOString() : null,
+          hasAccess: membership?.status === 'active',
+        };
+      }),
+    });
+  })
+);
+
+/** Add the signed-in system administrator as an active head coach of a club. */
+router.post('/platform/:id/access',
+  requireRole('system_admin'),
+  asyncHandler(async (req, res) => {
+    if (!/^[0-9a-fA-F]{24}$/.test(req.params.id)) throw new NotFoundError('Club');
+    const db = (await import('../config/database')).getDatabase();
+    const clubId = new ObjectId(req.params.id);
+    const [club, user] = await Promise.all([
+      db.collection('clubs').findOne({ _id: clubId }),
+      db.collection<UserDocument>('users').findOne({ firebaseUid: req.user!.uid }),
+    ]);
+    if (!club) throw new NotFoundError('Club');
+    if (!user) throw new ForbiddenError('User profile not found');
+
+    const now = new Date();
+    await db.collection('club_memberships').updateOne(
+      { userId: user._id, clubId },
+      {
+        $set: { role: 'head_coach', status: 'active', joinedAt: now, updatedAt: now },
+        $setOnInsert: { createdAt: now, invitedBy: null, invitedAt: null },
+      },
+      { upsert: true }
+    );
+    const existingClubIds = Array.isArray(user.clubIds) ? user.clubIds : [];
+    const clubIds = [...new Map(
+      [...existingClubIds, clubId].map(id => [id.toString(), id])
+    ).values()];
+    await db.collection('users').updateOne(
+      { _id: user._id },
+      { $set: { clubIds, ...(!user.activeClubId ? { activeClubId: clubId } : {}), updatedAt: now } }
+    );
+
+    res.json({ status: 'success', data: { clubId: clubId.toString(), access: 'active' } });
+  })
+);
+
+/**
  * POST /clubs
  * Create new club (system_admin only)
  */
@@ -73,6 +147,8 @@ router.post('/',
     const now = new Date();
 
     const db = (await import('../config/database')).getDatabase();
+    const creator = await db.collection<UserDocument>('users').findOne({ firebaseUid: req.user!.uid });
+    if (!creator) throw new ForbiddenError('User profile not found');
 
     // Generate slug from name if not provided
     const generatedSlug = slug || name
@@ -101,7 +177,7 @@ router.post('/',
         workoutVerificationRequired: false,
         notificationDefaults: {},
       },
-      createdBy: new ObjectId(req.user!.uid),
+      createdBy: creator._id,
       createdAt: now,
       updatedAt: now,
     };
@@ -111,7 +187,7 @@ router.post('/',
 
     // Create club_admin membership for creator
     const membership = {
-      userId: new ObjectId(req.user!.uid),
+      userId: creator._id,
       clubId,
       role: 'head_coach', // system_admin gets head_coach role in club
       status: 'active',
@@ -125,12 +201,11 @@ router.post('/',
     await db.collection('club_memberships').insertOne(membership);
 
     // Update user's clubIds and activeClubId
+    const creatorClubIds = Array.isArray(creator.clubIds) ? creator.clubIds : [];
+    const clubIds = [...new Map([...creatorClubIds, clubId].map(id => [id.toString(), id])).values()];
     await db.collection('users').updateOne(
-      { firebaseUid: req.user!.uid },
-      {
-        $addToSet: { clubIds: clubId },
-        $set: { activeClubId: clubId, updatedAt: now },
-      }
+      { _id: creator._id },
+      { $set: { clubIds, activeClubId: clubId, updatedAt: now } }
     );
 
     // Trigger custom claims refresh
@@ -244,7 +319,7 @@ router.get('/:id/members',
   validate(clubMembersQuerySchema),
   asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { page, limit, role, status } = req.query;
+    const { page, limit, role, status } = clubMembersQuerySchema.shape.query.parse(req.query);
 
     const db = (await import('../config/database')).getDatabase();
 
@@ -257,7 +332,7 @@ router.get('/:id/members',
     const total = await db.collection('club_memberships').countDocuments(filter);
 
     // Get paginated memberships
-    const memberships = await db.collection('club_memberships')
+    const memberships = await db.collection<MembershipDocument>('club_memberships')
       .find(filter)
       .sort({ joinedAt: -1 })
       .skip((page - 1) * limit)
@@ -266,7 +341,7 @@ router.get('/:id/members',
 
     // Get user details for each membership
     const userIds = memberships.map(m => m.userId);
-    const users = await db.collection('users')
+    const users = await db.collection<UserDocument>('users')
       .find({ _id: { $in: userIds } })
       .toArray();
 
@@ -283,7 +358,7 @@ router.get('/:id/members',
           name: user.name,
           avatarUrl: user.avatarUrl,
           role: user.role,
-          clubIds: user.clubIds.map((id: ObjectId) => id.toString()),
+          clubIds: getClubIds(user),
           activeClubId: user.activeClubId?.toString() || null,
           status: user.status,
           lastLoginAt: user.lastLoginAt?.toISOString() || null,

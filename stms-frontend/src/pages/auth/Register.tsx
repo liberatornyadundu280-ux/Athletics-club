@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { api, authApi } from '@/services/api';
-import { initializeFirebase, signInWithGoogle } from '@/services/firebase';
+import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select, SelectOption } from '@/components/ui/Input';
@@ -35,6 +34,10 @@ const roleOptions: SelectOption[] = [
 
 export function Register() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { register: registerAccount, loginWithGoogle } = useAuth();
+  const fromState = (location.state as any)?.from;
+  const from = fromState?.pathname ? `${fromState.pathname}${fromState.search || ''}` : '/dashboard';
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -57,20 +60,16 @@ export function Register() {
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true);
     try {
-      await authApi.register({
+      await registerAccount({
         name: data.name,
         email: data.email,
         password: data.password,
         role: data.role,
       });
       toast.success('Account created successfully! Welcome to STMS.');
-      navigate('/dashboard', { replace: true });
+      navigate(from, { replace: true });
     } catch (error: any) {
-      if (error.message?.includes('Firebase Client SDK')) {
-        toast.error('Please use Google sign-in or contact support for email/password registration');
-      } else {
-        toast.error(error.message || 'Registration failed. Please try again.');
-      }
+      toast.error(error.message || 'Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -79,10 +78,9 @@ export function Register() {
   const handleGoogleRegister = async () => {
     setGoogleLoading(true);
     try {
-      initializeFirebase();
-      await signInWithGoogle();
+      await loginWithGoogle();
       toast.success('Welcome to STMS!');
-      navigate('/dashboard', { replace: true });
+      navigate(from, { replace: true });
     } catch (error: any) {
       if (error.code !== 'auth/popup-closed-by-user') {
         toast.error(error.message || 'Google sign-up failed');
@@ -208,7 +206,7 @@ export function Register() {
               className="w-4 h-4 mt-0.5 rounded border-surface-300 text-primary-800 focus:ring-2 focus:ring-primary-500"
             />
             <div className="text-body-sm text-surface-600 dark:text-surface-400">
-              I agree to the <a href="#" className="text-primary-800 hover:text-primary-700 underline">Terms of Service</a> and <a href="#" className="text-primary-800 hover:text-primary-700 underline">Privacy Policy</a>
+              I agree to the STMS terms and privacy policy.
             </div>
           </label>
           {errors.terms && (
@@ -250,11 +248,11 @@ export function Register() {
 
       <p className="text-center text-body-sm text-surface-500 dark:text-surface-400">
         Already have an account?{' '}
-        <a href="/login" className="text-primary-800 hover:text-primary-700 font-medium">Sign in</a>
+        <Link to="/login" state={location.state} className="text-primary-800 hover:text-primary-700 font-medium">Sign in</Link>
       </p>
 
       <p className="text-center text-caption text-surface-500 dark:text-surface-400">
-        By creating an account, you agree to our <a href="#" className="underline">Terms of Service</a> and <a href="#" className="underline">Privacy Policy</a>
+        By creating an account, you agree to STMS terms and privacy policy.
       </p>
     </div>
   );

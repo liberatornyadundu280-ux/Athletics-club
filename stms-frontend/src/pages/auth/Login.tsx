@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { authApi } from '@/services/api';
-import { initializeFirebase, signInWithGoogle } from '@/services/firebase';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Mail, Lock, Eye, EyeOff, Loader2, Monitor } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address').min(1, 'Email is required'),
@@ -22,12 +20,13 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  const from = (location.state as any)?.from?.pathname || '/dashboard';
+  const fromState = (location.state as any)?.from;
+  const from = fromState?.pathname ? `${fromState.pathname}${fromState.search || ''}` : '/dashboard';
 
   const {
     register,
@@ -43,15 +42,11 @@ export function Login() {
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
-      await authApi.login(data.email, data.password);
+      await login(data.email, data.password);
       toast.success('Welcome back!');
       navigate(from, { replace: true });
     } catch (error: any) {
-      if (error.message?.includes('Firebase Client SDK')) {
-        toast.error('Please use Google sign-in or contact support for email/password login');
-      } else {
-        toast.error(error.message || 'Login failed. Please check your credentials.');
-      }
+      toast.error(error.message || 'Login failed. Please check your credentials.');
     } finally {
       setIsLoading(false);
     }
@@ -60,8 +55,7 @@ export function Login() {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
-      initializeFirebase();
-      await signInWithGoogle();
+      await loginWithGoogle();
       toast.success('Welcome!');
       navigate(from, { replace: true });
     } catch (error: any) {
@@ -70,39 +64,6 @@ export function Login() {
       }
     } finally {
       setGoogleLoading(false);
-    }
-  };
-
-  const handleDemoLogin = async () => {
-    setIsLoading(true);
-    try {
-      // Skip API call entirely - directly set mock auth in localStorage
-      const mockUser = {
-        id: 'demo-user',
-        email: 'demo@stms.local',
-        name: 'Demo Coach',
-        role: 'coach',
-        clubId: 'demo-club',
-        avatarUrl: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      const mockPermissions = [
-        'athlete:read', 'athlete:write', 'workout:read', 'workout:write',
-        'attendance:read', 'attendance:write', 'performance:read', 'performance:write',
-        'injury:read', 'injury:write', 'permission:read', 'permission:write',
-        'analytics:read', 'settings:manage'
-      ];
-      // Set keys that AuthContext/api.ts expects
-      localStorage.setItem('user', JSON.stringify(mockUser));
-      localStorage.setItem('permissions', JSON.stringify(mockPermissions));
-      localStorage.setItem('accessToken', 'demo-token');
-      localStorage.setItem('tokenExpiresAt', String(Date.now() + 3600000));
-
-      toast.success('Demo mode - Welcome to STMS!');
-      navigate(from, { replace: true });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -157,9 +118,9 @@ export function Login() {
             />
             <span className="text-body-sm text-surface-600 dark:text-surface-400">Remember me</span>
           </label>
-          <a href="/forgot-password" className="text-body-sm text-primary-800 hover:text-primary-700">
+          <Link to="/forgot-password" className="text-body-sm text-primary-800 hover:text-primary-700">
             Forgot password?
-          </a>
+          </Link>
         </div>
 
         <Button type="submit" className="w-full" size="lg" loading={isLoading}>
@@ -198,22 +159,11 @@ export function Login() {
         )}
       </Button>
 
-      <Button
-        variant="secondary"
-        className="w-full gap-3"
-        onClick={handleDemoLogin}
-        loading={isLoading}
-        disabled={googleLoading}
-        leftIcon={<Monitor className="w-5 h-5" />}
-      >
-        Demo Login (No Backend)
-      </Button>
-
       <p className="text-center text-body-sm text-surface-500 dark:text-surface-400">
         Don't have an account?{' '}
-        <a href="/register" className="text-primary-800 hover:text-primary-700 font-medium">
+        <Link to="/register" state={location.state} className="text-primary-800 hover:text-primary-700 font-medium">
           Sign up
-        </a>
+        </Link>
       </p>
     </div>
   );

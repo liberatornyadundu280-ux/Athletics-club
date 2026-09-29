@@ -2,11 +2,25 @@
 // Firebase Admin SDK initialization
 
 import admin from 'firebase-admin';
+import { createPrivateKey } from 'crypto';
 import { env } from './env';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 
-// Parse private key (handles \n in env var)
-const privateKey = env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n');
+function parseFirebasePrivateKey(value: string): string {
+  const privateKey = value.replace(/\\n/g, '\n').trim();
+
+  try {
+    createPrivateKey(privateKey);
+  } catch {
+    throw new Error(
+      'FIREBASE_PRIVATE_KEY is invalid or incomplete. In Firebase Console, generate a new service account private key, then set FIREBASE_PRIVATE_KEY to the complete private_key value from its JSON file (preserve line breaks as \\n).'
+    );
+  }
+
+  return privateKey;
+}
+
+const privateKey = parseFirebasePrivateKey(env.FIREBASE_PRIVATE_KEY);
 
 if (!admin.apps.length) {
   admin.initializeApp({

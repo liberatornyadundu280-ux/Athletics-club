@@ -8,7 +8,7 @@ import compression from 'compression';
 import { env, getAllowedOrigins } from './config/env';
 import { requestLogger } from './middleware/logger.middleware';
 import { errorHandler, asyncHandler } from './middleware/error-handler';
-import { apiLimiter, authLimiter } from './middleware/rate-limit.middleware';
+import { apiLimiter } from './middleware/rate-limit.middleware';
 import { injectClubId } from './middleware/club.middleware';
 import { authenticate } from './middleware/auth.middleware';
 import { connectToDatabase } from './config/database';
@@ -17,6 +17,7 @@ import { connectToDatabase } from './config/database';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import clubRoutes from './routes/club.routes';
+import athleteRoutes from './routes/athlete.routes';
 
 const app = express();
 
@@ -61,9 +62,6 @@ app.use(requestLogger);
 
 // ==================== RATE LIMITING ====================
 app.use('/api/', apiLimiter);
-app.use('/api/auth/login', authLimiter);
-app.use('/api/auth/register', authLimiter);
-app.use('/api/auth/google', authLimiter);
 
 // ==================== HEALTH CHECK ====================
 app.get('/healthz', (_req: Request, res: Response) => {
@@ -78,9 +76,18 @@ app.get('/healthz', (_req: Request, res: Response) => {
 // ==================== API ROUTES ====================
 const API_PREFIX = '/api/v1';
 
+// Platform account routes are global and are restricted to system_admin in
+// user.routes.ts. They must not require an active club. All other user routes
+// retain the existing club-context requirement for tenant isolation.
+const injectClubContextForUserRoutes = (req: Request, res: Response, next: NextFunction): void => {
+  if (req.path === '/platform' || req.path.startsWith('/platform/')) return next();
+  return injectClubId(req, res, next);
+};
+
 app.use(`${API_PREFIX}/auth`, authRoutes);
-app.use(`${API_PREFIX}/users`, authenticate, injectClubId, userRoutes);
+app.use(`${API_PREFIX}/users`, authenticate, injectClubContextForUserRoutes, userRoutes);
 app.use(`${API_PREFIX}/clubs`, authenticate, clubRoutes);
+app.use(`${API_PREFIX}/athletes`, authenticate, injectClubId, athleteRoutes);
 
 // ==================== 404 HANDLER ====================
 app.use((_req: Request, _res: Response, next: NextFunction) => {

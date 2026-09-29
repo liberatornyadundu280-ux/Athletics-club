@@ -1,6 +1,13 @@
 // src/config/env.ts
 // Validates all required environment variables at startup
 
+import { config as loadDotEnv } from 'dotenv';
+import { resolve } from 'path';
+
+// Load the backend's own .env file regardless of the directory the command runs from.
+// Existing process environment values keep precedence (dotenv's default behavior).
+loadDotEnv({ path: resolve(__dirname, '../../.env') });
+
 const requiredEnvVars = [
   'NODE_ENV',
   'PORT',
@@ -15,6 +22,7 @@ const requiredEnvVars = [
 ] as const;
 
 const optionalEnvVars = [
+  'FRONTEND_URL',
   'CLOUDINARY_CLOUD_NAME',
   'CLOUDINARY_API_KEY',
   'CLOUDINARY_API_SECRET',
@@ -25,7 +33,9 @@ const optionalEnvVars = [
 type RequiredEnv = typeof requiredEnvVars[number];
 type OptionalEnv = typeof optionalEnvVars[number];
 
-export type EnvConfig = Record<RequiredEnv, string> & Partial<Record<OptionalEnv, string>>;
+export type EnvConfig = Omit<Record<RequiredEnv, string>, 'ALLOWED_ORIGINS'> & {
+  ALLOWED_ORIGINS: string[];
+} & Partial<Record<OptionalEnv, string>>;
 
 function validateEnv(): EnvConfig {
   const missing: string[] = [];
@@ -57,9 +67,10 @@ function validateEnv(): EnvConfig {
   }
 
   // Parse ALLOWED_ORIGINS
-  config.ALLOWED_ORIGINS = config.ALLOWED_ORIGINS.split(',').map(o => o.trim());
-
-  return config as EnvConfig;
+  return {
+    ...config,
+    ALLOWED_ORIGINS: config.ALLOWED_ORIGINS.split(',').map(origin => origin.trim()),
+  } as EnvConfig;
 }
 
 export const env = validateEnv();

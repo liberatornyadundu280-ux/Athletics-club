@@ -10,6 +10,7 @@ import {
   storeRefreshToken,
   revokeRefreshToken,
   verifyRefreshToken,
+  TokenPair,
 } from '../utils/tokens';
 import {
   UnauthorizedError,
@@ -18,7 +19,7 @@ import {
   ValidationError,
 } from '../utils/errors';
 import { ERROR_CODES } from '../utils/errors';
-import { RegisterInput, LoginInput, TokenPair, JWTPayload } from '../types';
+import { RegisterInput, LoginInput, JWTPayload } from '../types';
 
 export class AuthService {
   private readonly REFRESH_TOKEN_TTL_DAYS = 7;

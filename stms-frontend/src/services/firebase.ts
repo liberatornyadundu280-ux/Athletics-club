@@ -1,5 +1,13 @@
 import { initializeApp, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth, GoogleAuthProvider, signInWithPopup, UserCredential } from 'firebase/auth';
+import {
+  getAuth,
+  Auth,
+  GoogleAuthProvider,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  sendPasswordResetEmail,
+  UserCredential,
+} from 'firebase/auth';
 
 // ==================== FIREBASE CONFIG ====================
 const firebaseConfig = {
@@ -48,6 +56,14 @@ export async function signInWithGoogle(): Promise<UserCredential> {
   const auth = getFirebaseAuth();
   const provider = getGoogleProvider();
   return signInWithPopup(auth, provider);
+}
+
+export async function signInWithEmail(email: string, password: string): Promise<UserCredential> {
+  return signInWithEmailAndPassword(getFirebaseAuth(), email, password);
+}
+
+export async function requestPasswordReset(email: string): Promise<void> {
+  await sendPasswordResetEmail(getFirebaseAuth(), email);
 }
 
 export async function getIdToken(forceRefresh = false): Promise<string | null> {

@@ -32,7 +32,6 @@ export interface RegisterInput {
   password: string;
   role: 'athlete' | 'coach';
   name: string;
-  clubId?: string;
 }
 
 export interface LoginInput {
@@ -42,7 +41,6 @@ export interface LoginInput {
 
 export interface GoogleAuthInput {
   idToken: string;
-  clubId?: string;
 }
 
 export interface SwitchClubInput {

@@ -23,7 +23,7 @@ Read, in this order:
 
 This file governs _how we work_; `managementsystem/` governs _what we're building and what's already been decided_.
 
-**Current phase:** Requirements & System Design. Requirements gathering and analysis are done; system design is in progress; development, testing, and deployment haven't started yet. _(Update this line as the project moves through SDLC phases.)_
+**Current phase:** Development — Sprint 1 is owner-reviewed and complete; Sprint 2 athlete profiles and club management are in progress.
 
 ## Role & Working Style
 
@@ -62,8 +62,12 @@ Treat this table as a quick reference — `managementsystem/` has the full archi
 
 Built in sprints; each sprint is reviewed and evaluated before the next one starts. **Update this checklist the moment a task or sprint item is completed** — check it off, add the date, a one-line summary, and (if a chart, diagram, or other generated artifact was involved) which skill built it. A new session should be able to read this list alone and know exactly where things stand, instead of re-deriving it from scratch.
 
-- [ ] 1. Authentication & user management
-- [ ] 2. Athlete profiles & club management
+- [x] 1. Authentication & user management — done 2026-09-29, owner reviewed and confirmed Sprint 1 acceptance; Firebase sessions, club access, profile updates, roster management, and invitation acceptance wired to APIs; aligned local Firebase/API configuration, corrected JWT key pair, bounded auth requests, fixed sign-out menu, removed duplicate PWA worker registration, and removed mock login bypass.
+- [x] Sprint 1 platform account administration — done 2026-09-29, added system-admin account search and permanent Firebase/MongoDB deletion with a one-time secure role-promotion command.
+- [x] Platform account directory handles legacy MongoDB users without club membership arrays — done 2026-09-29, missing clubIds now display as an empty club list.
+- [x] Backend shutdown closes MongoDB and Redis clients cleanly — done 2026-09-29, removed duplicate signal handlers and added central graceful cleanup.
+- [x] System administrators can view existing clubs and add their own active membership — done 2026-09-29, global club directory opens the selected club's roster for user management.
+- [ ] 2. Athlete profiles & club management — in progress 2026-09-29, added club-scoped athlete CRUD/archive APIs, searchable roster and profile editor, bounded CSV import with row results, system-admin club creation, and account linking on invitation acceptance; production builds pass, with live-service acceptance pending.
 - [ ] 3. Attendance module
 - [ ] 4. Workout module
 - [ ] 5. Performance tracking

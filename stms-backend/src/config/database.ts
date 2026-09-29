@@ -29,6 +29,25 @@ export async function connectToDatabase(): Promise<Db> {
 
   // Test connection
   await db.command({ ping: 1 });
+  // Athlete profiles are club-scoped and may optionally link to an account.
+  // MongoDB creates the collection if needed when these indexes are created.
+  await db.collection('athletes').createIndexes([
+    { key: { clubId: 1, createdAt: -1 }, name: 'idx_athletes_club_created_desc' },
+    {
+      key: { clubId: 1, email: 1 },
+      unique: true,
+      partialFilterExpression: { clubId: { $type: 'objectId' }, email: { $type: 'string' } },
+      name: 'idx_athletes_club_email_unique',
+    },
+    {
+      key: { clubId: 1, userId: 1 },
+      unique: true,
+      partialFilterExpression: { userId: { $type: 'objectId' } },
+      name: 'idx_athletes_club_user_unique',
+    },
+    { key: { clubId: 1, status: 1 }, name: 'idx_athletes_club_status' },
+    { key: { clubId: 1, eventSpecialization: 1 }, name: 'idx_athletes_club_events' },
+  ]);
   console.log('✅ Connected to MongoDB Atlas');
 
   return db;
@@ -47,18 +66,5 @@ export async function closeDatabaseConnection(): Promise<void> {
     console.log('✅ MongoDB connection closed');
   }
 }
-
-// Graceful shutdown handlers
-process.on('SIGINT', async () => {
-  console.log('SIGINT received, closing database connection...');
-  await closeDatabaseConnection();
-  process.exit(0);
-});
-
-process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, closing database connection...');
-  await closeDatabaseConnection();
-  process.exit(0);
-});
 
 export { client as mongoClient };

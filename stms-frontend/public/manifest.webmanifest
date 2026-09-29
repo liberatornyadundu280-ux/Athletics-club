@@ -10,15 +10,15 @@
   "scope": "/",
   "icons": [
     {
-      "src": "pwa-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "pwa-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     }
   ],
@@ -29,14 +29,14 @@
       "short_name": "Workout",
       "description": "View today's assigned workout",
       "url": "/workouts/today",
-      "icons": [{ "src": "workout-icon.png", "sizes": "192x192" }]
+      "icons": [{ "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
     },
     {
       "name": "Attendance",
       "short_name": "Attendance",
       "description": "Mark attendance",
       "url": "/attendance",
-      "icons": [{ "src": "attendance-icon.png", "sizes": "192x192" }]
+      "icons": [{ "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
     }
   ]
 }

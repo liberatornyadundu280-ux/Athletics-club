@@ -2,21 +2,41 @@
 // JWT token generation and refresh token management
 
 import jwt from 'jsonwebtoken';
+import { createHash, randomBytes } from 'crypto';
 import { createClient } from 'redis';
 import { env } from '../config/env';
 import { JWTPayload } from '../types';
 
 const redisClient = createClient({ url: env.REDIS_URL });
-redisClient.on('error', (err) => console.error('Redis token error:', err));
-redisClient.connect().catch(console.error);
+let isClosingRedisClient = false;
+redisClient.on('error', (err) => {
+  if (!isClosingRedisClient) console.error('Redis token error:', err);
+});
+const redisConnection = redisClient.connect().catch((err) => {
+  if (!isClosingRedisClient) console.error('Redis token connection failed:', err);
+});
+
+export async function closeTokenRedisClient(): Promise<void> {
+  isClosingRedisClient = true;
+  if (redisClient.isReady) {
+    await redisClient.close();
+  } else if (redisClient.isOpen) {
+    // During a pending connection, destroy instead of queuing QUIT behind it.
+    redisClient.destroy();
+  }
+  await redisConnection;
+}
 
 const ACCESS_TOKEN_TTL = '15m';
 const REFRESH_TOKEN_TTL_DAYS = 7;
 const REFRESH_TOKEN_KEY_PREFIX = 'refresh_token:';
+const USER_REFRESH_TOKEN_SET_PREFIX = 'refresh_tokens_by_user:';
 
 export interface TokenPair {
   accessToken: string;
   refreshToken: string;
+  expiresIn: number;
+  tokenType: 'Bearer';
 }
 
 export interface TokenPayload {
@@ -53,24 +73,21 @@ export async function generateTokens(payload: TokenPayload): Promise<TokenPair> 
   // Generate cryptographically secure refresh token
   const refreshToken = generateRefreshToken();
 
-  return { accessToken, refreshToken };
+  return { accessToken, refreshToken, expiresIn: 900, tokenType: 'Bearer' };
 }
 
 /**
  * Generate secure random refresh token
  */
 function generateRefreshToken(): string {
-  const array = new Uint8Array(32);
-  crypto.getRandomValues(array);
-  return Buffer.from(array).toString('base64url');
+  return randomBytes(32).toString('base64url');
 }
 
 /**
  * Hash refresh token for storage
  */
 export function hashRefreshToken(token: string): string {
-  const crypto = await import('crypto');
-  return crypto.createHash('sha256').update(token).digest('hex');
+  return createHash('sha256').update(token).digest('hex');
 }
 
 /**
@@ -85,6 +102,8 @@ export async function storeRefreshToken(userId: string, refreshToken: string): P
     REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60, // TTL in seconds
     JSON.stringify({ userId, createdAt: Date.now() })
   );
+  await redisClient.sAdd(`${USER_REFRESH_TOKEN_SET_PREFIX}${userId}`, key);
+  await redisClient.expire(`${USER_REFRESH_TOKEN_SET_PREFIX}${userId}`, REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60);
 }
 
 /**
@@ -101,21 +120,25 @@ export async function verifyRefreshToken(refreshToken: string): Promise<TokenPay
 
   const { userId } = JSON.parse(stored);
 
-  // Get user's current claims from Firebase
+  // User documents are the source of truth for account and club state.
+  const db = (await import('../config/database')).getDatabase();
+  const user = await db.collection('users').findOne({ firebaseUid: userId });
+  if (!user || user.status !== 'active') {
+    throw new Error('User profile not found or inactive');
+  }
+
+  // Preserve permission claims where present, while taking club membership
+  // and role from the persisted account record.
   const { getUserClaims } = await import('../config/firebase');
   const claims = await getUserClaims(userId);
 
-  if (!claims) {
-    throw new Error('User claims not found');
-  }
-
   return {
     uid: userId,
-    email: '', // Will be populated from claims or DB
-    role: claims.role,
-    clubIds: claims.clubIds,
-    activeClubId: claims.activeClubId,
-    permissions: claims.permissions,
+    email: user.email,
+    role: user.role,
+    clubIds: user.clubIds.map((id: { toString(): string }) => id.toString()),
+    activeClubId: user.activeClubId?.toString() || null,
+    permissions: user.permissions?.length ? user.permissions : claims?.permissions || [],
   };
 }
 
@@ -125,19 +148,22 @@ export async function verifyRefreshToken(refreshToken: string): Promise<TokenPay
 export async function revokeRefreshToken(refreshToken: string): Promise<void> {
   const hashed = await hashRefreshToken(refreshToken);
   const key = `${REFRESH_TOKEN_KEY_PREFIX}${hashed}`;
+  const stored = await redisClient.get(key);
   await redisClient.del(key);
+  if (stored) {
+    const { userId } = JSON.parse(stored) as { userId: string };
+    await redisClient.sRem(`${USER_REFRESH_TOKEN_SET_PREFIX}${userId}`, key);
+  }
 }
 
 /**
  * Revoke all refresh tokens for a user
  */
 export async function revokeAllUserRefreshTokens(userId: string): Promise<void> {
-  // Note: This requires scanning Redis keys which is not efficient
-  // In production, maintain a user->token mapping or use Redis sets
-  // For now, we'll implement a simpler approach
-  const pattern = `${REFRESH_TOKEN_KEY_PREFIX}*`;
-  // This is a simplified version - production should use SCAN
-  // await redisClient.keys(pattern) then filter by userId
+  const indexKey = `${USER_REFRESH_TOKEN_SET_PREFIX}${userId}`;
+  const tokenKeys = await redisClient.sMembers(indexKey);
+  if (tokenKeys.length) await redisClient.del(tokenKeys);
+  await redisClient.del(indexKey);
 }
 
 /**

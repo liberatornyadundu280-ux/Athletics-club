@@ -1,9 +1,7 @@
 import React, { forwardRef } from 'react';
 import { cn } from '@/utils/helpers';
 
-export type ButtonVariant = 'split' | 'track' | 'gold' | 'danger' | 'ghost' 
-  // Legacy aliases
-  | 'primary' | 'secondary' | 'outline' | 'success';
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success' | 'amber';
 export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -19,7 +17,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
     {
       children,
-      variant = 'split',
+      variant = 'primary',
       size = 'md',
       loading = false,
       leftIcon,
@@ -31,28 +29,14 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     },
     ref
   ) => {
-    // Map legacy variants to new ones
-    const normalizedVariant = (() => {
-      switch (variant) {
-        case 'primary': return 'split';
-        case 'secondary': return 'track';
-        case 'outline': return 'ghost';
-        case 'success': return 'split';
-        default: return variant;
-      }
-    })();
-
     const variantClasses: Record<ButtonVariant, string> = {
-      split: 'btn-split',
-      track: 'btn-track',
-      gold: 'btn-gold',
-      danger: 'btn-danger',
+      primary: 'btn-primary',
+      secondary: 'btn-secondary',
+      outline: 'btn-outline',
       ghost: 'btn-ghost',
-      // Legacy (mapped above)
-      primary: 'btn-split',
-      secondary: 'btn-track',
-      outline: 'btn-ghost',
-      success: 'btn-split',
+      danger: 'btn-danger',
+      success: 'btn-success',
+      amber: 'btn-amber',
     };
 
     const sizeClasses: Record<ButtonSize, string> = {
@@ -68,7 +52,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <button
         ref={ref}
-        className={cn('btn', variantClasses[normalizedVariant], sizeClasses[size], widthClass, className)}
+        className={cn('btn', variantClasses[variant], sizeClasses[size], widthClass, className)}
         disabled={disabled || loading}
         {...props}
       >
@@ -121,21 +105,19 @@ export interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEl
 export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
   ({ variant = 'ghost', size = 'md', ariaLabel, children, className, ...props }, ref) => {
     const variantClasses: Record<ButtonVariant, string> = {
-      split: 'btn-split',
-      track: 'btn-track',
-      gold: 'btn-gold',
-      danger: 'btn-danger',
+      primary: 'btn-primary',
+      secondary: 'btn-secondary',
+      outline: 'btn-outline',
       ghost: 'btn-ghost',
-      primary: 'btn-split',
-      secondary: 'btn-track',
-      outline: 'btn-ghost',
-      success: 'btn-split',
+      danger: 'btn-danger',
+      success: 'btn-success',
+      amber: 'btn-amber',
     };
 
     const sizeClasses = {
-      sm: 'p-1.5',
-      md: 'p-2',
-      lg: 'p-3',
+      sm: 'btn-icon-sm',
+      md: 'btn-icon',
+      lg: 'btn-icon-lg',
     };
 
     return (
@@ -166,7 +148,7 @@ export function ButtonGroup({ children, className, vertical = false }: ButtonGro
       className={cn(
         'inline-flex',
         vertical ? 'flex-col' : 'flex-row',
-        'rounded-split overflow-hidden border border-lane-700',
+        'rounded-radius-md overflow-hidden border border-border',
         className
       )}
       role="group"

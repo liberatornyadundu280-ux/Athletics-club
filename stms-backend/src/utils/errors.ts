@@ -6,6 +6,10 @@ export interface ValidationErrorDetail {
   message: string;
 }
 
+interface CodedErrorOptions {
+  code?: string;
+}
+
 export class AppError extends Error {
   constructor(
     public readonly message: string,
@@ -37,15 +41,15 @@ export class NotFoundError extends AppError {
 }
 
 export class UnauthorizedError extends AppError {
-  constructor(message: string = 'Unauthorized') {
-    super(message, 401, true, 'UNAUTHORIZED');
+  constructor(message: string = 'Unauthorized', options: CodedErrorOptions = {}) {
+    super(message, 401, true, options.code ?? 'UNAUTHORIZED');
     Object.setPrototypeOf(this, UnauthorizedError.prototype);
   }
 }
 
 export class ForbiddenError extends AppError {
-  constructor(message: string = 'Forbidden') {
-    super(message, 403, true, 'FORBIDDEN');
+  constructor(message: string = 'Forbidden', options: CodedErrorOptions = {}) {
+    super(message, 403, true, options.code ?? 'FORBIDDEN');
     Object.setPrototypeOf(this, ForbiddenError.prototype);
   }
 }

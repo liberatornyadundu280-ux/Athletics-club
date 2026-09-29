@@ -99,12 +99,12 @@ export function Modal({
           <div className="modal-header">
             <div>
               {title && (
-                <h2 id="modal-title" className="text-split-md font-semibold text-chalk-100">
+                <h2 id="modal-title" className="text-heading-md font-semibold text-text-primary">
                   {title}
                 </h2>
               )}
               {description && (
-                <p id="modal-description" className="text-body-sm text-chalk-400 mt-1">
+                <p id="modal-description" className="text-body-sm text-text-secondary mt-1">
                   {description}
                 </p>
               )}
@@ -146,7 +146,7 @@ export interface ConfirmModalProps {
   message: string;
   confirmText?: string;
   cancelText?: string;
-  variant?: 'danger' | 'split';
+  variant?: 'danger' | 'primary' | 'success';
   loading?: boolean;
 }
 
@@ -163,9 +163,9 @@ export function ConfirmModal({
 }: ConfirmModalProps) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
-      <p className="text-body text-chalk-300">{message}</p>
+      <p className="text-body text-text-secondary">{message}</p>
       <div className="modal-footer">
-        <Button variant="track" onClick={onClose} disabled={loading}>
+        <Button variant="secondary" onClick={onClose} disabled={loading}>
           {cancelText}
         </Button>
         <Button variant={variant} onClick={onConfirm} loading={loading}>
@@ -173,6 +173,87 @@ export function ConfirmModal({
         </Button>
       </div>
     </Modal>
+  );
+}
+
+// ==================== DROPDOWN ====================
+
+export interface DropdownItem {
+  label?: string;
+  onClick?: () => void;
+  icon?: React.ReactNode;
+  disabled?: boolean;
+  danger?: boolean;
+  divider?: boolean;
+}
+
+export interface DropdownProps {
+  trigger: React.ReactNode;
+  items: DropdownItem[];
+  align?: 'left' | 'right';
+  className?: string;
+}
+
+export function Dropdown({ trigger, items, align = 'right', className }: DropdownProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        if (triggerRef.current && !triggerRef.current.contains(e.target as Node)) {
+          setIsOpen(false);
+        }
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  return (
+    <div className={cn('dropdown relative inline-block', className)}>
+      <div ref={triggerRef} onClick={() => setIsOpen(!isOpen)}>
+        {trigger}
+      </div>
+      {isOpen && (
+        <div
+          ref={dropdownRef}
+          className={cn(
+            'dropdown-menu',
+            align === 'right' ? 'right-0' : 'left-0'
+          )}
+          role="menu"
+        >
+          {items.map((item, index) => (
+            <React.Fragment key={index}>
+              {item.divider && <div className="dropdown-divider" role="separator" />}
+              {!item.divider && (
+                <button
+                  role="menuitem"
+                  onClick={() => {
+                    item.onClick?.();
+                    setIsOpen(false);
+                  }}
+                  disabled={item.disabled}
+                  className={cn(
+                    'dropdown-item w-full',
+                    item.danger && 'text-danger-400',
+                    item.disabled && 'opacity-50 cursor-not-allowed'
+                  )}
+                >
+                  {item.icon && <span className="mr-3 flex-shrink-0">{item.icon}</span>}
+                  {item.label}
+                </button>
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -187,7 +268,6 @@ export interface TooltipProps {
 export function Tooltip({ children, content, position = 'top', delay = 200 }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
-  const childRef = useRef<HTMLElement>(null);
 
   const show = () => {
     timeoutRef.current = setTimeout(() => setIsVisible(true), delay);
@@ -215,10 +295,17 @@ export function Tooltip({ children, content, position = 'top', delay = 200 }: To
     right: 'left-full top-1/2 -translate-y-1/2 ml-2',
   };
 
+  const childProps = {
+    onMouseEnter: show,
+    onMouseLeave: hide,
+    onFocus: show,
+    onBlur: hide,
+  };
+
   return (
-    <div className="relative inline-block" onMouseEnter={show} onMouseLeave={hide} onFocus={show} onBlur={hide}>
+    <div className="relative inline-block">
       {React.isValidElement(children)
-        ? React.cloneElement(children, { ref: childRef as any } as any)
+        ? React.cloneElement(children, childProps)
         : children}
       {isVisible && createPortal(
         <div
@@ -276,7 +363,7 @@ export function Popover({ trigger, content, position = 'bottom' }: PopoverProps)
           className={cn('absolute z-50 w-72', positionClasses[position])}
           role="dialog"
         >
-          <div className="split-band-elevated p-3 animate-split-reveal">
+          <div className="surface-raised p-3 animate-fade-in">
             {content}
           </div>
         </div>

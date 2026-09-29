@@ -210,9 +210,9 @@ export function toUserResponse(user: UserDocument): any {
     clubIds: user.clubIds.map((id: ObjectId) => id.toString()),
     activeClubId: user.activeClubId?.toString() || null,
     status: user.status,
-    lastLoginAt: user.lastLoginAt?.toISOString() || null,
-    createdAt: user.createdAt.toISOString(),
-    updatedAt: user.updatedAt.toISOString(),
+    lastLoginAt: user.lastLoginAt || null,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
   };
 }
 
@@ -224,8 +224,8 @@ export function toClubResponse(club: ClubDocument): any {
     branding: club.branding,
     settings: club.settings,
     createdBy: club.createdBy.toString(),
-    createdAt: club.createdAt.toISOString(),
-    updatedAt: club.updatedAt.toISOString(),
+    createdAt: club.createdAt,
+    updatedAt: club.updatedAt,
   };
 }
 
@@ -235,7 +235,7 @@ export function toMembershipResponse(membership: MembershipDocument, user: UserD
     membership: {
       role: membership.role,
       status: membership.status,
-      joinedAt: membership.joinedAt.toISOString(),
+      joinedAt: membership.joinedAt,
       invitedBy: membership.invitedBy?.toString() || null,
     },
   };

@@ -1,270 +1,69 @@
-import React, { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent, Button, Input, Textarea, Badge, Avatar, Select } from '@/components/ui';
-import { ArrowLeft, Dumbbell, Calendar, Trophy, Target, AlertTriangle, Upload, Save, Clock, TrendingUp, User, Settings, Check } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ArrowLeft, BadgeCheck, CalendarDays, Dumbbell, Save, UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { Avatar, Badge, Button, Card, CardContent, Input } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
-import { Athlete } from '@/types';
-
-const mockAthlete: Athlete = {
-  id: '1',
-  userId: 'u1',
-  firstName: 'Priya',
-  lastName: 'Sharma',
-  email: 'priya.sharma@aditya.edu',
-  phone: '+91 98765 43210',
-  dateOfBirth: '2003-03-15',
-  gender: 'female',
-  eventSpecialization: ['100m', '200m'],
-  personalBest: { '100m': '11.82s', '200m': '24.15s' },
-  seasonBest: { '100m': '11.95s', '200m': '24.45s' },
-  medicalNotes: 'None',
-  emergencyContact: { name: 'Rajesh Sharma', relationship: 'Father', phone: '+91 98765 43211', email: 'rajesh.sharma@email.com' },
-  school: 'Aditya University',
-  grade: '3rd Year',
-  status: 'active',
-  clubId: '1',
-  createdAt: '2024-01-15',
-  updatedAt: '2024-06-20',
-};
 
 export function Profile() {
   const navigate = useNavigate();
-  const { user, hasPermission } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'workouts' | 'performance' | 'attendance' | 'settings'>('overview');
-  
-  const tabs = [
-    { id: 'overview', label: 'Overview', icon: <User className="w-4 h-4" /> },
-    { id: 'workouts', label: 'Workouts', icon: <Dumbbell className="w-4 h-4" /> },
-    { id: 'performance', label: 'Performance', icon: <Trophy className="w-4 h-4" /> },
-    { id: 'attendance', label: 'Attendance', icon: <Calendar className="w-4 h-4" /> },
-    { id: 'settings', label: 'Settings', icon: <Settings className="w-4 h-4" /> },
-  ] as const;
+  const { user, updateProfile } = useAuth();
+  const [name, setName] = useState(user?.name || '');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { setName(user?.name || ''); }, [user?.name]);
+
+  const saveProfile = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      await updateProfile({ name: name.trim() });
+      toast.success('Profile saved');
+    } catch (error: any) {
+      toast.error(error.message || 'Could not save profile');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} leftIcon={<ArrowLeft className="w-4 h-4" />}>
-          Back
-        </Button>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <Avatar size="xl" name={`${mockAthlete.firstName} ${mockAthlete.lastName}`} />
-            <div>
-              <h1 className="text-heading-lg font-bold text-surface-900 dark:text-surface-100">
-                {mockAthlete.firstName} {mockAthlete.lastName}
-              </h1>
-              <div className="flex items-center gap-2 mt-1">
-                <Badge variant={mockAthlete.status === 'active' ? 'success' : 'danger'}>{mockAthlete.status}</Badge>
-                <Badge variant="neutral">{mockAthlete.school} \u2022 {mockAthlete.grade}</Badge>
-              </div>
-            </div>
+    <div className="mx-auto max-w-5xl space-y-6">
+      <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} leftIcon={<ArrowLeft className="h-4 w-4" />}>Dashboard</Button>
+      <section className="surface-raised relative overflow-hidden p-6 sm:p-8">
+        <div className="absolute bottom-0 left-0 h-1.5 w-full bg-gradient-to-r from-sky-400 via-sky-500 to-amber-400" />
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+          <Avatar size="xl" name={user?.name} src={user?.avatarUrl || undefined} />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-sky-400">ATHLETE & COACH PROFILE</p>
+            <h1 className="mt-1 truncate text-3xl font-bold text-text-primary">{user?.name || 'Your profile'}</h1>
+            <p className="mt-1 text-text-secondary">{user?.email}</p>
           </div>
+          <Badge variant="success" dot>{user?.role.replace('_', ' ')}</Badge>
         </div>
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(260px,.7fr)]">
+        <Card>
+          <CardContent className="p-6">
+            <div className="mb-5 flex items-center gap-3"><UserRound className="h-5 w-5 text-sky-400" /><div><h2 className="font-semibold text-text-primary">Account details</h2><p className="text-sm text-text-secondary">Keep the name your team sees up to date.</p></div></div>
+            <form onSubmit={saveProfile} className="space-y-4">
+              <Input label="Full name" required minLength={2} maxLength={100} value={name} onChange={event => setName(event.target.value)} autoComplete="name" />
+              <Input label="Email address" value={user?.email || ''} disabled hint="Email is managed by Firebase Authentication." />
+              <div className="flex justify-end"><Button type="submit" loading={saving} disabled={name.trim().length < 2 || name.trim() === user?.name} leftIcon={<Save className="h-4 w-4" />}>Save profile</Button></div>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <h2 className="font-semibold text-text-primary">Your training space</h2>
+            <p className="mt-1 text-sm text-text-secondary">Performance and training records will appear here as those sprints are connected.</p>
+            <div className="mt-5 space-y-3">
+              {[{ icon: Dumbbell, title: 'Workout history', text: 'Available in Sprint 4' }, { icon: CalendarDays, title: 'Attendance record', text: 'Available in Sprint 3' }, { icon: BadgeCheck, title: 'Performance profile', text: 'Available in Sprint 5' }].map(item => <div key={item.title} className="flex items-start gap-3 rounded-lg border border-border p-3"><item.icon className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" /><div><p className="text-sm font-medium text-text-primary">{item.title}</p><p className="text-xs text-text-muted">{item.text}</p></div></div>)}
+            </div>
+          </CardContent>
+        </Card>
       </div>
-
-      <div className="flex gap-1 bg-surface-100 dark:bg-surface-800 p-1 rounded-lg overflow-x-auto">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-body-sm font-medium transition-colors whitespace-nowrap ${
-              activeTab === tab.id
-                ? 'bg-white dark:bg-surface-900 text-primary-800 dark:text-primary-200 shadow-sm'
-                : 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-100'
-            }`}
-          >
-            {tab.icon}
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      <Card>
-        <CardContent className="pt-6">
-          {activeTab === 'overview' && (
-            <div className="space-y-6">
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-body-sm text-surface-500">Attendance Rate</p>
-                        <p className="text-heading-lg font-bold text-green-800 dark:text-green-200">87%</p>
-                      </div>
-                      <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                        <Check className="w-6 h-6 text-green-600" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-body-sm text-surface-500">Workout Compliance</p>
-                        <p className="text-heading-lg font-bold text-primary-800 dark:text-primary-200">94%</p>
-                      </div>
-                      <div className="w-12 h-12 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-                        <Dumbbell className="w-6 h-6 text-primary-600" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-body-sm text-surface-500">Active Injuries</p>
-                        <p className="text-heading-lg font-bold text-danger-800 dark:text-danger-200">0</p>
-                      </div>
-                      <div className="w-12 h-12 rounded-xl bg-danger-100 dark:bg-danger-900/30 flex items-center justify-center">
-                        <AlertTriangle className="w-6 h-6 text-danger-600" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-body-sm text-surface-500">Competitions</p>
-                        <p className="text-heading-lg font-bold text-gold-800 dark:text-gold-200">3</p>
-                      </div>
-                      <div className="w-12 h-12 rounded-xl bg-gold-100 dark:bg-gold-900/30 flex items-center justify-center">
-                        <Trophy className="w-6 h-6 text-gold-600" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Personal Bests</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    {Object.entries(mockAthlete.personalBest).map(([event, value]) => (
-                      <div key={event} className="p-4 rounded-lg bg-primary-50 dark:bg-primary-900/20">
-                        <p className="text-body-sm text-surface-500">{event}</p>
-                        <p className="text-heading-md font-bold text-primary-800 dark:text-primary-200">{value}</p>
-                        <p className="text-caption text-surface-500">Personal Best</p>
-                      </div>
-                    ))}
-                    {Object.entries(mockAthlete.seasonBest).map(([event, value]) => (
-                      <div key={event + 'sb'} className="p-4 rounded-lg bg-gold-50 dark:bg-gold-900/20">
-                        <p className="text-body-sm text-surface-500">{event}</p>
-                        <p className="text-heading-md font-bold text-gold-800 dark:text-gold-200">{value}</p>
-                        <p className="text-caption text-surface-500">Season Best</p>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Event Specializations</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {mockAthlete.eventSpecialization.map((event) => (
-                      <Badge key={event} variant="primary">{event}</Badge>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Emergency Contact</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <p className="font-medium">{mockAthlete.emergencyContact.name}</p>
-                    <p className="text-body-sm text-surface-500">{mockAthlete.emergencyContact.relationship}</p>
-                    <p className="text-body-sm text-surface-500">{mockAthlete.emergencyContact.phone}</p>
-                    {mockAthlete.emergencyContact.email && <p className="text-body-sm text-surface-500">{mockAthlete.emergencyContact.email}</p>}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {activeTab === 'workouts' && (
-            <div className="space-y-4">
-              <p className="text-body text-surface-500">Your upcoming and completed workouts will appear here.</p>
-              <Card>
-                <CardContent className="pt-6 text-center py-12">
-                  <Dumbbell className="w-12 h-12 mx-auto mb-4 text-surface-300 dark:text-surface-600" />
-                  <p className="text-body">No upcoming workouts</p>
-                  <p className="text-body-sm text-surface-500 mt-1">Your coach will assign workouts here</p>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {activeTab === 'performance' && (
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Competition Results</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-body text-surface-500">Your competition results will be displayed here.</p>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {activeTab === 'attendance' && (
-            <div className="space-y-6">
-              <div className="grid gap-4 sm:grid-cols-3">
-                <Card>
-                  <CardContent className="pt-6 text-center">
-                    <p className="text-heading-lg font-bold text-green-800 dark:text-green-200">87%</p>
-                    <p className="text-body-sm text-surface-500">Attendance Rate</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-6 text-center">
-                    <p className="text-heading-lg font-bold text-primary-800 dark:text-primary-200">94%</p>
-                    <p className="text-body-sm text-surface-500">Workout Compliance</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-6 text-center">
-                    <p className="text-heading-lg font-bold text-gold-800 dark:text-gold-200">12</p>
-                    <p className="text-body-sm text-surface-500">Sessions This Month</p>
-                  </CardContent>
-                </Card>
-              </div>
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-body text-surface-500 text-center">Attendance calendar will be displayed here.</p>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {activeTab === 'settings' && (
-            <div className="max-w-2xl space-y-6">
-              <h3 className="text-heading-sm font-semibold mb-4">Profile Settings</h3>
-              <div className="space-y-4">
-                <Input label="Full Name" defaultValue={`${mockAthlete.firstName} ${mockAthlete.lastName}`} />
-                <Input label="Email" type="email" defaultValue={mockAthlete.email} disabled />
-                <Input label="Phone" type="tel" defaultValue={mockAthlete.phone} />
-                <Select label="Gender" options={[{ value: 'female', label: 'Female' }, { value: 'male', label: 'Male' }, { value: 'other', label: 'Other' }]} defaultValue={mockAthlete.gender} />
-                <Input label="Date of Birth" type="date" defaultValue={mockAthlete.dateOfBirth} />
-                <Input label="School" defaultValue={mockAthlete.school} />
-                <Input label="Grade" defaultValue={mockAthlete.grade} />
-                <Input label="Events" placeholder="Comma separated" defaultValue={mockAthlete.eventSpecialization.join(', ')} />
-                <Textarea label="Medical Notes" rows={3} defaultValue={mockAthlete.medicalNotes} />
-                <Button leftIcon={<Save className="w-4 h-4" />}>Save Profile</Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }

@@ -1,5 +1,75 @@
 # Project Summary
 
+## Session 6 — 2026-09-29
+
+**Contributor(s):**
+Codex
+
+**Focus:**
+Fix STMS frontend console warnings and the Google authentication handoff.
+
+**Decisions made:**
+
+- **Changes / additions:** Opted into React Router v7 future behavior, removed the broken font URL and missing PWA asset references, corrected the Vite API proxy path, and made Google sign-in await Firebase token exchange with the backend before navigating.
+- **Skill(s) used (if any):** vercel-react-best-practices.
+- **Open questions / next steps:** If Firebase still rejects Google sign-in, check that Google is enabled as a provider and `localhost` is authorized in Firebase Authentication; capture the exact `auth/...` error code if it continues.
+
+## Session 5 — 2026-09-29
+
+**Contributor(s):**
+Codex
+
+**Focus:**
+Diagnose local backend Redis DNS connection failures.
+
+**Decisions made:**
+
+- **Changes / additions:** Corrected the backend environment example to use the local Redis URL and clarified that hosted services require an externally reachable connection URL when running locally.
+- **Skill(s) used (if any):** backend-development.
+- **Open questions / next steps:** The local machine has no detected Redis or Docker installation. The project owner must run a Redis service locally or set `REDIS_URL` to a reachable hosted Redis URL in `stms-backend/.env`.
+
+## Session 4 — 2026-09-29
+
+**Contributor(s):**
+Codex
+
+**Focus:**
+Diagnose Firebase Admin's malformed private-key startup error.
+
+**Decisions made:**
+
+- **Changes / additions:** Validate the Firebase private key before SDK initialization and return an actionable error for invalid or truncated keys. Replaced the misleading Firebase private-key sample in `.env.example` with an empty value and a source note.
+- **Skill(s) used (if any):** backend-development.
+- **Open questions / next steps:** The local `stms-backend/.env` key is truncated. The project owner must generate a new Firebase service-account key and update the local value before Firebase initialization can succeed.
+
+## Session 3 — 2026-09-29
+
+**Contributor(s):**
+Codex
+
+**Focus:**
+Resolve the TypeScript errors reported by the STMS backend build.
+
+**Decisions made:**
+
+- **Changes / additions:** Typed parsed CORS origins, aligned the backend compiler settings with its CommonJS runtime, corrected coded error constructors and response handler return types, fixed auth/token type mismatches and asynchronous crypto usage, and typed paginated MongoDB results.
+- **Skill(s) used (if any):** backend-development.
+- **Open questions / next steps:** None for this build error.
+
+## Session 2 — 2026-09-29
+
+**Contributor(s):**
+Codex
+
+**Focus:**
+Fix local STMS backend startup failing to load its environment file.
+
+**Decisions made:**
+
+- **Changes / additions:** Load `stms-backend/.env` from the backend configuration module before validating required variables. Keep variables already supplied by the process environment as the higher-priority values.
+- **Skill(s) used (if any):** None.
+- **Open questions / next steps:** Start the backend from the backend directory and confirm it loads the configured environment; database and Redis services must be reachable for full startup.
+
 ## Session 1 — 2026-09-26
 
 **Contributor(s):**
@@ -197,3 +267,205 @@ STMS (Smart Trainer Management System) Design Phase — Complete module-by-modul
 - Design system setup: Storybook repo, component library, theme tokens
 - API contract finalization: OpenAPI 3.0 spec for all modules
 - Database migration baseline: initial schema with Mongock
+
+## Session 7 — 2026-09-29
+
+**Contributor(s):**
+Codex
+
+**Focus:**
+Sprint 1 authentication, user and club API wiring, page action audit, and UI improvements.
+
+**Decisions made:**
+
+- **Changes / additions:** Firebase email/password and ID-token exchange flows now back auth; protected profile, club switching, and invitation acceptance are connected to backend endpoints. User roster and profile actions persist through APIs. Unsupported later-sprint modules show clear planned states instead of sample data. Navigation, feedback, and visual hierarchy were improved. Sprint 1 remains in progress.
+- **Skill(s) used (if any):** planning-and-task-breakdown, backend-development, frontend-design, vercel-react-best-practices.
+- **Open questions / next steps:** Confirm the deployed Firebase, MongoDB, and Redis configuration against the local app; set `FRONTEND_URL` for deployed invitation links if needed. Complete remaining Sprint 1 acceptance criteria before marking the sprint done.
+## Session 8 — 2026-09-29
+
+**Contributor(s):**
+Codex
+
+**Focus:**
+Resolve Firebase Google sign-in configuration failure on localhost.
+
+**Decisions made:**
+
+- **Changes / additions:** Found that the root workspace starts `apps/frontend`, which had no local Firebase environment file; the configured Vite/Firebase client settings existed only under `stms-frontend`. Created the ignored `apps/frontend/.env` using those existing client settings. Confirmed the project ID and auth domain match `smart-trainer-ms`. No OAuth secrets were added to source control.
+- **Skill(s) used (if any):** None.
+- **Open questions / next steps:** Restart the root workspace dev server and retry Google sign-in; if the error persists, confirm Google is enabled for `smart-trainer-ms` and inspect the OAuth web client settings.
+## Session 9 — 2026-09-29
+
+**Contributor(s):**
+Codex
+
+**Focus:**
+Fix local Google sign-in JWT handoff and prevent indefinite API loading.
+
+**Decisions made:**
+
+- **Changes / additions:** The `stms-frontend` Vite proxy pointed to port 3000 while the configured `stms-backend` runs on port 5000. Made the proxy target configurable with a port-5000 default, aligned the backend env example, and added 15-second timeouts to API and refresh requests so auth loading resolves on network failures.
+- **Skill(s) used (if any):** None.
+- **Open questions / next steps:** Restart both local servers and retry Google sign-in. If Firebase still returns `auth/invalid-continue-url`, confirm the frontend `VITE_FIREBASE_API_KEY` is copied from the same `smart-trainer-ms` web app config and that `localhost` is authorized in that project. The frontend production build passes; hosted authentication was not exercised.
+## Session 10 — 2026-09-29
+
+**Contributor(s):**
+Codex
+
+**Focus:**
+Resolve the browser's unsupported service worker MIME type after successful sign-in.
+
+**Decisions made:**
+
+- **Changes / additions:** Removed the manual `/sw.js` registration from `stms-frontend/src/main.tsx`. `vite-plugin-pwa` already injects and manages registration; the duplicate manual path could receive Vite's HTML fallback in development, which the browser rejects as `text/html`. Frontend production build passes.
+- **Skill(s) used (if any):** None.
+- **Open questions / next steps:** Restart the Vite server. If the old message remains, unregister the service worker and clear site data for `localhost` once, then reload.
+## Session 11 — 2026-09-29
+
+**Contributor(s):**
+Codex
+
+**Focus:**
+Clarify Sprint 1 sign-in architecture and remove the misleading mock login path.
+
+**Decisions made:**
+
+- **Changes / additions:** Confirmed email/password and Google login first authenticate with Firebase, then exchange the Firebase ID token for an STMS JWT. Removed the `Demo Login (No Backend)` button and its fake-token session bypass; legacy `demo-token` sessions are now cleared. This prevents a mock session from being mistaken for a real Sprint 1 authentication success. Frontend production build passes.
+- **Skill(s) used (if any):** None.
+- **Open questions / next steps:** Firebase `auth/invalid-continue-url` still needs diagnosis in the live Firebase project/config; verify Firebase project key, `localhost` authorization, and inspect whether Firebase rejects the credential request before `/api/v1/auth/firebase` is called.
+## Session 12 — 2026-09-29
+
+**Contributor(s):**
+Codex
+
+**Focus:**
+Diagnose local backend Redis connection timeouts.
+
+**Decisions made:**
+
+- **Changes / additions:** Inspected the rate-limit and refresh-token Redis clients. A sanitized connectivity check showed DNS resolution succeeds but the local machine cannot reach the configured Redis TCP port, indicating an external network/access issue rather than an application-level authentication failure. No backend code changes were made because the connection is blocked before Redis can respond.
+- **Skill(s) used (if any):** backend-development.
+- **Open questions / next steps:** Enable external access and allowlist the developer machine's public IP in Render Key Value Networking, or use the Render internal URL when the backend runs in the same Render region. Rotate the exposed Redis credential and update the backend environment value.
+## Session 13 — 2026-09-29
+
+**Contributor(s):**
+Codex
+
+**Focus:**
+Review frontend and backend environment examples for local API/Firebase setup.
+
+**Decisions made:**
+
+- **Changes / additions:** Confirmed `VITE_API_URL=/api/v1` is correct for local Vite development because the dev server proxies `/api` to `http://localhost:5000`. Documented production API URL/rewrite requirements. Replaced hard-coded credentials/key material in the backend example with placeholders and corrected its Firebase project ID to match the frontend.
+- **Skill(s) used (if any):** None.
+- **Open questions / next steps:** Configure the deployed frontend's API URL or hosting rewrite. Rotate any credentials from the previous backend example if they were real or used.
+## Session 14 — 2026-09-29
+
+**Contributor(s):**
+Codex
+
+**Focus:**
+Fix invalid JWT authorization and restore visible sign-out controls.
+
+**Decisions made:**
+
+- **Changes / additions:** The attached log showed registration succeeded, but protected `/auth/me` calls returned `TOKEN_INVALID` even after `/auth/refresh` returned 200. A safe local check confirmed the configured RS256 private/public keys did not match. Generated a matching pair in the ignored backend `.env` and verified the pair through dotenv parsing without printing key material. Confirmed Firebase client/Admin project IDs match. Replaced the nested empty-trigger user dropdown with visible Profile, Settings, and Sign out menu buttons; Firebase sign-out now runs even if backend logout fails. Backend and frontend builds pass.
+- **Skill(s) used (if any):** backend-development.
+- **Open questions / next steps:** Restart the backend so it loads the new local JWT keys, then sign in again and retry a profile change. The pasted backend log does not contain the browser-side `auth/invalid-continue-url` event; inspect the Firebase network request separately if that error persists.
+## Session 15 — 2026-09-29
+
+**Contributor(s):**
+Codex
+
+**Focus:**
+Add system administrator account management with coordinated Firebase and MongoDB deletion.
+
+**Decisions made:**
+
+- **Changes / additions:** Added a global system-admin-only account directory at `/admin/users`, with search and role/status filters. Added a permanent-delete API that removes the Firebase Authentication identity, MongoDB user record, club memberships, pending invitations and indexed Redis refresh sessions; retained audit events. Protected authenticated API requests with an active MongoDB account check so deleted/deactivated accounts cannot keep using existing STMS JWTs. Added a one-time backend CLI command to promote an existing active account to `system_admin`; the app cannot self-assign this role. The existing club roster deactivation remains a separate action.
+- **Skill(s) used (if any):** None.
+- **Open questions / next steps:** Promote the designated first administrator from the backend terminal, sign out and back in, then open Platform Users. Firebase/MongoDB/Redis deletion was not exercised against the user's hosted services. Backend and frontend production builds pass.
+
+## Session 16 — 2026-09-29
+
+**Contributor(s):**
+Codex
+
+**Focus:**
+Diagnose local STMS backend startup failure while connecting to MongoDB Atlas.
+
+**Decisions made:**
+
+- **Changes / additions:** Checked the backend connection configuration without exposing credentials. MongoDB SRV and node DNS lookups succeeded, while a TCP connection to the resolved Atlas node on port 27017 failed from the development machine. This indicates network access or firewall filtering before MongoDB authentication; no application code change can restore this external network path.
+- **Skill(s) used (if any):** None.
+- **Open questions / next steps:** Add the development machine's current public IP to the Atlas project's Network Access IP Access List, restart the backend, and retry. If it still times out, check VPN/firewall outbound TCP access to port 27017 and the cluster status. Do not use `0.0.0.0/0` as a workaround.
+
+## Session 17 — 2026-09-29
+
+**Contributor(s):**
+Codex
+
+**Focus:**
+Remove the active-club requirement from global platform account administration.
+
+**Decisions made:**
+
+- **Changes / additions:** Updated user-route middleware dispatch so `/users/platform` and `/users/platform/:id` bypass only active-club injection. Authentication remains required, the platform routes still require `system_admin`, and all other user routes continue to require a selected club. Backend production build passes.
+- **Skill(s) used (if any):** None.
+- **Open questions / next steps:** Restart the backend and reload Platform Users. MongoDB Atlas must still be reachable and the signed-in account must have the `system_admin` role.
+
+## Session 18 — 2026-09-29
+
+**Contributor(s):**
+Codex
+
+**Focus:**
+Fix platform user listing when older MongoDB records lack club membership metadata.
+
+**Decisions made:**
+
+- **Changes / additions:** Made the global system-admin user directory tolerate accounts with no `clubIds` array by returning an empty club list, and added safe defaults for role/name/status and dates so legacy data does not crash the response serializer. Backend production build passes.
+- **Skill(s) used (if any):** None.
+- **Open questions / next steps:** Restart the backend and refresh Platform Users. If another error appears, capture the GET `/api/v1/users/platform` response message and status.
+
+## Session 19 — 2026-09-29
+
+**Contributor(s):**
+Codex
+
+**Focus:**
+Fix Redis abort errors emitted while stopping or restarting the backend.
+
+**Decisions made:**
+
+- **Changes / additions:** Centralized process shutdown in `server.ts`, removed duplicate SIGINT/SIGTERM handlers from the MongoDB module, and added cleanup for both Redis clients on normal shutdown and startup failure. Pending Redis connection errors are handled without logging shutdown-induced abort stacks. Backend production build passes.
+- **Skill(s) used (if any):** None.
+- **Open questions / next steps:** Restart the backend with the updated code and stop it with Ctrl+C to confirm the abort stack no longer appears. Redis must still be reachable for rate limiting and refresh-session features during normal operation.
+
+## Session 20 — 2026-09-29
+
+**Contributor(s):**
+Codex
+
+**Focus:**
+Expose existing clubs to the system administrator and support user roster management within them.
+
+**Decisions made:**
+
+- **Changes / additions:** Added system-admin-only `GET /clubs/platform` to list clubs in the connected MongoDB database and report membership access. Added `POST /clubs/platform/:id/access` to create or reactivate the current administrator's `head_coach` membership, then wired Platform Users to add access, switch into that club, and open its roster. Clubs do not currently have a separate active/inactive field; this action activates the administrator's membership. Frontend and backend production builds pass.
+- **Skill(s) used (if any):** None.
+- **Open questions / next steps:** Restart backend and frontend, open Platform Users, and add access for the club to manage. If no clubs are listed, the connected MongoDB database does not contain club documents; the active `stms-backend` has no club seed script.
+
+## Session 21 — 2026-09-29
+
+**Contributor(s):**
+Codex
+
+**Focus:**
+Close Sprint 1 after owner review and begin Sprint 2 athlete profiles and club management.
+
+**Decisions made:**
+
+- **Changes / additions:** The project owner confirmed Sprint 1 checks passed. Added a club-scoped athlete collection and indexes, list/search/detail/create/update/archive APIs, bounded CSV import with per-row results, API-backed roster and profile UI, and system-admin club creation. Existing invitation acceptance now links a same-club athlete record by email. Club switching rebuilds its club list from active membership records; auth and roster responses tolerate legacy users without `clubIds`. Documented the athlete API contract and Sprint 2 plan/checklist.
+- **Skill(s) used (if any):** planning-and-task-breakdown, backend-development, frontend-design.
+- **Open questions / next steps:** Sprint 2 remains in progress until the owner exercises athlete CRUD/import, invitation-to-account linking, club creation/settings/switching, and cross-club isolation with configured Firebase, MongoDB, and Redis services. MongoDB athlete indexes are created idempotently when the backend connects.

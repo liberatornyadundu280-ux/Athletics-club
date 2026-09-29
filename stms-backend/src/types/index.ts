@@ -76,6 +76,29 @@ export interface ClubResponse {
   updatedAt: string;
 }
 
+// ==================== ATHLETE ====================
+export interface AthleteDocument extends Document {
+  _id: ObjectId;
+  clubId: ObjectId;
+  userId?: ObjectId | null;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string | null;
+  dateOfBirth: string | null;
+  gender: 'male' | 'female' | 'other';
+  eventSpecialization: string[];
+  personalBest: Record<string, string>;
+  seasonBest: Record<string, string>;
+  medicalNotes: string | null;
+  emergencyContact: { name: string; relationship: string; phone: string; email: string | null } | null;
+  school: string | null;
+  grade: string | null;
+  status: 'active' | 'injured' | 'inactive' | 'transferred' | 'alumni';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // ==================== CLUB MEMBERSHIP ====================
 export interface MembershipDocument extends Document {
   _id: ObjectId;

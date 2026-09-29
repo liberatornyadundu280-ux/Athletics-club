@@ -180,6 +180,8 @@ export default {
         'space-2xl': '3rem',
         'space-3xl': '4rem',
         'space-4xl': '6rem',
+        'lane': '16rem',
+        'lane-sm': '14rem',
       },
 
       borderRadius: {
@@ -190,6 +192,14 @@ export default {
         'radius-xl': '1rem',
         'radius-2xl': '1.5rem',
         'radius-full': '9999px',
+      },
+      borderWidth: {
+        '0': '0',
+        '1': '1px',
+        '2': '2px',
+        '3': '3px',
+        '4': '4px',
+        '8': '8px',
       },
 
       boxShadow: {

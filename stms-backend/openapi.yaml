@@ -11,11 +11,11 @@ info:
   license:
     name: Proprietary
 servers:
-  - url: https://api.stms.example.com/v1
+  - url: https://api.stms.example.com/api/v1
     description: Production
-  - url: https://api-staging.stms.example.com/v1
+  - url: https://api-staging.stms.example.com/api/v1
     description: Staging
-  - url: http://localhost:3000/v1
+  - url: http://localhost:3000/api/v1
     description: Local development
 
 security:
@@ -102,7 +102,7 @@ components:
     # ==================== AUTH ====================
     RegisterRequest:
       type: object
-      required: [email, password, role]
+      required: [email, password, role, name]
       properties:
         email:
           type: string
@@ -125,20 +125,6 @@ components:
           minLength: 1
           maxLength: 100
           example: "John Smith"
-        clubId:
-          type: string
-          description: Optional - join existing club on registration (requires invite token)
-          example: "507f1f77bcf86cd799439011"
-
-    LoginRequest:
-      type: object
-      required: [email, password]
-      properties:
-        email:
-          type: string
-          format: email
-        password:
-          type: string
 
     GoogleAuthRequest:
       type: object
@@ -147,9 +133,6 @@ components:
         idToken:
           type: string
           description: Google OAuth ID token from frontend
-        clubId:
-          type: string
-          description: Optional club to join
 
     TokenResponse:
       type: object
@@ -171,6 +154,10 @@ components:
               type: string
               enum: [Bearer]
               example: "Bearer"
+            permissions:
+              type: array
+              items:
+                type: string
             user:
               $ref: '#/components/schemas/UserResponse'
 
@@ -217,6 +204,24 @@ components:
           type: string
           pattern: '^[0-9a-fA-F]{24}$'
           description: Must be in user's clubIds
+
+    UpdateProfileRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+
+    AcceptInvitationRequest:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          pattern: '^[0-9a-fA-F]{24}$'
+          description: Invitation ID from the club admin's shareable link
 
     # ==================== USER ====================
     UserResponse:
@@ -323,6 +328,201 @@ components:
             expiresAt:
               type: string
               format: date-time
+
+    # ==================== ATHLETE ====================
+    AthleteProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: '^[0-9a-fA-F]{24}$'
+        userId:
+          type: string
+          nullable: true
+          description: Linked STMS account when the athlete has an active account in this club.
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          nullable: true
+        dateOfBirth:
+          type: string
+          format: date
+          nullable: true
+        gender:
+          type: string
+          enum: [male, female, other]
+        eventSpecialization:
+          type: array
+          items:
+            type: string
+        personalBest:
+          type: object
+          additionalProperties:
+            type: string
+        seasonBest:
+          type: object
+          additionalProperties:
+            type: string
+        medicalNotes:
+          type: string
+          nullable: true
+        emergencyContact:
+          type: object
+          nullable: true
+          properties:
+            name:
+              type: string
+            relationship:
+              type: string
+            phone:
+              type: string
+            email:
+              type: string
+              nullable: true
+        school:
+          type: string
+          nullable: true
+        grade:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [active, injured, inactive, transferred, alumni]
+        clubId:
+          type: string
+          pattern: '^[0-9a-fA-F]{24}$'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AthleteProfileInput:
+      type: object
+      required: [firstName, lastName, email, gender]
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 80
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 80
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        phone:
+          type: string
+          nullable: true
+          maxLength: 30
+        dateOfBirth:
+          type: string
+          format: date
+          nullable: true
+        gender:
+          type: string
+          enum: [male, female, other]
+        eventSpecialization:
+          type: array
+          maxItems: 12
+          items:
+            type: string
+            maxLength: 60
+        medicalNotes:
+          type: string
+          nullable: true
+          maxLength: 2000
+        emergencyContact:
+          type: object
+          nullable: true
+          properties:
+            name:
+              type: string
+            relationship:
+              type: string
+            phone:
+              type: string
+            email:
+              type: string
+              nullable: true
+        school:
+          type: string
+          nullable: true
+        grade:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [active, injured, inactive, transferred, alumni]
+
+    AthleteProfilePatchInput:
+      type: object
+      description: Send only the fields being changed.
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 80
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 80
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        phone:
+          type: string
+          nullable: true
+          maxLength: 30
+        dateOfBirth:
+          type: string
+          format: date
+          nullable: true
+        gender:
+          type: string
+          enum: [male, female, other]
+        eventSpecialization:
+          type: array
+          maxItems: 12
+          items:
+            type: string
+            maxLength: 60
+        medicalNotes:
+          type: string
+          nullable: true
+          maxLength: 2000
+        emergencyContact:
+          type: object
+          nullable: true
+          properties:
+            name:
+              type: string
+            relationship:
+              type: string
+            phone:
+              type: string
+            email:
+              type: string
+              nullable: true
+        school:
+          type: string
+          nullable: true
+        grade:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [active, injured, inactive, transferred, alumni]
 
     # ==================== CLUB ====================
     ClubResponse:
@@ -520,39 +720,27 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /auth/login:
+  /auth/firebase:
     post:
       tags: [Authentication]
-      summary: Login with email/password
-      description: Returns access token + sets refresh token cookie
+      summary: Exchange a Firebase ID token for an STMS session
+      description: The Firebase client SDK authenticates email/password or Google; this endpoint verifies its ID token, returns an STMS access token, and sets an HttpOnly refresh cookie.
       security: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LoginRequest'
+              $ref: '#/components/schemas/GoogleAuthRequest'
       responses:
         '200':
-          description: Login successful
+          description: Authentication successful
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TokenResponse'
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '401':
-          description: Invalid credentials
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '429':
-          description: Rate limited (5 requests per 15 min)
+          description: Firebase token is invalid, expired, or revoked
           content:
             application/json:
               schema:
@@ -561,8 +749,8 @@ paths:
   /auth/google:
     post:
       tags: [Authentication]
-      summary: Login/register with Google OAuth
-      description: Verifies Google ID token, creates/updates user, returns tokens
+      summary: Legacy alias for Firebase ID-token exchange
+      description: Google sign-in uses the same Firebase ID-token verification flow as /auth/firebase.
       security: []
       requestBody:
         required: true
@@ -643,6 +831,53 @@ paths:
                 $ref: '#/components/schemas/AuthMeResponse'
         '401':
           description: Invalid/expired access token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags: [Authentication]
+      summary: Update current user's display name
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthMeResponse'
+        '401':
+          description: Invalid/expired access token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/accept-invitation:
+    post:
+      tags: [Authentication]
+      summary: Accept a club invitation
+      description: Requires the signed-in Firebase account email to match the invitation email.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcceptInvitationRequest'
+      responses:
+        '200':
+          description: Membership accepted and active club session issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: Invitation is invalid, expired, or belongs to another email
           content:
             application/json:
               schema:
@@ -884,6 +1119,305 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ==================== ATHLETES ====================
+  /athletes:
+    get:
+      tags: [Athletes]
+      summary: List and search athletes in the active club
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/pageParam'
+        - $ref: '#/components/parameters/limitParam'
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 100
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, injured, inactive, transferred, alumni]
+        - name: event
+          in: query
+          schema:
+            type: string
+            maxLength: 60
+      responses:
+        '200':
+          description: Paginated athlete list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AthleteProfile'
+                  meta:
+                    $ref: '#/components/schemas/PaginatedResponse/properties/meta'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Requires athlete:read permission and active club context
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags: [Athletes]
+      summary: Add athlete profile to the active club
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AthleteProfileInput'
+      responses:
+        '201':
+          description: Athlete profile created; account linked when an active same-club account matches the email
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    $ref: '#/components/schemas/AthleteProfile'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Requires athlete:write permission and active club context
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Email already exists in this club
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /athletes/import:
+    post:
+      tags: [Athletes]
+      summary: Bulk import up to 250 athlete profiles into the active club
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rows]
+              properties:
+                rows:
+                  type: array
+                  minItems: 1
+                  maxItems: 250
+                  items:
+                    $ref: '#/components/schemas/AthleteProfileInput'
+      responses:
+        '200':
+          description: Per-row import results, including failures
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    type: object
+                    properties:
+                      created:
+                        type: integer
+                      failed:
+                        type: integer
+                      results:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            row:
+                              type: integer
+                            email:
+                              type: string
+                            status:
+                              type: string
+                              enum: [created, error]
+                            message:
+                              type: string
+        '201':
+          description: At least one athlete profile was created; failed rows remain listed in the response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    type: object
+                    properties:
+                      created:
+                        type: integer
+                      failed:
+                        type: integer
+                      results:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            row:
+                              type: integer
+                            email:
+                              type: string
+                            status:
+                              type: string
+                              enum: [created, error]
+                            message:
+                              type: string
+        '403':
+          description: Requires athlete:import permission and active club context
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /athletes/{id}:
+    get:
+      tags: [Athletes]
+      summary: Get an athlete profile in the active club
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+      responses:
+        '200':
+          description: Athlete profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    $ref: '#/components/schemas/AthleteProfile'
+        '403':
+          description: Requires athlete:read permission and active club context
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Athlete not found in this club
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    patch:
+      tags: [Athletes]
+      summary: Update an athlete profile
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AthleteProfilePatchInput'
+      responses:
+        '200':
+          description: Updated athlete profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    $ref: '#/components/schemas/AthleteProfile'
+        '403':
+          description: Requires athlete:write permission and active club context
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Athlete not found in this club
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags: [Athletes]
+      summary: Archive an athlete profile while retaining its record
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+      responses:
+        '200':
+          description: Athlete archived
+        '403':
+          description: Requires athlete:write permission and active club context
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Athlete not found in this club
           content:
             application/json:
               schema:

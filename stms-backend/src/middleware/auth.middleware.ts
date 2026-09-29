@@ -6,6 +6,7 @@ import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
 import { UnauthorizedError, ForbiddenError } from '../utils/errors';
 import { ERROR_CODES } from '../utils/errors';
+import { getDatabase } from '../config/database';
 
 export interface JWTPayload {
   uid: string;
@@ -39,16 +40,28 @@ export const authenticate = async (
     const token = authHeader.slice(7); // Remove 'Bearer '
 
     // Verify RS256 token
-    const payload = jwt.verify(token, env.JWT_PUBLIC_KEY, {
+    const decoded = jwt.verify(token, env.JWT_PUBLIC_KEY, {
       algorithms: ['RS256'],
       issuer: 'stms-backend',
       audience: 'stms-frontend',
-    }) as JWTPayload;
+    }) as JWTPayload & { sub?: string };
+
+    // JWT subject is the canonical Firebase UID. Accept older tokens that
+    // carried `uid`, then normalize the request shape used by route handlers.
+    const payload: JWTPayload = { ...decoded, uid: decoded.uid || decoded.sub || '' };
 
     // Additional validation
     if (!payload.uid || !payload.email) {
       throw new UnauthorizedError('Invalid token payload');
     }
+
+    // Keep account deletion/deactivation effective immediately for existing
+    // STMS access tokens, not only after their 15-minute expiry.
+    const account = await getDatabase().collection('users').findOne(
+      { firebaseUid: payload.uid, status: 'active' },
+      { projection: { _id: 1 } }
+    );
+    if (!account) throw new UnauthorizedError('Account is no longer active');
 
     req.user = payload;
     next();
@@ -80,11 +93,13 @@ export const optionalAuth = async (
     }
 
     const token = authHeader.slice(7);
-    const payload = jwt.verify(token, env.JWT_PUBLIC_KEY, {
+    const decoded = jwt.verify(token, env.JWT_PUBLIC_KEY, {
       algorithms: ['RS256'],
       issuer: 'stms-backend',
       audience: 'stms-frontend',
-    }) as JWTPayload;
+    }) as JWTPayload & { sub?: string };
+
+    const payload: JWTPayload = { ...decoded, uid: decoded.uid || decoded.sub || '' };
 
     req.user = payload;
     next();

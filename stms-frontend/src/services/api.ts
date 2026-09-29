@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
-import { ApiResponse, PaginatedResponse } from '@/types';
+import { ApiResponse, Athlete, PaginatedResponse } from '@/types';
 
 // ==================== AXIOS INSTANCE ====================
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
@@ -11,6 +11,7 @@ class ApiService {
   constructor() {
     this.client = axios.create({
       baseURL: API_BASE_URL,
+      timeout: 15000,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -73,7 +74,7 @@ class ApiService {
         const response = await axios.post<ApiResponse<{ accessToken: string; expiresIn: number }>>(
           `${API_BASE_URL}/auth/refresh`,
           {},
-          { withCredentials: true }
+          { withCredentials: true, timeout: 15000 }
         );
 
         const { accessToken, expiresIn } = response.data.data!;
@@ -119,8 +120,8 @@ class ApiService {
   }
 
   // ==================== AUTH ====================
-  async register(data: { email: string; password: string; role: 'athlete' | 'coach'; name: string; clubId?: string }) {
-    const response = await this.client.post<ApiResponse<{ accessToken: string; expiresIn: number; tokenType: string; user: any }>>(
+  async register(data: { email: string; password: string; role: 'athlete' | 'coach'; name: string }) {
+    const response = await this.client.post<ApiResponse<{ accessToken: string; expiresIn: number; tokenType: string; user: any; permissions?: string[] }>>(
       '/auth/register',
       data
     );
@@ -128,21 +129,22 @@ class ApiService {
     return response.data.data!;
   }
 
-  async login(email: string, password: string) {
-    const response = await this.client.post<ApiResponse<{ accessToken: string; expiresIn: number; tokenType: string; user: any }>>(
-      '/auth/login',
-      { email, password }
+  async loginWithGoogle(idToken: string) {
+    const response = await this.client.post<ApiResponse<{ accessToken: string; expiresIn: number; tokenType: string; user: any; permissions?: string[] }>>(
+      '/auth/google',
+      { idToken }
     );
     this.setAuth(response.data.data!);
     return response.data.data!;
   }
 
-  async loginWithGoogle(idToken: string, clubId?: string) {
-    const response = await this.client.post<ApiResponse<{ accessToken: string; expiresIn: number; tokenType: string; user: any }>>(
-      '/auth/google',
-      { idToken, clubId }
+  async loginWithFirebase(idToken: string) {
+    const response = await this.client.post<ApiResponse<{ accessToken: string; expiresIn: number; tokenType: string; user: any; permissions?: string[] }>>(
+      '/auth/firebase',
+      { idToken }
     );
     this.setAuth(response.data.data!);
+    localStorage.setItem('permissions', JSON.stringify(response.data.data!.permissions || []));
     return response.data.data!;
   }
 
@@ -159,12 +161,32 @@ class ApiService {
     return response.data.data!;
   }
 
+  async updateMyProfile(data: { name: string }) {
+    const response = await this.client.patch<ApiResponse<{ user: any }>>('/auth/me', data);
+    this.updateUser(response.data.data!.user);
+    return response.data.data!.user;
+  }
+
   async switchClub(clubId: string) {
-    const response = await this.client.post<ApiResponse<{ user: any; permissions: string[] }>>(
+    const response = await this.client.post<ApiResponse<{ user: any; permissions: string[]; accessToken: string; expiresIn: number }>>(
       '/auth/switch-club',
       { clubId }
     );
     this.updateUser(response.data.data!.user);
+    if (response.data.data!.accessToken) {
+      localStorage.setItem('accessToken', response.data.data!.accessToken);
+      localStorage.setItem('tokenExpiresAt', String(Date.now() + response.data.data!.expiresIn * 1000));
+    }
+    this.updatePermissions(response.data.data!.permissions);
+    return response.data.data!;
+  }
+
+  async acceptInvitation(token: string) {
+    const response = await this.client.post<ApiResponse<{ accessToken: string; expiresIn: number; user: any; permissions: string[] }>>(
+      '/auth/accept-invitation',
+      { token }
+    );
+    this.setAuth(response.data.data!);
     return response.data.data!;
   }
 
@@ -172,6 +194,15 @@ class ApiService {
   async getUsers(params?: { page?: number; limit?: number; search?: string; role?: string; status?: string }) {
     const response = await this.client.get<PaginatedResponse<any>>('/users', { params });
     return response.data;
+  }
+
+  async getPlatformUsers(params?: { page?: number; limit?: number; search?: string; role?: string; status?: string }) {
+    const response = await this.client.get<PaginatedResponse<any>>('/users/platform', { params });
+    return response.data;
+  }
+
+  async permanentlyDeletePlatformUser(id: string) {
+    await this.client.delete(`/users/platform/${id}`);
   }
 
   async inviteUser(data: { email: string; role: string; clubId?: string }) {
@@ -199,6 +230,16 @@ class ApiService {
     return response.data.data!;
   }
 
+  async getPlatformClubs() {
+    const response = await this.client.get<ApiResponse<any[]>>('/clubs/platform');
+    return response.data.data || [];
+  }
+
+  async addMyPlatformClubAccess(id: string) {
+    const response = await this.client.post<ApiResponse<any>>(`/clubs/platform/${id}/access`);
+    return response.data.data!;
+  }
+
   async getClub(id: string) {
     const response = await this.client.get<ApiResponse<any>>(`/clubs/${id}`);
     return response.data.data!;
@@ -214,15 +255,50 @@ class ApiService {
     return response.data;
   }
 
+  // ==================== ATHLETES ====================
+  async getAthletes(params?: { page?: number; limit?: number; search?: string; status?: string; event?: string }) {
+    const response = await this.client.get<PaginatedResponse<Athlete>>('/athletes', { params });
+    return response.data;
+  }
+
+  async getAthlete(id: string) {
+    const response = await this.client.get<ApiResponse<Athlete>>(`/athletes/${id}`);
+    return response.data.data!;
+  }
+
+  async createAthlete(data: Partial<Athlete>) {
+    const response = await this.client.post<ApiResponse<Athlete>>('/athletes', data);
+    return response.data.data!;
+  }
+
+  async updateAthlete(id: string, data: Partial<Athlete>) {
+    const response = await this.client.patch<ApiResponse<Athlete>>(`/athletes/${id}`, data);
+    return response.data.data!;
+  }
+
+  async archiveAthlete(id: string) {
+    await this.client.delete(`/athletes/${id}`);
+  }
+
+  async importAthletes(rows: Record<string, unknown>[]) {
+    const response = await this.client.post<ApiResponse<{ created: number; failed: number; results: { row: number; email?: string; status: 'created' | 'error'; message?: string }[] }>>('/athletes/import', { rows });
+    return response.data.data!;
+  }
+
   // ==================== UTILITIES ====================
-  private setAuth(data: { accessToken: string; expiresIn: number; user: any }) {
+  private setAuth(data: { accessToken: string; expiresIn: number; user: any; permissions?: string[] }) {
     localStorage.setItem('accessToken', data.accessToken);
     localStorage.setItem('tokenExpiresAt', String(Date.now() + data.expiresIn * 1000));
     localStorage.setItem('user', JSON.stringify(data.user));
+    localStorage.setItem('permissions', JSON.stringify(data.permissions || data.user.permissions || []));
   }
 
   private updateUser(user: any) {
     localStorage.setItem('user', JSON.stringify(user));
+  }
+
+  private updatePermissions(permissions: string[]) {
+    localStorage.setItem('permissions', JSON.stringify(permissions || []));
   }
 
   getStoredUser(): any | null {
@@ -261,15 +337,19 @@ export const api = new ApiService();
 
 export const authApi = {
   register: api.register.bind(api),
-  login: api.login.bind(api),
   loginWithGoogle: api.loginWithGoogle.bind(api),
+  loginWithFirebase: api.loginWithFirebase.bind(api),
   logout: api.logout.bind(api),
   getMe: api.getMe.bind(api),
+  updateMyProfile: api.updateMyProfile.bind(api),
+  acceptInvitation: api.acceptInvitation.bind(api),
   switchClub: api.switchClub.bind(api),
 };
 
 export const userApi = {
   getUsers: api.getUsers.bind(api),
+  getPlatformUsers: api.getPlatformUsers.bind(api),
+  permanentlyDeletePlatformUser: api.permanentlyDeletePlatformUser.bind(api),
   inviteUser: api.inviteUser.bind(api),
   getUser: api.getUser.bind(api),
   updateUserRole: api.updateUserRole.bind(api),
@@ -278,9 +358,20 @@ export const userApi = {
 
 export const clubApi = {
   createClub: api.createClub.bind(api),
+  getPlatformClubs: api.getPlatformClubs.bind(api),
+  addMyPlatformClubAccess: api.addMyPlatformClubAccess.bind(api),
   getClub: api.getClub.bind(api),
   updateClub: api.updateClub.bind(api),
   getClubMembers: api.getClubMembers.bind(api),
+};
+
+export const athleteApi = {
+  getAthletes: api.getAthletes.bind(api),
+  getAthlete: api.getAthlete.bind(api),
+  createAthlete: api.createAthlete.bind(api),
+  updateAthlete: api.updateAthlete.bind(api),
+  archiveAthlete: api.archiveAthlete.bind(api),
+  importAthletes: api.importAthletes.bind(api),
 };
 
 export default api;

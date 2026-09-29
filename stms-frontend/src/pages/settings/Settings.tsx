@@ -1,259 +1,89 @@
-import React, { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent, Button, Input, Textarea, Select, SelectOption, Badge, Avatar, Switch } from '@/components/ui';
-import { User, Shield, Bell, Palette, Globe, Save, Key, Moon, Sun, Monitor, LogOut, Eye, EyeOff, Upload } from 'lucide-react';
-import { useAuth, useTheme } from '@/context';
-import { User as UserType } from '@/types';
+import React, { useEffect, useState } from 'react';
+import { Building2, Moon, Palette, Save, Sun, UserRound } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
+import { Button, Card, CardContent, Input } from '@/components/ui';
+import { useAuth, useTheme } from '@/context';
+import { clubApi } from '@/services/api';
+import { Club } from '@/types';
 
-const settingsTabs = [
-  { id: 'profile', label: 'Profile', icon: <User className="w-4 h-4" /> },
-  { id: 'security', label: 'Security', icon: <Shield className="w-4 h-4" /> },
-  { id: 'notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" /> },
-  { id: 'appearance', label: 'Appearance', icon: <Palette className="w-4 h-4" /> },
-  { id: 'club', label: 'Club Settings', icon: <Shield className="w-4 h-4" /> },
-];
-
-const mockUser: UserType = {
-  id: '1',
-  firebaseUid: 'u1',
-  email: 'coach.john@aditya.edu',
-  name: 'John Coach',
-  avatarUrl: null,
-  role: 'club_admin',
-  clubIds: ['1'],
-  activeClubId: '1',
-  status: 'active',
-  lastLoginAt: new Date().toISOString(),
-  createdAt: '2024-01-15',
-  updatedAt: new Date().toISOString(),
-};
+type Tab = 'profile' | 'appearance' | 'club';
 
 export function Settings() {
-  const { user, hasRole, hasPermission } = useAuth();
-  const { theme, resolvedTheme, setTheme } = useTheme();
-  const [activeTab, setActiveTab] = useState('profile');
-  const [profileData, setProfileData] = useState({
-    name: mockUser.name,
-    email: mockUser.email,
-    phone: '+91 98765 43210',
-    bio: 'Head Coach - Sprint & Jumps',
-  });
-  const [securityData, setSecurityData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-    twoFactorEnabled: false,
-  });
-  const [notificationPrefs, setNotificationPrefs] = useState({
-    email: true,
-    push: true,
-    workoutReminders: true,
-    attendanceAlerts: true,
-    performanceUpdates: true,
-    permissionUpdates: true,
-    marketingEmails: false,
-  });
+  const location = useLocation();
+  const { user, updateProfile, hasPermission } = useAuth();
+  const { theme, setTheme } = useTheme();
+  const [activeTab, setActiveTab] = useState<Tab>(location.pathname.endsWith('/club') ? 'club' : 'profile');
+  const [name, setName] = useState(user?.name || '');
+  const [club, setClub] = useState<Club | null>(null);
+  const [clubForm, setClubForm] = useState({ primaryColor: '#1E3A8A', secondaryColor: '#F59E0B', logoUrl: '', timezone: 'Asia/Kolkata', attendanceMinPercent: 75, workoutVerificationRequired: false });
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const canEditClub = hasPermission('club:settings');
 
-  // Check if user has club admin permissions
-  const isClubAdmin = hasRole(['club_admin', 'system_admin']);
+  useEffect(() => { setActiveTab(location.pathname.endsWith('/club') ? 'club' : 'profile'); }, [location.pathname]);
+  useEffect(() => { setName(user?.name || ''); }, [user?.name]);
+
+  useEffect(() => {
+    if (activeTab !== 'club' || !user?.activeClubId || !canEditClub) return;
+    let active = true;
+    setLoading(true);
+    clubApi.getClub(user.activeClubId).then((data: Club) => {
+      if (!active) return;
+      setClub(data);
+      setClubForm({
+        primaryColor: data.branding.primaryColor,
+        secondaryColor: data.branding.secondaryColor,
+        logoUrl: data.branding.logoUrl || '',
+        timezone: data.settings.timezone,
+        attendanceMinPercent: data.settings.attendanceMinPercent,
+        workoutVerificationRequired: data.settings.workoutVerificationRequired,
+      });
+    }).catch((error: any) => toast.error(error.message || 'Could not load club settings')).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [activeTab, user?.activeClubId, canEditClub]);
+
+  const saveName = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSaving(true);
+    try { await updateProfile({ name: name.trim() }); toast.success('Profile saved'); }
+    catch (error: any) { toast.error(error.message || 'Could not save profile'); }
+    finally { setSaving(false); }
+  };
+
+  const saveClub = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!club) return;
+    setSaving(true);
+    try {
+      const updated = await clubApi.updateClub(club.id, {
+        branding: { primaryColor: clubForm.primaryColor, secondaryColor: clubForm.secondaryColor, logoUrl: clubForm.logoUrl || null },
+        settings: { timezone: clubForm.timezone, attendanceMinPercent: Number(clubForm.attendanceMinPercent), workoutVerificationRequired: clubForm.workoutVerificationRequired },
+      });
+      setClub(updated);
+      toast.success('Club settings saved');
+    } catch (error: any) { toast.error(error.message || 'Could not save club settings'); }
+    finally { setSaving(false); }
+  };
+
+  const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
+    { id: 'profile', label: 'Profile', icon: <UserRound className="h-4 w-4" /> },
+    { id: 'appearance', label: 'Appearance', icon: <Palette className="h-4 w-4" /> },
+    ...(canEditClub ? [{ id: 'club' as const, label: 'Club settings', icon: <Building2 className="h-4 w-4" /> }] : []),
+  ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-heading-lg font-bold text-surface-900 dark:text-surface-100">Settings</h1>
-          <p className="text-body text-surface-500 dark:text-surface-400 mt-1">Manage your account and preferences</p>
-        </div>
+    <div className="mx-auto max-w-5xl space-y-6">
+      <div><p className="text-sm font-semibold text-sky-400">YOUR TRAINING SPACE</p><h1 className="mt-2 text-3xl font-bold text-text-primary">Settings</h1><p className="mt-1 text-text-secondary">Account details and preferences for your work with the team.</p></div>
+      <div className="flex gap-2 overflow-x-auto border-b border-border" role="tablist" aria-label="Settings sections">
+        {tabs.map(tab => <button key={tab.id} role="tab" aria-selected={activeTab === tab.id} onClick={() => setActiveTab(tab.id)} className={`inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors ${activeTab === tab.id ? 'border-sky-400 text-sky-300' : 'border-transparent text-text-secondary hover:text-text-primary'}`}>{tab.icon}{tab.label}</button>)}
       </div>
 
-      {/* Tab Navigation */}
-      <div className="flex gap-1 bg-surface-100 dark:bg-surface-800 p-1 rounded-lg overflow-x-auto">
-        {settingsTabs
-          .filter(tab => tab.id !== 'club' || isClubAdmin)
-          .map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-body-sm font-medium transition-colors whitespace-nowrap ${
-                activeTab === tab.id
-                  ? 'bg-white dark:bg-surface-900 text-primary-800 dark:text-primary-200 shadow-sm'
-                  : 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-100'
-              }`}
-            >
-              {tab.icon}
-              {tab.label}
-            </button>
-          ))}
-      </div>
+      {activeTab === 'profile' && <Card><CardContent className="max-w-2xl space-y-5 p-6"><div><h2 className="text-xl font-semibold text-text-primary">Account profile</h2><p className="mt-1 text-sm text-text-secondary">This name appears on your roster and training records.</p></div><form onSubmit={saveName} className="space-y-4"><Input label="Full name" value={name} minLength={2} maxLength={100} required onChange={event => setName(event.target.value)} autoComplete="name" /><Input label="Email address" type="email" value={user?.email || ''} disabled hint="Email is managed by Firebase Authentication." /><div className="flex justify-end"><Button type="submit" loading={saving} disabled={name.trim().length < 2 || name.trim() === user?.name} leftIcon={<Save className="h-4 w-4" />}>Save changes</Button></div></form></CardContent></Card>}
 
-      <Card>
-        <CardContent className="pt-6">
-          {activeTab === 'profile' && (
-            <div className="max-w-2xl space-y-6">
-              <div className="flex items-center gap-6">
-                <Avatar size="xl" name={profileData.name} src={mockUser.avatarUrl} />
-                <div>
-                  <Button variant="outline" leftIcon={<Upload className="w-4 h-4" />}>Change Avatar</Button>
-                  <p className="text-caption text-surface-500 mt-1">JPG, PNG up to 5MB</p>
-                </div>
-              </div>
-              <Input label="Full Name" value={profileData.name} onChange={e => setProfileData(prev => ({ ...prev, name: e.target.value }))} />
-              <Input label="Email" type="email" value={profileData.email} onChange={e => setProfileData(prev => ({ ...prev, email: e.target.value }))} disabled />
-              <Input label="Phone" type="tel" value={profileData.phone} onChange={e => setProfileData(prev => ({ ...prev, phone: e.target.value }))} placeholder="+91 98765 43210" />
-              <Textarea label="Bio" placeholder="Tell us about yourself..." rows={3} value={profileData.bio} onChange={e => setProfileData(prev => ({ ...prev, bio: e.target.value }))} />
-              <Button onClick={() => toast.success('Profile updated!')} leftIcon={<Save className="w-4 h-4" />}>Save Changes</Button>
-            </div>
-          )}
+      {activeTab === 'appearance' && <Card><CardContent className="p-6"><div><h2 className="text-xl font-semibold text-text-primary">Appearance</h2><p className="mt-1 text-sm text-text-secondary">Choose how STMS looks on this device.</p></div><div className="mt-6 grid gap-3 sm:grid-cols-3">{([{ id: 'light', title: 'Daylight', text: 'Bright, clear screens', icon: Sun }, { id: 'dark', title: 'Trackside', text: 'Low light training spaces', icon: Moon }, { id: 'system', title: 'Follow device', text: 'Match your device setting', icon: Palette }] as const).map(option => <button key={option.id} onClick={() => setTheme(option.id)} aria-pressed={theme === option.id} className={`rounded-xl border p-5 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400 ${theme === option.id ? 'border-sky-400 bg-sky-500/10' : 'border-border hover:border-sky-400/50'}`}><option.icon className="h-5 w-5 text-amber-400" /><p className="mt-4 font-semibold text-text-primary">{option.title}</p><p className="mt-1 text-sm text-text-secondary">{option.text}</p></button>)}</div></CardContent></Card>}
 
-          {activeTab === 'security' && (
-            <div className="max-w-2xl space-y-8">
-              <div>
-                <h3 className="text-heading-sm font-semibold mb-4">Change Password</h3>
-                <div className="space-y-4">
-                  <Input label="Current Password" type="password" placeholder="Enter current password" value={securityData.currentPassword} onChange={e => setSecurityData(prev => ({ ...prev, currentPassword: e.target.value }))} leftIcon={<Key className="w-5 h-5" />} />
-                  <Input label="New Password" type="password" placeholder="Min 12 characters" value={securityData.newPassword} onChange={e => setSecurityData(prev => ({ ...prev, newPassword: e.target.value }))} leftIcon={<Key className="w-5 h-5" />} />
-                  <Input label="Confirm New Password" type="password" placeholder="Confirm new password" value={securityData.confirmPassword} onChange={e => setSecurityData(prev => ({ ...prev, confirmPassword: e.target.value }))} leftIcon={<Key className="w-5 h-5" />} />
-                </div>
-                <Button onClick={() => toast.success('Password updated!')} leftIcon={<Save className="w-4 h-4" />}>Update Password</Button>
-              </div>
-              <div className="border-t border-surface-200 dark:border-surface-700 pt-8">
-                <h3 className="text-heading-sm font-semibold mb-4">Two-Factor Authentication</h3>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Authenticator App</p>
-                    <p className="text-body-sm text-surface-500">Use Google Authenticator or similar for 2FA</p>
-                  </div>
-                  <Button variant={securityData.twoFactorEnabled ? 'secondary' : 'primary'} onClick={() => setSecurityData(prev => ({ ...prev, twoFactorEnabled: !prev.twoFactorEnabled }))}>
-                    {securityData.twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA'}
-                  </Button>
-                </div>
-              </div>
-              <div className="border-t border-surface-200 dark:border-surface-700 pt-8">
-                <h3 className="text-heading-sm font-semibold mb-4">Active Sessions</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-surface-50 dark:bg-surface-800/50">
-                    <div className="flex items-center gap-3">
-                      <Monitor className="w-5 h-5 text-surface-500" />
-                      <div>
-                        <p className="font-medium">Current Session</p>
-                        <p className="text-body-sm text-surface-500">Chrome on Windows • Active now</p>
-                      </div>
-                    </div>
-                    <Badge variant="success">Current</Badge>
-                  </div>
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-surface-50 dark:bg-surface-800/50">
-                    <div className="flex items-center gap-3">
-                      <Monitor className="w-5 h-5 text-surface-500" />
-                      <div>
-                        <p className="font-medium">Mobile App</p>
-                        <p className="text-body-sm text-surface-500">iOS • Last active 2 hours ago</p>
-                      </div>
-                    </div>
-                    <Button variant="ghost" size="sm" leftIcon={<LogOut className="w-4 h-4" />}>Revoke</Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'notifications' && (
-            <div className="max-w-2xl space-y-6">
-              <h3 className="text-heading-sm font-semibold mb-4">Notification Preferences</h3>
-              <div className="space-y-4">
-                {Object.entries(notificationPrefs).map(([key, value]) => {
-                  const labels: Record<string, string> = {
-                    email: 'Email Notifications',
-                    push: 'Push Notifications',
-                    workoutReminders: 'Workout Reminders',
-                    attendanceAlerts: 'Attendance Alerts',
-                    performanceUpdates: 'Performance Updates',
-                    permissionUpdates: 'Permission Updates',
-                    marketingEmails: 'Marketing Emails',
-                  };
-                  return (
-                    <div key={key} className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{labels[key]}</p>
-                        <p className="text-body-sm text-surface-500">Receive {labels[key].toLowerCase()} via {key === 'email' ? 'email' : key === 'push' ? 'push' : 'app'}</p>
-                      </div>
-                      <Switch checked={value} onChange={checked => setNotificationPrefs(prev => ({ ...prev, [key]: checked }))} />
-                    </div>
-                  );
-                })}
-              </div>
-              <Button onClick={() => toast.success('Preferences saved!')} leftIcon={<Save className="w-4 h-4" />}>Save Preferences</Button>
-            </div>
-          )}
-
-          {activeTab === 'appearance' && (
-            <div className="max-w-2xl space-y-6">
-              <div>
-                <h3 className="text-heading-sm font-semibold mb-4">Theme</h3>
-                <div className="grid gap-4 sm:grid-cols-3">
-                  {(['light', 'dark', 'system'] as const).map(t => (
-                    <button
-                      key={t}
-                      onClick={() => setTheme(t)}
-                      className={`p-4 rounded-lg border-2 text-center transition-all ${
-                        theme === t
-                          ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                          : 'border-surface-200 dark:border-surface-700 hover:border-surface-300 dark:hover:border-surface-600'
-                      }`}
-                    >
-                      {t === 'light' && <Sun className="w-8 h-8 mx-auto mb-2 text-gold-500" />}
-                      {t === 'dark' && <Moon className="w-8 h-8 mx-auto mb-2 text-primary-500" />}
-                      {t === 'system' && <Monitor className="w-8 h-8 mx-auto mb-2 text-primary-500" />}
-                      <p className="font-medium capitalize">{t}</p>
-                      <p className="text-caption text-surface-500 mt-1">
-                        {t === 'light' ? 'Always light' : t === 'dark' ? 'Always dark' : 'Match system'}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="border-t border-surface-200 dark:border-surface-700 pt-6">
-                <h3 className="text-heading-sm font-semibold mb-4">Density</h3>
-                <Select
-                  options={[
-                    { value: 'comfortable', label: 'Comfortable' },
-                    { value: 'compact', label: 'Compact' },
-                    { value: 'spacious', label: 'Spacious' },
-                  ]}
-                  placeholder="Display density"
-                />
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'club' && (
-            <div className="max-w-2xl space-y-6">
-              <h3 className="text-heading-sm font-semibold mb-4">Club Settings</h3>
-              <p className="text-body text-surface-500">Manage club branding, defaults, and member permissions</p>
-              <div className="space-y-4">
-                <Input label="Club Name" placeholder="Aditya Athletics Club" />
-                <Input label="Club Slug" placeholder="aditya-athletics" />
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Input label="Primary Color" type="color" defaultValue="#1E3A8A" />
-                  <Input label="Secondary Color" type="color" defaultValue="#F59E0B" />
-                </div>
-                <Input label="Logo URL" placeholder="https://example.com/logo.png" />
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Select label="Timezone" options={[
-                    { value: 'Asia/Kolkata', label: 'Asia/Kolkata (IST)' },
-                    { value: 'UTC', label: 'UTC' },
-                  ]} />
-                  <Input label="Min Attendance %" type="number" min="0" max="100" defaultValue="75" />
-                </div>
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" className="w-4 h-4 rounded border-surface-300 text-primary-800" defaultChecked />
-                  <span>Require workout verification</span>
-                </label>
-                <Button leftIcon={<Save className="w-4 h-4" />}>Save Club Settings</Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {activeTab === 'club' && <Card><CardContent className="p-6">{!user?.activeClubId ? <p className="py-8 text-center text-text-secondary">Select a club before changing its settings.</p> : loading ? <p className="py-8 text-center text-text-secondary" role="status">Loading club settings…</p> : !club ? <p className="py-8 text-center text-text-secondary">Club settings could not be loaded.</p> : <form onSubmit={saveClub} className="max-w-3xl space-y-5"><div><h2 className="text-xl font-semibold text-text-primary">{club.name}</h2><p className="mt-1 text-sm text-text-secondary">Club branding and training defaults.</p></div><div className="grid gap-4 sm:grid-cols-2"><Input label="Primary color" type="color" value={clubForm.primaryColor} onChange={event => setClubForm(prev => ({ ...prev, primaryColor: event.target.value }))} /><Input label="Secondary color" type="color" value={clubForm.secondaryColor} onChange={event => setClubForm(prev => ({ ...prev, secondaryColor: event.target.value }))} /></div><Input label="Logo URL" type="url" value={clubForm.logoUrl} onChange={event => setClubForm(prev => ({ ...prev, logoUrl: event.target.value }))} placeholder="https://…" /><div className="grid gap-4 sm:grid-cols-2"><Input label="Timezone" value={clubForm.timezone} onChange={event => setClubForm(prev => ({ ...prev, timezone: event.target.value }))} /><Input label="Minimum attendance (%)" type="number" min={0} max={100} value={clubForm.attendanceMinPercent} onChange={event => setClubForm(prev => ({ ...prev, attendanceMinPercent: Number(event.target.value) }))} /></div><label className="flex items-center gap-3 text-sm text-text-secondary"><input type="checkbox" checked={clubForm.workoutVerificationRequired} onChange={event => setClubForm(prev => ({ ...prev, workoutVerificationRequired: event.target.checked }))} className="h-4 w-4 accent-sky-500" />Require workout verification</label><div className="flex justify-end"><Button type="submit" loading={saving} leftIcon={<Save className="h-4 w-4" />}>Save club settings</Button></div></form>}</CardContent></Card>}
     </div>
   );
 }
