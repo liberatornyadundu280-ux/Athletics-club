@@ -24,6 +24,7 @@ import performanceRoutes from './routes/performance.routes';
 import injuryRoutes from './routes/injury.routes';
 import permissionRoutes from './routes/permissions.routes';
 import analyticsRoutes from './routes/analytics.routes';
+import readinessRoutes from './routes/readiness.routes';
 
 const app = express();
 
@@ -95,6 +96,7 @@ app.use(`${API_PREFIX}/performance`, authenticate, injectClubId, performanceRout
 app.use(`${API_PREFIX}/injuries`, authenticate, injectClubId, injuryRoutes);
 app.use(`${API_PREFIX}/permissions`, authenticate, injectClubId, permissionRoutes);
 app.use(`${API_PREFIX}/analytics`, authenticate, injectClubId, analyticsRoutes);
+app.use(`${API_PREFIX}/readiness`, authenticate, injectClubId, readinessRoutes);
 
 // ==================== 404 HANDLER ====================
 app.use((_req: Request, _res: Response, next: NextFunction) => {

@@ -17,8 +17,9 @@ import {
   NotFoundError,
   ValidationError,
 } from '../utils/errors';
+import { MEMBERSHIP_TO_USER_ROLE, ROLE_BASE_PERMISSIONS } from '@stms/shared/constants/roles';
 import { ERROR_CODES } from '@stms/shared/constants/errors';
-import { RegisterInput, LoginInput, TokenPair, JWTPayload, UserRole } from '@stms/shared/types';
+import { RegisterInput, LoginInput, MembershipRole, TokenPair, JWTPayload, UserRole } from '@stms/shared/types';
 
 export class AuthService {
   private readonly REFRESH_TOKEN_TTL_DAYS = 7;
@@ -303,40 +304,76 @@ export class AuthService {
   /**
    * Switch active club
    */
-  async switchClub(userId: string, clubId: string): Promise<JWTPayload> {
+  async switchClub(userId: string, clubId: string): Promise<TokenPair & { user: any; permissions: string[] }> {
     const db = await getDatabase();
+    const user = await db.collection('users').findOne({ firebaseUid: userId, status: 'active' });
+    if (!user) throw new UnauthorizedError('User profile not found');
 
-    // Verify user is member of this club
-    const membership = await db.collection('club_memberships').findOne({
-      userId: new ObjectId(userId),
-      clubId: new ObjectId(clubId),
+    const clubObjectId = new ObjectId(clubId);
+    let membershipRole = (await db.collection('club_memberships').findOne({
+      userId: user._id,
+      clubId: clubObjectId,
       status: 'active',
-    });
+    }))?.role as MembershipRole | undefined;
 
-    if (!membership) {
+    if (!membershipRole && user.role === UserRole.SYSTEM_ADMIN) {
+      const club = await db.collection('clubs').findOne({ _id: clubObjectId }, { projection: { _id: 1 } });
+      if (!club) throw new NotFoundError('Club');
+      const now = new Date();
+      await db.collection('club_memberships').updateOne(
+        { userId: user._id, clubId: clubObjectId },
+        {
+          $set: { role: MembershipRole.HEAD_COACH, status: 'active', joinedAt: now, updatedAt: now },
+          $setOnInsert: { createdAt: now, invitedBy: null, invitedAt: null },
+        },
+        { upsert: true },
+      );
+      membershipRole = MembershipRole.HEAD_COACH;
+    }
+
+    if (!membershipRole) {
       throw new UnauthorizedError('Not a member of this club', { code: 'CLUB_ACCESS_DENIED' });
     }
 
-    // Update user's active club
+    const role: UserRole = user.role === UserRole.SYSTEM_ADMIN
+      ? UserRole.SYSTEM_ADMIN
+      : MEMBERSHIP_TO_USER_ROLE[membershipRole];
+    const permissions = ROLE_BASE_PERMISSIONS[role];
+    const activeClubObjectIds = await db.collection('club_memberships').distinct('clubId', {
+      userId: user._id,
+      status: 'active',
+    });
+    const clubIds = activeClubObjectIds.map((id: ObjectId) => id.toString());
+    const now = new Date();
+
     await db.collection('users').updateOne(
-      { firebaseUid: userId },
-      { $set: { activeClubId: new ObjectId(clubId), updatedAt: new Date() } }
+      { _id: user._id, status: 'active' },
+      { $set: { activeClubId: clubObjectId, clubIds: activeClubObjectIds, role, permissions, updatedAt: now } },
     );
+    await setUserClaims(userId, { role, clubIds, activeClubId: clubId, permissions });
 
-    // Get updated claims
-    const claims = await getUserClaims(userId);
-
-    if (!claims) {
-      throw new Error('Failed to refresh user claims');
-    }
+    const tokens = await generateTokens({ uid: userId, email: user.email, role, clubIds, activeClubId: clubId, permissions });
+    await storeRefreshToken(userId, tokens.refreshToken);
 
     return {
-      uid: userId,
-      email: '', // Would be populated from user document
-      role: claims.role as import('@stms/shared/types').UserRole,
-      clubIds: claims.clubIds,
-      activeClubId: claims.activeClubId,
-      permissions: claims.permissions,
+      ...tokens,
+      expiresIn: 900,
+      tokenType: 'Bearer',
+      permissions,
+      user: {
+        id: user._id.toString(),
+        firebaseUid: user.firebaseUid,
+        email: user.email,
+        name: user.name,
+        avatarUrl: user.avatarUrl || null,
+        role,
+        clubIds,
+        activeClubId: clubId,
+        status: user.status,
+        lastLoginAt: user.lastLoginAt?.toISOString() || null,
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: now.toISOString(),
+      },
     };
   }
 
@@ -368,8 +405,16 @@ export class AuthService {
   }
 
   /**
-   * Update user role
-   */
+      { _id: user._id, status: 'active' },
+      {
+        $set: {
+          activeClubId: clubObjectId,
+          clubIds: activeClubObjectIds,
+          role,
+          permissions,
+          updatedAt: now,
+        },
+      },
   async updateUserRole(userId: string, newRole: string, requestingUserId: string): Promise<any> {
     if (requestingUserId === userId) {
       throw new UnauthorizedError('Cannot change your own role');
@@ -377,12 +422,24 @@ export class AuthService {
 
     if (newRole === 'system_admin') {
       throw new UnauthorizedError('Cannot assign system_admin role');
-    }
-
-    const db = await getDatabase();
-
-    const user = await db.collection('users').findOne({ _id: new ObjectId(userId) });
-    if (!user) {
+      ...tokens,
+      expiresIn: 900,
+      tokenType: 'Bearer',
+      permissions,
+      user: {
+        id: user._id.toString(),
+        firebaseUid: user.firebaseUid,
+        email: user.email,
+        name: user.name,
+        avatarUrl: user.avatarUrl || null,
+        role,
+        clubIds,
+        activeClubId: clubId,
+        status: user.status,
+        lastLoginAt: user.lastLoginAt?.toISOString() || null,
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: now.toISOString(),
+      },
       throw new NotFoundError('User');
     }
 

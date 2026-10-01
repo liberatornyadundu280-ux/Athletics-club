@@ -11,6 +11,7 @@ import { up as migration005, down as migration005Down } from './migrations/005-p
 import { up as migration006, down as migration006Down } from './migrations/006-injury-collections';
 import { up as migration007, down as migration007Down } from './migrations/007-permissions-collections';
 import { up as migration008, down as migration008Down } from './migrations/008-analytics-collections';
+import { up as migration009, down as migration009Down } from './migrations/009-daily-readiness-and-exercise-enhancements';
 
 const migrations = [
   { name: '001-initial-schema', up: migration001, down: migration001Down },
@@ -21,6 +22,7 @@ const migrations = [
   { name: '006-injury-collections', up: migration006, down: migration006Down },
   { name: '007-permissions-collections', up: migration007, down: migration007Down },
   { name: '008-analytics-collections', up: migration008, down: migration008Down },
+  { name: '009-daily-readiness-and-exercise-enhancements', up: migration009, down: migration009Down },
 ];
 
 async function runMigrations(direction: 'up' | 'down' = 'up'): Promise<void> {

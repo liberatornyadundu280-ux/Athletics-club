@@ -1,0 +1,124 @@
+# STMS ML Feature Engineering Configuration
+# Copy to config.local.yaml and adjust for your environment
+
+# --- MongoDB Connection ---
+mongodb:
+  uri: "mongodb+srv://Liberator:5huOdPezTMCBdTYH@cluster0.bqmgnic.mongodb.net/?appName=Cluster0
+"
+  database: "stms_dev"
+  # For local: "mongodb://localhost:27017"
+
+# --- Cloudinary (Model Artifacts) ---
+cloudinary:
+  cloud_name: "dxul80bac"
+  api_key: "423774626293923"
+  api_secret: "0YDF7x0N8NP5PH6HCu89T8Yhu14"
+  model_folder: "stms/models"
+
+# --- Redis Streams (Inference Queue) ---
+redis:
+  url: "redis://localhost:6379"
+  stream_key: "stms:recommendation:triggers"
+  consumer_group: "inference-workers"
+  consumer_name: "worker-1"
+
+# --- Feature Engineering ---
+features:
+  # Time windows for rolling features (in days)
+  windows:
+    acute: 7
+    subacute: 28
+    chronic: 90
+    season: 180
+
+  # Minimum data requirements
+  min_workouts_for_compliance: 5
+  min_weeks_for_trends: 4
+  min_attendance_sessions: 10
+
+  # Event groups for event-specific features
+  event_groups:
+    sprints: ["100m", "200m", "400m", "60m", "100m_hurdles", "110m_hurdles", "400m_hurdles"]
+    middle_distance: ["800m", "1500m", "3000m", "mile", "3000m_steeplechase"]
+    long_distance: ["5000m", "10000m", "half_marathon", "marathon", "3000m_steeplechase"]
+    jumps: ["long_jump", "triple_jump", "high_jump", "pole_vault"]
+    throws: ["shot_put", "discus", "hammer", "javelin", "weight_throw"]
+    combined: ["heptathlon", "decathlon", "pentathlon"]
+
+  # Feature groups to enable/disable
+  enabled_groups:
+    workload: true
+    compliance: true
+    performance: true
+    attendance: true
+    injury: true
+    fitness: true
+    demographics: true
+    event_specific: true
+    readiness: true
+
+# --- Training Pipeline ---
+training:
+  model_type: "xgboost"  # or "lightgbm"
+  target_variables:
+    - "next_workout_rpe"           # Predicted RPE for next workout
+    - "next_week_focus"            # Classification: focus category
+    - "intensity_prescription"     # Regression: target intensity %
+    - "injury_risk_score"          # Regression: 0-1 risk
+    - "progression_adjustment"     # Regression: +% load adjustment
+
+  # For multi-target, train separate models or use multi-output
+  primary_target: "next_workout_rpe"
+
+  hyperparameters:
+    xgboost:
+      n_estimators: 500
+      max_depth: 6
+      learning_rate: 0.05
+      subsample: 0.8
+      colsample_bytree: 0.8
+      random_state: 42
+      n_jobs: -1
+    lightgbm:
+      n_estimators: 500
+      max_depth: 6
+      learning_rate: 0.05
+      num_leaves: 31
+      subsample: 0.8
+      colsample_bytree: 0.8
+      random_state: 42
+      n_jobs: -1
+
+  validation:
+    test_size: 0.2
+    time_series_split: true
+    n_splits: 5
+    gap_days: 7  # Gap between train/val to prevent leakage
+
+  # Retraining schedule
+  schedule:
+    enabled: true
+    cron: "0 2 * * *"  # Daily at 2 AM UTC
+    min_new_samples: 50  # Minimum new labeled samples before retrain
+
+# --- Inference ---
+inference:
+  model_version: "latest"  # or specific version tag
+  confidence_threshold: 0.5
+  cache_ttl_seconds: 3600
+  fallback_to_cold_start: true
+
+# --- Cold Start (Pre-trained) ---
+cold_start:
+  enabled: true
+  model_path: "models/cold_start_v1.pkl"
+  # Use public athletics datasets to pre-train:
+  # - World Athletics competition data
+  # - Open training logs (Strava, etc.)
+  # - Research datasets on training load/injury
+
+# --- Logging ---
+logging:
+  level: "INFO"
+  file: "logs/feature_engineering.log"
+  mlflow_tracking_uri: "http://localhost:5001"

@@ -2,6 +2,7 @@
 // Unit tests for auth service
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { ObjectId } from 'mongodb';
 import { UnauthorizedError, ValidationError, ConflictError } from '../../src/utils/errors';
 import { ERROR_CODES } from '@stms/shared/constants/errors';
 
@@ -30,9 +31,9 @@ vi.mock('../../src/utils/tokens', () => ({
   verifyRefreshToken: vi.fn(),
 }));
 
-import { firebaseAuth, setUserClaims, getUserClaims } from '../../src/config/firebase';
+import { firebaseAuth, setUserClaims } from '../../src/config/firebase';
 import { getDatabase } from '../../src/config/database';
-import { generateTokens, hashRefreshToken, storeRefreshToken } from '../../src/utils/tokens';
+import { generateTokens, hashRefreshToken, storeRefreshToken, revokeRefreshToken, verifyRefreshToken } from '../../src/utils/tokens';
 
 // Import the service after mocks
 import { AuthService } from '../../src/services/auth.service';
@@ -56,6 +57,7 @@ describe('AuthService', () => {
       limit: vi.fn().mockReturnThis(),
       project: vi.fn().mockReturnThis(),
       toArray: vi.fn(),
+      distinct: vi.fn(),
     };
 
     mockDb = {
@@ -206,7 +208,6 @@ describe('AuthService', () => {
         expiresIn: 900,
         tokenType: 'Bearer',
       });
-
       expect(revokeRefreshToken).toHaveBeenCalledWith('old-refresh-token');
       expect(storeRefreshToken).toHaveBeenCalledWith('user-123', 'new-refresh-token');
     });
@@ -230,34 +231,88 @@ describe('AuthService', () => {
   });
 
   describe('switchClub', () => {
-    it('should switch active club for valid membership', async () => {
-      mockCollection.findOne.mockResolvedValue({
-        _id: 'membership-123',
-        userId: 'user-123',
-        clubId: 'club-456',
-        status: 'active',
-      });
-      mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
-      (getUserClaims as any).mockResolvedValue({
+    it('should resolve the Firebase UID and switch with fresh claims and tokens', async () => {
+      const userId = new ObjectId();
+      const clubId = new ObjectId();
+      const user = {
+        _id: userId,
+        firebaseUid: 'firebase-user-123',
+        email: 'coach@example.com',
+        name: 'Coach User',
+        avatarUrl: null,
         role: 'coach',
-        clubIds: ['club-456'],
-        activeClubId: 'club-456',
-        permissions: ['workout:read'],
-      });
+        status: 'active',
+        lastLoginAt: null,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      };
+      mockCollection.findOne
+        .mockResolvedValueOnce(user)
+        .mockResolvedValueOnce({ role: 'assistant_coach' });
+      mockCollection.distinct.mockResolvedValue([clubId]);
+      mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+      (setUserClaims as any).mockResolvedValue(undefined);
+      (generateTokens as any).mockResolvedValue({ accessToken: 'fresh-access', refreshToken: 'fresh-refresh' });
+      (storeRefreshToken as any).mockResolvedValue(undefined);
 
-      const result = await authService.switchClub('user-123', 'club-456');
+      const result = await authService.switchClub('firebase-user-123', clubId.toString());
 
       expect(result).toMatchObject({
-        activeClubId: 'club-456',
-        clubIds: ['club-456'],
+        accessToken: 'fresh-access',
+        refreshToken: 'fresh-refresh',
+        user: { activeClubId: clubId.toString(), clubIds: [clubId.toString()], role: 'coach' },
       });
+      expect(mockCollection.findOne).toHaveBeenNthCalledWith(2, {
+        userId,
+        clubId,
+        status: 'active',
+      });
+      expect(setUserClaims).toHaveBeenCalledWith('firebase-user-123', expect.objectContaining({
+        role: 'coach',
+        clubIds: [clubId.toString()],
+        activeClubId: clubId.toString(),
+      }));
+      expect(storeRefreshToken).toHaveBeenCalledWith('firebase-user-123', 'fresh-refresh');
     });
 
     it('should throw UnauthorizedError for non-member', async () => {
-      mockCollection.findOne.mockResolvedValue(null);
+      mockCollection.findOne
+        .mockResolvedValueOnce({ _id: new ObjectId(), status: 'active', role: 'athlete' })
+        .mockResolvedValueOnce(null);
 
-      await expect(authService.switchClub('user-123', 'club-456'))
+      await expect(authService.switchClub('firebase-user-123', new ObjectId().toString()))
         .rejects.toThrow(UnauthorizedError);
+    });
+
+    it('should grant a system administrator membership before switching', async () => {
+      const userId = new ObjectId();
+      const clubId = new ObjectId();
+      mockCollection.findOne
+        .mockResolvedValueOnce({
+          _id: userId,
+          firebaseUid: 'firebase-admin-123',
+          email: 'admin@example.com',
+          name: 'System Admin',
+          role: 'system_admin',
+          status: 'active',
+          createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        })
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ _id: clubId });
+      mockCollection.distinct.mockResolvedValue([clubId]);
+      mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+      (setUserClaims as any).mockResolvedValue(undefined);
+      (generateTokens as any).mockResolvedValue({ accessToken: 'admin-access', refreshToken: 'admin-refresh' });
+      (storeRefreshToken as any).mockResolvedValue(undefined);
+
+      const result = await authService.switchClub('firebase-admin-123', clubId.toString());
+
+      expect(result.user.role).toBe('system_admin');
+      expect(mockCollection.updateOne).toHaveBeenNthCalledWith(
+        1,
+        { userId, clubId },
+        expect.objectContaining({ $set: expect.objectContaining({ role: 'head_coach', status: 'active' }) }),
+        { upsert: true },
+      );
     });
   });
 });

@@ -469,3 +469,101 @@ Close Sprint 1 after owner review and begin Sprint 2 athlete profiles and club m
 - **Changes / additions:** The project owner confirmed Sprint 1 checks passed. Added a club-scoped athlete collection and indexes, list/search/detail/create/update/archive APIs, bounded CSV import with per-row results, API-backed roster and profile UI, and system-admin club creation. Existing invitation acceptance now links a same-club athlete record by email. Club switching rebuilds its club list from active membership records; auth and roster responses tolerate legacy users without `clubIds`. Documented the athlete API contract and Sprint 2 plan/checklist.
 - **Skill(s) used (if any):** planning-and-task-breakdown, backend-development, frontend-design.
 - **Open questions / next steps:** Sprint 2 remains in progress until the owner exercises athlete CRUD/import, invitation-to-account linking, club creation/settings/switching, and cross-club isolation with configured Firebase, MongoDB, and Redis services. MongoDB athlete indexes are created idempotently when the backend connects.
+
+## Session 22 — 2026-09-29
+
+**Contributor(s):**
+Codex
+
+**Focus:**
+Finish Sprint 2 implementation review and repair the dashboard's dead sprint progress action.
+
+**Decisions made:**
+
+- **Changes / additions:** Added a protected Sprint 2 progress page and connected the dashboard action to it. The page links only to workflows available to the signed-in user's role and permissions. Updated dashboard copy to reflect Sprint 2, added client-side CSV size and row-count checks to match server limits, and recorded the remaining live-service review steps.
+- **Skill(s) used (if any):** backend-development, frontend-design.
+- **Open questions / next steps:** Frontend and backend production builds pass. Sprint 2 remains open until the owner manually verifies athlete CRUD/archive/import, invitations and account linking, club creation/settings/switching, and cross-club isolation against configured services.
+
+## Session 23 — 2026-09-30
+
+**Contributor(s):**
+Codex
+
+**Focus:**
+Implement Sprint 2–8 module foundations and connect the screens to persistent APIs before owner review.
+
+**Decisions made:**
+
+- **Changes / additions:** Added attendance sessions, manual/bulk records, expiring check-in links and reports; workout/exercise authoring, assignment/completion and attendance-on-open; competition results, PB/SB, fitness tests and goals; persisted explainable cold-start training recommendations with coach review; injury/wellness/rehab/RTP and permission letter workflows; role-scoped analytics/CSV export; club announcements/read state; and an IndexedDB offline workout cache/completion queue. Added indexes, role-filtered screens, Vercel SPA fallback, corrected CI workflow paths to the real npm project directories, and documented app setup. Frontend/backend production builds pass.
+- **Skill(s) used (if any):** planning-and-task-breakdown, backend-development, frontend-design.
+- **Open questions / next steps:** Sprints remain open for owner review. Remaining gaps or external dependencies include multi-week program planning, actual QR image rendering and Firebase realtime sync, advanced rankings/trends, trained ML model/data/worker, PDF/media attachments, hosted push/email delivery, monitoring, and deployment secrets. Verify privacy/club isolation and operational behavior against configured Firebase, MongoDB, and Redis before acceptance.
+
+## Session 24 — 2026-09-30
+
+**Contributor(s):**
+Codex
+
+**Focus:**
+Fix the TypeScript parse error in the STMS club membership route.
+
+**Decisions made:**
+
+- **Changes / additions:** Corrected the `/mine` route response closure in `stms-backend/src/routes/club.routes.ts`; `npm --prefix stms-backend run typecheck` passes.
+- **Skill(s) used (if any):** None.
+- **Open questions / next steps:** None for this syntax fix.
+
+## Session 25 — 2026-09-30
+
+**Contributor(s):**
+Codex
+
+**Focus:**
+Enable platform administrators to select clubs from the header switcher.
+
+**Decisions made:**
+
+- **Changes / additions:** Updated the club switcher to load the platform club directory for system admins, while keeping other users limited to their active memberships. The frontend TypeScript check passes.
+- **Skill(s) used (if any):** None.
+- **Open questions / next steps:** None.
+
+## Session 26 — 2026-09-30
+
+**Contributor(s):**
+Codex
+
+**Focus:**
+Allow athletes without a club to request enrollment and let club staff review requests.
+
+**Decisions made:**
+
+- **Changes / additions:** Added a public club directory for authenticated athletes without memberships, pending enrollment requests with optional athlete notes, a staff inbox in club user management, and approve/decline actions. Approval creates an active athlete membership; coaches continue to create or link the detailed athlete profile. Added duplicate-request protection and indexes. Frontend production build and backend/frontend typechecks pass.
+- **Skill(s) used (if any):** backend-development, frontend-design.
+- **Open questions / next steps:** Outbound email/push delivery is not configured; club staff see requests in the in-app roster management inbox. Owner should verify the workflow against configured Firebase and MongoDB services.
+
+## Session 27 — 2026-09-30
+
+**Contributor(s):**
+Codex
+
+**Focus:**
+Fix HTTP 500 responses when switching clubs.
+
+**Decisions made:**
+
+- **Changes / additions:** Corrected `apps/backend` to resolve the Firebase UID to a MongoDB user before membership lookup. Club switching now synchronizes membership-derived role/permissions and Firebase claims, issues fresh access/refresh tokens, and grants system administrators membership when selecting a club. Added focused switch-service tests; all three pass.
+- **Skill(s) used (if any):** backend-development.
+- **Open questions / next steps:** The full auth-service test file still has one unrelated failing refresh-token test. Restart the running backend if its dev watcher does not reload the updated service.
+
+## Session 28 — 2026-09-30
+
+**Contributor(s):**
+Codex
+
+**Focus:**
+Fix manual athlete creation failures from the roster form.
+
+**Decisions made:**
+
+- **Changes / additions:** Aligned the active `apps/backend` create/update schemas with the frontend contract: the backend supplies the club ID, optional profile fields may be null, and birth dates may be date-only strings. Athlete response formatting now handles stored date strings and Date values. Added payload and invalid-date regression tests.
+- **Skill(s) used (if any):** backend-development.
+- **Open questions / next steps:** Rebuild or restart the active backend process if its watcher does not reload these changes. Verify creation with the configured MongoDB and Firebase account.

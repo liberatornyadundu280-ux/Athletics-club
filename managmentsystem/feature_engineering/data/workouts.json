@@ -1,0 +1,442 @@
+[
+  {
+    "id": "wk_sprint_001",
+    "title": "Max Acceleration & Block Starts",
+    "targetEventGroup": "sprints",
+    "periodizationPhase": "pre-comp",
+    "templateType": "speed",
+    "energySystemFocus": "atp-pcr",
+    "estimatedRPE": 8.5,
+    "estimatedDurationMinutes": 75,
+    "exercises": [
+      {
+        "name": "Dynamic Track Warmup & RAMP Drills",
+        "phase": "warmup",
+        "energySystem": "aerobic",
+        "movementPattern": "sprint",
+        "cnsIntensity": 2,
+        "contraindications": [],
+        "sets": 1,
+        "reps": "15 mins",
+        "restSeconds": 60,
+        "tempo": "gradual",
+        "targetZone": "RPE 4-5",
+        "coachingNotes": "Focus on hip mobility, ankle dorsiflexion, and core engagement."
+      },
+      {
+        "name": "Wicket Sprint Drills",
+        "phase": "explosive",
+        "energySystem": "atp-pcr",
+        "movementPattern": "sprint",
+        "cnsIntensity": 4,
+        "contraindications": [
+          "hamstring",
+          "achilles"
+        ],
+        "sets": 4,
+        "reps": "30m",
+        "restSeconds": 120,
+        "tempo": "explosive",
+        "targetZone": "90% Max Velocity",
+        "coachingNotes": "Maintain upright posture and tall hips. Step down over the center of mass."
+      },
+      {
+        "name": "Block Starts & 30m Acceleration",
+        "phase": "explosive",
+        "energySystem": "atp-pcr",
+        "movementPattern": "sprint",
+        "cnsIntensity": 5,
+        "contraindications": [
+          "hamstring",
+          "knee",
+          "groin"
+        ],
+        "sets": 5,
+        "reps": "30m",
+        "restSeconds": 180,
+        "tempo": "maximal",
+        "targetZone": "98-100% Max Effort",
+        "coachingNotes": "Push hard off rear block, keep projection angle low, eyes down for first 5-6 strides."
+      },
+      {
+        "name": "Flying 30m Sprints (20m Fly Build)",
+        "phase": "explosive",
+        "energySystem": "atp-pcr",
+        "movementPattern": "sprint",
+        "cnsIntensity": 5,
+        "contraindications": [
+          "hamstring",
+          "achilles"
+        ],
+        "sets": 3,
+        "reps": "50m total",
+        "restSeconds": 240,
+        "tempo": "maximal",
+        "targetZone": "100% Max Velocity",
+        "coachingNotes": "Smooth acceleration build through 20m, attack top speed zone with relaxed shoulders."
+      },
+      {
+        "name": "Heavy Sled Pulls (10m)",
+        "phase": "strength",
+        "energySystem": "atp-pcr",
+        "movementPattern": "hinge",
+        "cnsIntensity": 4,
+        "contraindications": [
+          "lower_back"
+        ],
+        "sets": 4,
+        "reps": "10m",
+        "restSeconds": 150,
+        "tempo": "explosive",
+        "targetZone": "75% Bodyweight Load",
+        "coachingNotes": "Drive triple extension through ankle, knee, and hip."
+      },
+      {
+        "name": "Extensive Plyo & Cooldown Stretch",
+        "phase": "cooldown",
+        "energySystem": "aerobic",
+        "movementPattern": "carry",
+        "cnsIntensity": 1,
+        "contraindications": [],
+        "sets": 1,
+        "reps": "10 mins",
+        "restSeconds": 0,
+        "tempo": "slow",
+        "targetZone": "Recovery",
+        "coachingNotes": "Static hamstring and hip flexor stretches, foam roll calves."
+      }
+    ]
+  },
+  {
+    "id": "wk_sprint_002",
+    "title": "Speed Endurance & Glycolytic Capacity (400m Focus)",
+    "targetEventGroup": "sprints",
+    "periodizationPhase": "off-season",
+    "templateType": "endurance",
+    "energySystemFocus": "glycolytic",
+    "estimatedRPE": 9.0,
+    "estimatedDurationMinutes": 85,
+    "exercises": [
+      {
+        "name": "Dynamic Mobility & A-Skips/B-Skips",
+        "phase": "warmup",
+        "energySystem": "aerobic",
+        "movementPattern": "sprint",
+        "cnsIntensity": 2,
+        "contraindications": [],
+        "sets": 1,
+        "reps": "20 mins",
+        "restSeconds": 60,
+        "tempo": "moderate",
+        "targetZone": "RPE 5",
+        "coachingNotes": "High rhythm drills, prep glycolytic system."
+      },
+      {
+        "name": "Split 400m Reps (300m + 100m)",
+        "phase": "explosive",
+        "energySystem": "glycolytic",
+        "movementPattern": "sprint",
+        "cnsIntensity": 5,
+        "contraindications": [
+          "hamstring",
+          "knee"
+        ],
+        "sets": 3,
+        "reps": "300m + 100m",
+        "restSeconds": 480,
+        "tempo": "near-maximal",
+        "targetZone": "92-95% Pace",
+        "coachingNotes": "Take 45 sec rest between 300m and 100m. Focus on race model relaxation."
+      },
+      {
+        "name": "Tempo 200m Runs",
+        "phase": "strength",
+        "energySystem": "glycolytic",
+        "movementPattern": "sprint",
+        "cnsIntensity": 3,
+        "contraindications": [
+          "achilles"
+        ],
+        "sets": 4,
+        "reps": "200m",
+        "restSeconds": 180,
+        "tempo": "controlled",
+        "targetZone": "75% Speed",
+        "coachingNotes": "Focus on fluid stride frequency and breathing."
+      },
+      {
+        "name": "Flush Run & Cold Contrast Cooldown",
+        "phase": "cooldown",
+        "energySystem": "aerobic",
+        "movementPattern": "carry",
+        "cnsIntensity": 1,
+        "contraindications": [],
+        "sets": 1,
+        "reps": "15 mins",
+        "restSeconds": 0,
+        "tempo": "slow",
+        "targetZone": "Recovery",
+        "coachingNotes": "Barefoot grass jog and lower body flush."
+      }
+    ]
+  },
+  {
+    "id": "wk_jump_001",
+    "title": "Approach Speed & Takeoff Elasticity",
+    "targetEventGroup": "jumps",
+    "periodizationPhase": "pre-comp",
+    "templateType": "technique",
+    "energySystemFocus": "atp-pcr",
+    "estimatedRPE": 8.0,
+    "estimatedDurationMinutes": 80,
+    "exercises": [
+      {
+        "name": "Multi-Directional Hurdle Mobility",
+        "phase": "warmup",
+        "energySystem": "aerobic",
+        "movementPattern": "lunge",
+        "cnsIntensity": 2,
+        "contraindications": [],
+        "sets": 1,
+        "reps": "15 mins",
+        "restSeconds": 60,
+        "tempo": "smooth",
+        "targetZone": "Mobility",
+        "coachingNotes": "Hurdle walks over/under to open hip capsule."
+      },
+      {
+        "name": "Approach Rhythm Runs (12-16 Strides)",
+        "phase": "explosive",
+        "energySystem": "atp-pcr",
+        "movementPattern": "sprint",
+        "cnsIntensity": 4,
+        "contraindications": [
+          "knee",
+          "ankle"
+        ],
+        "sets": 6,
+        "reps": "Approach Distance",
+        "restSeconds": 150,
+        "tempo": "accelerating",
+        "targetZone": "100% Rhythm Accuracy",
+        "coachingNotes": "Hit exact checkmark at stride 4 and 10. Tall posture at board."
+      },
+      {
+        "name": "Penultimate Stride & Pop-Ups off Short Approach",
+        "phase": "explosive",
+        "energySystem": "atp-pcr",
+        "movementPattern": "jump",
+        "cnsIntensity": 5,
+        "contraindications": [
+          "knee",
+          "patellar_tendon",
+          "lower_back"
+        ],
+        "sets": 5,
+        "reps": "4-Stride Pop Up",
+        "restSeconds": 180,
+        "tempo": "explosive",
+        "targetZone": "Max Vertical Projection",
+        "coachingNotes": "Lower hips slightly on penultimate stride, drive lead knee aggressively upwards."
+      },
+      {
+        "name": "Depth Jumps to Box (Reactive Plyos)",
+        "phase": "strength",
+        "energySystem": "atp-pcr",
+        "movementPattern": "jump",
+        "cnsIntensity": 5,
+        "contraindications": [
+          "knee",
+          "achilles",
+          "lower_back"
+        ],
+        "sets": 4,
+        "reps": "3 reps",
+        "restSeconds": 150,
+        "tempo": "reactive",
+        "targetZone": "Minimal Contact Time (<0.15s)",
+        "coachingNotes": "Drop off 40cm box, stiff ankle landing, instant rebound."
+      },
+      {
+        "name": "Posterior Chain Active Recovery",
+        "phase": "cooldown",
+        "energySystem": "aerobic",
+        "movementPattern": "hinge",
+        "cnsIntensity": 1,
+        "contraindications": [],
+        "sets": 1,
+        "reps": "10 mins",
+        "restSeconds": 0,
+        "tempo": "gentle",
+        "targetZone": "Recovery",
+        "coachingNotes": "Light band pull-aparts and hamstrings release."
+      }
+    ]
+  },
+  {
+    "id": "wk_throw_001",
+    "title": "Rotational Torque & Explosive Power (Shot Put / Discus)",
+    "targetEventGroup": "throws",
+    "periodizationPhase": "competition",
+    "templateType": "speed",
+    "energySystemFocus": "atp-pcr",
+    "estimatedRPE": 8.0,
+    "estimatedDurationMinutes": 90,
+    "exercises": [
+      {
+        "name": "Dynamic Thoracic Spine & Shoulder Prep",
+        "phase": "warmup",
+        "energySystem": "aerobic",
+        "movementPattern": "push",
+        "cnsIntensity": 2,
+        "contraindications": [],
+        "sets": 1,
+        "reps": "15 mins",
+        "restSeconds": 60,
+        "tempo": "controlled",
+        "targetZone": "Mobility",
+        "coachingNotes": "Resistance band shoulder dislocates, thoracic rotation circles."
+      },
+      {
+        "name": "Standing Throws & Rotational Med-Ball Slams",
+        "phase": "explosive",
+        "energySystem": "atp-pcr",
+        "movementPattern": "throw",
+        "cnsIntensity": 4,
+        "contraindications": [
+          "shoulder",
+          "lower_back"
+        ],
+        "sets": 5,
+        "reps": "4 throws",
+        "restSeconds": 120,
+        "tempo": "explosive",
+        "targetZone": "Max Hip-Shoulder Separation",
+        "coachingNotes": "Initiate drive from right hip (right-handed thrower), delay arm stroke."
+      },
+      {
+        "name": "Full Ring Glides / Turns with Overweight Implement",
+        "phase": "explosive",
+        "energySystem": "atp-pcr",
+        "movementPattern": "throw",
+        "cnsIntensity": 5,
+        "contraindications": [
+          "shoulder",
+          "wrist",
+          "lower_back"
+        ],
+        "sets": 6,
+        "reps": "2 throws",
+        "restSeconds": 180,
+        "tempo": "max-speed",
+        "targetZone": "Technical Precision",
+        "coachingNotes": "Land balanced in power position, strike block leg hard."
+      },
+      {
+        "name": "Power Snatch from Hang",
+        "phase": "strength",
+        "energySystem": "atp-pcr",
+        "movementPattern": "hinge",
+        "cnsIntensity": 4,
+        "contraindications": [
+          "shoulder",
+          "wrist",
+          "lower_back"
+        ],
+        "sets": 4,
+        "reps": "3 reps @ 80% 1RM",
+        "restSeconds": 180,
+        "tempo": "explosive extension",
+        "targetZone": "Power Output",
+        "coachingNotes": "Violent triple extension, fast elbows turnover."
+      },
+      {
+        "name": "Rotator Cuff & Lower Back Decompression",
+        "phase": "cooldown",
+        "energySystem": "aerobic",
+        "movementPattern": "pull",
+        "cnsIntensity": 1,
+        "contraindications": [],
+        "sets": 1,
+        "reps": "10 mins",
+        "restSeconds": 0,
+        "tempo": "slow",
+        "targetZone": "Recovery",
+        "coachingNotes": "Hanging from pullup bar, Y-T-W band pull-aparts."
+      }
+    ]
+  },
+  {
+    "id": "wk_middle_001",
+    "title": "VO2 Max Intervals & Aerobic Power (800m/1500m)",
+    "targetEventGroup": "middle_distance",
+    "periodizationPhase": "pre-comp",
+    "templateType": "endurance",
+    "energySystemFocus": "aerobic",
+    "estimatedRPE": 8.5,
+    "estimatedDurationMinutes": 70,
+    "exercises": [
+      {
+        "name": "Progressive Aerobic Warmup & Strides",
+        "phase": "warmup",
+        "energySystem": "aerobic",
+        "movementPattern": "sprint",
+        "cnsIntensity": 2,
+        "contraindications": [],
+        "sets": 1,
+        "reps": "15 mins",
+        "restSeconds": 60,
+        "tempo": "easy to steady",
+        "targetZone": "HR Zone 2-3",
+        "coachingNotes": "Finish with 4 x 80m strides to prime neuromuscular system."
+      },
+      {
+        "name": "5 x 600m VO2 Max Reps",
+        "phase": "explosive",
+        "energySystem": "aerobic",
+        "movementPattern": "sprint",
+        "cnsIntensity": 4,
+        "contraindications": [
+          "achilles",
+          "shin_splints"
+        ],
+        "sets": 5,
+        "reps": "600m",
+        "restSeconds": 150,
+        "tempo": "1500m Race Pace",
+        "targetZone": "95-98% VO2 Max HR",
+        "coachingNotes": "Hit consistent splits. Keep upper body relaxed on final 150m."
+      },
+      {
+        "name": "4 x 200m Speed Sharpeners",
+        "phase": "strength",
+        "energySystem": "glycolytic",
+        "movementPattern": "sprint",
+        "cnsIntensity": 4,
+        "contraindications": [
+          "hamstring"
+        ],
+        "sets": 4,
+        "reps": "200m",
+        "restSeconds": 90,
+        "tempo": "800m Goal Pace",
+        "targetZone": "High Lactate",
+        "coachingNotes": "Focus on turnover and knee lift under fatigue."
+      },
+      {
+        "name": "10 min Grass Jog & Static Stretching",
+        "phase": "cooldown",
+        "energySystem": "aerobic",
+        "movementPattern": "carry",
+        "cnsIntensity": 1,
+        "contraindications": [],
+        "sets": 1,
+        "reps": "10 mins",
+        "restSeconds": 0,
+        "tempo": "very slow",
+        "targetZone": "HR Zone 1",
+        "coachingNotes": "Flush lactic acid, stretch hip flexors and calves."
+      }
+    ]
+  }
+]

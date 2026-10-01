@@ -23,7 +23,7 @@ Read, in this order:
 
 This file governs _how we work_; `managementsystem/` governs _what we're building and what's already been decided_.
 
-**Current phase:** Development — Sprint 1 is owner-reviewed and complete; Sprint 2 athlete profiles and club management are in progress.
+**Current phase:** Implementation for Sprints 2–8 is in place; owner review/acceptance remains pending. External service requirements and remaining implementation gaps are listed in `managmentsystem/Docs/AgentsDocumentation/tasks/sprints-2-8-todo.md`.
 
 ## Role & Working Style
 
@@ -67,13 +67,18 @@ Built in sprints; each sprint is reviewed and evaluated before the next one star
 - [x] Platform account directory handles legacy MongoDB users without club membership arrays — done 2026-09-29, missing clubIds now display as an empty club list.
 - [x] Backend shutdown closes MongoDB and Redis clients cleanly — done 2026-09-29, removed duplicate signal handlers and added central graceful cleanup.
 - [x] System administrators can view existing clubs and add their own active membership — done 2026-09-29, global club directory opens the selected club's roster for user management.
-- [ ] 2. Athlete profiles & club management — in progress 2026-09-29, added club-scoped athlete CRUD/archive APIs, searchable roster and profile editor, bounded CSV import with row results, system-admin club creation, and account linking on invitation acceptance; production builds pass, with live-service acceptance pending.
-- [ ] 3. Attendance module
-- [ ] 4. Workout module
-- [ ] 5. Performance tracking
-- [ ] 6. Recommendation engine
-- [ ] 7. Analytics dashboard
-- [ ] 8. Deployment
+- [x] Club membership route TypeScript syntax — done 2026-09-30, corrected the malformed `/mine` response closure; backend typecheck passes.
+- [x] Platform administrators can select clubs from the header — done 2026-09-30, system admins load the platform club directory in the switcher; other users remain limited to active memberships.
+- [x] Club switching server error — done 2026-09-30, resolve Firebase UIDs through Mongo user records, synchronize club claims, and issue fresh access tokens; focused switch tests pass.
+- [x] Athlete creation payload — done 2026-09-30, align `apps/backend` validation with the frontend's injected club ID, date-only birth dates, and nullable fields; athlete date formatting and payload tests pass.
+- [x] Athlete self-service club enrollment — done 2026-09-30, athletes without a club can request enrollment; club admins review requests and approval activates membership.
+- [ ] 2. Athlete profiles & club management — implementation ready 2026-09-29, added club-scoped athlete CRUD/archive APIs, searchable roster and profile editor, bounded CSV import with row results and client-side limits, system-admin club creation, invitation/account linking, and a working Sprint 2 progress page; frontend/backend production builds pass, owner acceptance pending.
+- [ ] 3. Attendance module — implementation ready 2026-09-30, club-scoped sessions/records, manual bulk marking, expiring check-in links, summaries, and API-backed screens; builds pass. QR image rendering/Firebase real-time sync and owner acceptance pending.
+- [ ] 4. Workout module — implementation ready 2026-09-30, exercise/workout authoring, assignments, workout player/completion, and attendance-on-open; builds pass. Multi-week program/mesocycle design and owner acceptance pending.
+- [ ] 5. Performance tracking — implementation ready 2026-09-30, results, PB/SB, fitness tests, goals, and CSV export; builds pass. Trend/ranking/report depth and owner acceptance pending.
+- [ ] 6. Recommendation engine — implementation ready 2026-09-30, persisted explainable cold-start rules, coach review, athlete plans, and event triggers; builds pass. No trained model/dataset/worker is configured; owner acceptance pending.
+- [ ] 7. Injury & permissions — implementation ready 2026-09-30, privacy-scoped injury/wellness/rehab/RTP and permission generation/review/status verification; builds pass. Attachments/PDF generation and owner acceptance pending.
+- [ ] 8. Analytics & deployment — implementation ready 2026-09-30, live club reports/export, announcements/read-state APIs, IndexedDB offline workout sync, Vercel SPA routing, corrected CI paths and operational docs; builds pass. Hosted notification delivery, deployment credentials, monitoring, and owner acceptance pending.
 
 Example of a completed line:
 `- [x] 3. Attendance module — done 2026-10-03, added QR check-in flow (skill used: frontend-design)`

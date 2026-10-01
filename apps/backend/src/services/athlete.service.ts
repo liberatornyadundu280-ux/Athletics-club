@@ -225,7 +225,11 @@ export class AthleteService {
       lastName: athlete.lastName,
       email: athlete.email,
       phone: athlete.phone,
-      dateOfBirth: athlete.dateOfBirth?.toISOString() || null,
+      dateOfBirth: athlete.dateOfBirth
+        ? athlete.dateOfBirth instanceof Date
+          ? athlete.dateOfBirth.toISOString()
+          : new Date(athlete.dateOfBirth).toISOString()
+        : null,
       gender: athlete.gender,
       eventSpecialization: athlete.eventSpecialization || [],
       personalBest: athlete.personalBest || {},

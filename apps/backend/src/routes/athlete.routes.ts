@@ -15,55 +15,41 @@ import { ERROR_CODES } from '@stms/shared/constants/errors';
 const router = Router();
 
 // ==================== ZOD SCHEMAS ====================
-const createAthleteSchema = z.object({
-  body: z.object({
-    firstName: z.string().min(2).max(100),
-    lastName: z.string().min(2).max(100),
-    email: z.string().email().toLowerCase().max(255),
-    phone: z.string().optional(),
-    dateOfBirth: z.string().datetime().optional(),
-    gender: z.enum(['male', 'female', 'other']).optional(),
-    eventSpecialization: z.array(z.string()).optional(),
-    personalBest: z.record(z.string()).optional(),
-    seasonBest: z.record(z.string()).optional(),
-    medicalNotes: z.string().optional(),
-    emergencyContact: z.object({
-      name: z.string(),
-      relationship: z.string(),
-      phone: z.string(),
-      email: z.string().email().optional(),
-    }).optional(),
-    school: z.string().optional(),
-    grade: z.string().optional(),
-    clubId: z.string().regex(/^[0-9a-fA-F]{24}$/),
-  }),
+const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}, 'Use a valid date in YYYY-MM-DD format');
+
+const athleteFields = {
+  firstName: z.string().trim().min(1).max(80),
+  lastName: z.string().trim().min(1).max(80),
+  email: z.string().trim().email().max(255).transform(value => value.toLowerCase()),
+  phone: z.union([z.string().trim().max(30), z.null()]).optional(),
+  dateOfBirth: z.union([dateOnly, z.string().datetime(), z.literal(''), z.null()]).optional(),
+  gender: z.enum(['male', 'female', 'other']).optional(),
+  eventSpecialization: z.array(z.string().trim().min(1).max(60)).max(12).optional(),
+  personalBest: z.record(z.string()).optional(),
+  seasonBest: z.record(z.string()).optional(),
+  medicalNotes: z.union([z.string().max(2000), z.null()]).optional(),
+  emergencyContact: z.object({
+    name: z.string().trim().max(100),
+    relationship: z.string().trim().max(60),
+    phone: z.string().trim().max(30),
+    email: z.union([z.string().trim().email().max(255), z.literal(''), z.null()]).optional(),
+  }).nullable().optional(),
+  school: z.union([z.string().trim().max(120), z.null()]).optional(),
+  grade: z.union([z.string().trim().max(40), z.null()]).optional(),
+};
+
+export const createAthleteSchema = z.object({
+  body: z.object(athleteFields),
 });
 
 const updateAthleteSchema = z.object({
   params: z.object({
     id: z.string().regex(/^[0-9a-fA-F]{24}$/),
   }),
-  body: z.object({
-    firstName: z.string().min(2).max(100).optional(),
-    lastName: z.string().min(2).max(100).optional(),
-    email: z.string().email().toLowerCase().max(255).optional(),
-    phone: z.string().optional(),
-    dateOfBirth: z.string().datetime().optional(),
-    gender: z.enum(['male', 'female', 'other']).optional(),
-    eventSpecialization: z.array(z.string()).optional(),
-    personalBest: z.record(z.string()).optional(),
-    seasonBest: z.record(z.string()).optional(),
-    medicalNotes: z.string().optional(),
-    emergencyContact: z.object({
-      name: z.string(),
-      relationship: z.string(),
-      phone: z.string(),
-      email: z.string().email().optional(),
-    }).optional(),
-    school: z.string().optional(),
-    grade: z.string().optional(),
-    status: z.enum(['active', 'injured', 'inactive', 'transferred', 'alumni']).optional(),
-  }),
+  body: z.object({ ...athleteFields, status: z.enum(['active', 'injured', 'inactive', 'transferred', 'alumni']).optional() }).partial(),
 });
 
 const bulkImportSchema = z.object({

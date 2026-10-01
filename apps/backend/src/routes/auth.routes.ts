@@ -175,17 +175,23 @@ router.post('/switch-club', validate(SwitchClubRequestSchema), asyncHandler(asyn
   const { clubId } = req.body;
   const userId = req.user!.uid;
 
-  const claims = await authService.switchClub(userId, clubId);
+  const result = await authService.switchClub(userId, clubId);
+  res.cookie('refreshToken', result.refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: '/',
+  });
 
   res.json({
     status: 'success',
     data: {
-      user: {
-        ...req.user,
-        activeClubId: clubId,
-        clubIds: claims.clubIds,
-      },
-      permissions: claims.permissions,
+      accessToken: result.accessToken,
+      expiresIn: result.expiresIn,
+      tokenType: result.tokenType,
+      user: result.user,
+      permissions: result.permissions,
     },
   });
 }));
