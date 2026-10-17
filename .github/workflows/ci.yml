@@ -1,49 +1,86 @@
 name: STMS CI
 
+# GitHub only reads workflows from the repository root's .github/workflows directory,
+# so this is the single place CI can actually run. All paths are relative to the repo root.
 on:
   push:
     branches: [main, develop]
     paths:
-      - 'stms-backend/**'
-      - 'stms-frontend/**'
+      - 'managementsystem/**'
       - '.github/workflows/ci.yml'
   pull_request:
     branches: [main, develop]
     paths:
-      - 'stms-backend/**'
-      - 'stms-frontend/**'
+      - 'managementsystem/**'
       - '.github/workflows/ci.yml'
   workflow_dispatch:
 
 jobs:
-  build-backend:
-    name: Build backend
+  backend:
+    name: Backend — typecheck, build
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: stms-backend
+        working-directory: managementsystem/stms-backend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: stms-backend/package-lock.json
+          cache-dependency-path: managementsystem/stms-backend/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+
+  backend-unit-tests:
+    name: Backend — unit tests (known stale, non-blocking)
+    runs-on: ubuntu-latest
+    # 5 of 11 tests in tests/unit/auth.service.test.ts are stale: they pass non-ObjectId
+    # strings ('user-123' / 'club-456') to switchClub, refreshToken and logout, which now
+    # resolve records by ObjectId. Non-blocking until those tests are rewritten.
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: managementsystem/stms-backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: managementsystem/stms-backend/package-lock.json
+      - run: npm ci
+      - run: npm run test:unit
+
+  frontend:
+    name: Frontend — build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: managementsystem/stms-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: managementsystem/stms-frontend/package-lock.json
       - run: npm ci
       - run: npm run build
 
-  build-frontend:
-    name: Build frontend
+  landing:
+    name: Landing page — build
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: stms-frontend
+        working-directory: managementsystem/landing
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: stms-frontend/package-lock.json
+          cache-dependency-path: managementsystem/landing/package-lock.json
       - run: npm ci
       - run: npm run build

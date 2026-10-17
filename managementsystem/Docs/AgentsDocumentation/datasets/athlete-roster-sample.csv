@@ -1,0 +1,25 @@
+firstName,lastName,email,phone,dateOfBirth,gender,eventSpecialization,school,grade
+Aarav,Mehta,athlete001@example.com,,2008-03-14,male,100m sprint|200m sprint,Northfield Academy,11
+Anaya,Rao,athlete002@example.com,,2009-07-22,female,100m sprint|long jump,Northfield Academy,10
+Vihaan,Shah,athlete003@example.com,,2007-11-05,male,400m sprint|800m,Maple Grove School,12
+Diya,Nair,athlete004@example.com,,2010-01-18,female,800m|1500m,Maple Grove School,9
+Arjun,Kapoor,athlete005@example.com,,2008-09-30,male,long jump|triple jump,Riverbend Academy,11
+Isha,Menon,athlete006@example.com,,2009-02-11,female,high jump|100m hurdles,Riverbend Academy,10
+Reyansh,Patel,athlete007@example.com,,2007-06-27,male,110m hurdles|400m hurdles,Eastview School,12
+Meera,Iyer,athlete008@example.com,,2010-12-03,female,200m sprint|400m sprint,Eastview School,9
+Kabir,Joshi,athlete009@example.com,,2008-05-09,male,1500m|3000m,Northfield Academy,11
+Sana,Thomas,athlete010@example.com,,2009-10-16,female,100m sprint|200m sprint,Maple Grove School,10
+Advik,Desai,athlete011@example.com,,2007-04-24,male,shot put|discus, Riverbend Academy,12
+Tara,Kulkarni,athlete012@example.com,,2010-08-07,female,long jump|triple jump,Eastview School,9
+Rohan,Das,athlete013@example.com,,2008-01-29,male,800m|1500m,Northfield Academy,11
+Myra,Sharma,athlete014@example.com,,2009-06-02,female,400m sprint|400m hurdles,Maple Grove School,10
+Ishaan,Verma,athlete015@example.com,,2007-12-19,male,100m sprint|200m sprint,Riverbend Academy,12
+Kiara,Fernandes,athlete016@example.com,,2010-04-13,female,high jump|long jump,Eastview School,9
+Dev,Mukherjee,athlete017@example.com,,2008-07-01,male,3000m|cross country,Northfield Academy,11
+Aditi,Chawla,athlete018@example.com,,2009-11-26,female,1500m|3000m,Maple Grove School,10
+Neil,Bhat,athlete019@example.com,,2007-02-08,male,javelin|shot put,Riverbend Academy,12
+Riya,Singh,athlete020@example.com,,2010-09-21,female,100m hurdles|200m sprint,Eastview School,9
+Kunal,Shetty,athlete021@example.com,,2008-12-10,male,400m sprint|800m,Northfield Academy,11
+Zoya,Ali,athlete022@example.com,,2009-04-05,female,100m sprint|long jump,Maple Grove School,10
+Samar,Gupta,athlete023@example.com,,2007-08-17,male,high jump|triple jump,Riverbend Academy,12
+Nisha,Pillai,athlete024@example.com,,2010-06-30,female,200m sprint|400m sprint,Eastview School,9

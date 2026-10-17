@@ -1,0 +1,89 @@
+// src/config/env.ts
+// Validates all required environment variables at startup
+
+import { config as loadDotEnv } from 'dotenv';
+import { resolve } from 'path';
+
+// Load the backend's own .env file regardless of the directory the command runs from.
+// Existing process environment values keep precedence (dotenv's default behavior).
+loadDotEnv({ path: resolve(__dirname, '../../.env') });
+
+const requiredEnvVars = [
+  'NODE_ENV',
+  'PORT',
+  'MONGODB_URI',
+  'REDIS_URL',
+  'FIREBASE_PROJECT_ID',
+  'FIREBASE_CLIENT_EMAIL',
+  'FIREBASE_PRIVATE_KEY',
+  'JWT_PRIVATE_KEY',
+  'JWT_PUBLIC_KEY',
+  'ALLOWED_ORIGINS',
+] as const;
+
+const optionalEnvVars = [
+  'FRONTEND_URL',
+  'CLOUDINARY_CLOUD_NAME',
+  'CLOUDINARY_API_KEY',
+  'CLOUDINARY_API_SECRET',
+  'SENTRY_DSN',
+  'LOG_LEVEL',
+  'ML_MODEL_ENABLED',
+  'ML_INFERENCE_STREAM_KEY',
+  'ML_INFERENCE_CONSUMER_GROUP',
+  'ML_INFERENCE_TIMEOUT_MS',
+] as const;
+
+type RequiredEnv = typeof requiredEnvVars[number];
+type OptionalEnv = typeof optionalEnvVars[number];
+
+export type EnvConfig = Omit<Record<RequiredEnv, string>, 'ALLOWED_ORIGINS'> & {
+  ALLOWED_ORIGINS: string[];
+} & Partial<Record<OptionalEnv, string>>;
+
+function validateEnv(): EnvConfig {
+  const missing: string[] = [];
+  const config: Record<string, string> = {};
+
+  for (const key of requiredEnvVars) {
+    const value = process.env[key];
+    if (!value) {
+      missing.push(key);
+    } else {
+      config[key] = value;
+    }
+  }
+
+  for (const key of optionalEnvVars) {
+    const value = process.env[key];
+    if (value) {
+      config[key] = value;
+    }
+  }
+
+  if (missing.length > 0) {
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+  }
+
+  // Validate NODE_ENV
+  if (!['development', 'staging', 'production'].includes(config.NODE_ENV)) {
+    throw new Error(`NODE_ENV must be one of: development, staging, production`);
+  }
+
+  // Parse ALLOWED_ORIGINS
+  return {
+    ...config,
+    ALLOWED_ORIGINS: config.ALLOWED_ORIGINS.split(',').map(origin => origin.trim()),
+  } as EnvConfig;
+}
+
+export const env = validateEnv();
+
+// Helper to get allowed origins for CORS
+export const getAllowedOrigins = (): string[] => env.ALLOWED_ORIGINS;
+
+// Helper to check if production
+export const isProduction = (): boolean => env.NODE_ENV === 'production';
+
+// Helper to check if development
+export const isDevelopment = (): boolean => env.NODE_ENV === 'development';
