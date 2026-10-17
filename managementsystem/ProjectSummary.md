@@ -95,3 +95,47 @@
 - The two-repository git split (`git filter-repo`) is still pending.
 - Restore or discard the two SmartCivic decks deleted from `Docs/` — recoverable from git history only.
 - This reorganization is not yet committed.
+
+## Session 5 — 2026-10-17
+
+**Contributor(s):** AI Assistant (opencode)
+
+**Focus:** Make the system runnable end to end — scrub the committed credentials, turn the dormant schema migrations into something that actually runs, stand up a seedable database, and get a working login.
+
+**Decisions made:**
+
+- **Migrations get a real runner (option A), before the seed.** The two migration files had never been executed, which mattered more than expected: `users`, `clubs`, `club_memberships` and `audit_logs` had **no indexes at all** in `config/database.ts`. Their unique constraints on `email`, `firebaseUid` and `slug` existed only in migration 001, so nothing was stopping duplicate accounts. Migrations now run first, and the seed runs after them.
+- **Migrations are idempotent rather than one-shot.** `connectToDatabase()` creates several of the same collections implicitly through `createIndexes()`, so a plain `db.createCollection()` throws `NamespaceExists` the second time a database is touched. Rewrote both migrations to use `ensureCollection` (create, or `collMod` when the collection is present) and `ensureIndexes` (create only what is missing). This keeps a retried migration safe, which is what lets the runner record a migration only after it succeeds.
+- **STMS gets its own database.** `MONGODB_URI` had no database name, so the driver fell back to MongoDB's default `test` — which turned out to be shared with an unrelated campus management application (90 accounts living in the *same* `users` collection under a completely different schema). Target is now `stms_dev`, which is what `docker-compose.yml` and `.env.example` had specified all along.
+- **The credential leak is fixed by rotation, not by history rewriting.** The live MongoDB password and Cloudinary secret are in `HEAD` and in `1270414`, and the two copies disagree, so one variant is already stale. Scrubbing the files does not invalidate them; rotation does. `git filter-repo` is not required.
+- **Secrets move to the environment.** `stms_ml/config.yaml` is committed and now holds no credentials; the Python pipeline overlays `MONGO_URI`, `MONGO_DB`, `REDIS_URL` and `CLOUDINARY_*` from the environment, matching what `inference_worker.py` already did.
+- **The seed's admin account is `FIREBASE_INITIAL_ADMIN_EMAIL`.** It is an existing Firebase account, so it is reused untouched (sign in with Google). The coach account defaults to the reserved `coach@example.com` rather than deriving from the admin's domain — deriving it from a Gmail address would have created an account at an address a stranger might own.
+- **No demo history in the seed.** Fabricating `training_sessions`, `attendance_records` and `performance_results` documents without reading those routes first would have produced plausible-looking records with wrong field names. Left as an explicit follow-up instead.
+
+**Changes / additions:**
+
+- Untracked `feature_engineering/config.local.yaml` (`git rm --cached`) and added `feature_engineering/.gitignore` covering `config.local.yaml`, `*.local.yaml`, `__pycache__/` and `.env`. The file stays on disk for local runs.
+- Stripped the live MongoDB URI and Cloudinary keys out of `feature_engineering/stms_ml/config.yaml`; added `feature_engineering/.env.example`.
+- Made `stms_ml/features/pipeline.py` environment-aware: added `import os`, resolved `mongo_uri`/`database` through argument → environment → YAML → default, and overlaid the Cloudinary and Redis values in `_load_config`.
+- Fixed a latent bug in both YAML files: the MongoDB URI was written as a **multiline YAML scalar**, so the parsed value ended with a newline. Normalised `config.local.yaml` on disk as well.
+- Added `src/migrations/helpers.ts` (`ensureCollection`, `ensureIndexes`, `dropIndexesByName`), `src/migrations/index.ts` (ordered registry) and `src/migrations/runner.ts` (shared logic). Rewrote `001-initial-schema.ts` and `002-daily-readiness-and-exercise-enhancements.ts` to use the helpers.
+- Rewrote `src/migrate.ts` as a CLI over the runner: applies pending migrations, `--list` for status, `--down` to roll back one, `--db <name>` to target another database, `--force` to permit a production rollback. It opens its own MongoDB connection so a migration run does not also trigger the application's index bootstrap.
+- Fixed migration 002's rollback, which called `dropIndexes()` and would have removed `idx_exercises_club_name` and `idx_workouts_club_updated` — indexes the running application still needs. It now drops only its own indexes by name.
+- Added `migrate:list` and `migrate:down` scripts. Fixed `migrate:test`, which used bash `NODE_ENV=test` inline syntax (broken on Windows) and would have been rejected by `env.ts` regardless; it is now `--db stms_test`, and `test` was added to the accepted `NODE_ENV` values.
+- Wrote `src/seed.ts` (~430 lines): applies pending migrations, then upserts a club, a `system_admin` and a `coach` Firebase account, the 24-athlete roster from `Docs/AgentsDocumentation/datasets/athlete-roster-sample.csv`, and a 12-exercise catalogue with the phase/energy-system fields migration 002 adds. Sets Firebase custom claims from `utils/role-permissions.ts`. Every record is keyed on a natural key (email, slug, club+name), so re-running is safe.
+- Pointed the local `MONGODB_URI` at `/stms_dev` and added a comment to `.env.example` explaining that the database name must be present, since its absence is silent.
+- Ran the migrations against `stms_dev` and verified the result: 5 collections now carry live `$jsonSchema` validators (`users`, `clubs`, `club_memberships`, `audit_logs`, `daily_readiness`), indexes are in place, and the seed produced 2 accounts, 1 club, 24 athletes and 12 exercises. Also proved the rollback path by rolling both migrations back and re-applying.
+- Confirmed `test` was not modified: still 93 users (72 of them campus roles), no validators, no `_migrations` collection.
+- `typecheck` and `build` pass for the backend.
+
+**Skill(s) used:** none (no skill loaded)
+
+**Open questions / next steps:**
+
+- **Rotate the leaked credentials** in the Atlas and Cloudinary consoles — the highest-priority outstanding item. Scrubbing the files did not invalidate them.
+- **Update Render's `MONGODB_URI`** to end with `/stms_dev`, or production will keep reading the shared `test` database.
+- Decide whether to copy the three STMS accounts still stranded in `test` (notably `liberatornyadundu2480@gmail.com`, a `system_admin`) into `stms_dev`, or simply re-promote them with `npm run admin:promote` after a first sign-in. Any account that signs in before it exists in `stms_dev` is provisioned as an `athlete`.
+- Seed demo history for the review screens: `training_sessions`, `attendance_records`, `workouts` and `performance_results` are still empty. This needs those routes read first so the documents have the right shape.
+- The AI/ML model remains last by design — `ruleEngine.ts` already produces recommendations, and the current model's training data is synthetic and its targets are not real coach decisions.
+- Backend unit tests (5 of 11) and lint debt are unchanged from Session 4.
+- This session's changes are not yet committed.

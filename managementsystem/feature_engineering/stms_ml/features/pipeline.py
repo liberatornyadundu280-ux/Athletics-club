@@ -4,6 +4,7 @@ Orchestrates all feature extractors for training and inference
 """
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
+import os
 import pandas as pd
 import yaml
 from pymongo import MongoClient
@@ -30,22 +31,58 @@ class RecommendationFeaturePipeline:
 
     def __init__(
         self,
-        mongo_uri: str = "mongodb://localhost:27017",
-        database: str = "stms",
+        mongo_uri: Optional[str] = None,
+        database: Optional[str] = None,
         config_path: Optional[str] = None,
     ):
-        self.mongo_uri = mongo_uri
-        self.database_name = database
+        self.config = self._load_config(config_path)
+        # Connection details resolve in this order: explicit argument, environment
+        # variable, config.yaml, then a local default. Secrets stay out of the repo.
+        mongodb_config = self.config.get("mongodb", {})
+        self.mongo_uri = (
+            mongo_uri
+            or os.getenv("MONGO_URI")
+            or mongodb_config.get("uri")
+            or "mongodb://localhost:27017"
+        )
+        self.database_name = (
+            database
+            or os.getenv("MONGO_DB")
+            or mongodb_config.get("database")
+            or "stms"
+        )
         self.client: Optional[MongoClient] = None
         self.db: Optional[Database] = None
-        self.config = self._load_config(config_path)
 
     def _load_config(self, config_path: Optional[str]) -> Dict[str, Any]:
-        """Load configuration from YAML file."""
+        """
+        Load configuration from a YAML file, then overlay environment variables.
+
+        The committed config.yaml intentionally carries no credentials, so a single
+        .env can drive local runs, training and the inference worker — all of which
+        already read MONGO_URI / MONGO_DB / REDIS_URL from the environment.
+        """
+        config: Dict[str, Any] = {}
         if config_path:
             with open(config_path, "r") as f:
-                return yaml.safe_load(f)
-        return {}
+                config = yaml.safe_load(f) or {}
+
+        for section in ("mongodb", "redis", "cloudinary"):
+            config.setdefault(section, {})
+
+        env_overrides = {
+            ("mongodb", "uri"): os.getenv("MONGO_URI"),
+            ("mongodb", "database"): os.getenv("MONGO_DB"),
+            ("redis", "url"): os.getenv("REDIS_URL"),
+            ("cloudinary", "cloud_name"): os.getenv("CLOUDINARY_CLOUD_NAME"),
+            ("cloudinary", "api_key"): os.getenv("CLOUDINARY_API_KEY"),
+            ("cloudinary", "api_secret"): os.getenv("CLOUDINARY_API_SECRET"),
+        }
+        for (section, key), value in env_overrides.items():
+            if value:
+                config[section][key] = value.strip()
+
+        return config
 
     def connect(self):
         """Establish MongoDB connection."""

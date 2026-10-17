@@ -12,6 +12,7 @@ import { apiLimiter } from './middleware/rate-limit.middleware';
 import { injectClubId } from './middleware/club.middleware';
 import { authenticate } from './middleware/auth.middleware';
 import { connectToDatabase } from './config/database';
+import { NotFoundError } from './utils/errors';
 
 // Import routes
 import authRoutes from './routes/auth.routes';
@@ -110,9 +111,9 @@ app.use(`${API_PREFIX}/readiness`, authenticate, injectClubId, readinessRoutes);
 
 // ==================== 404 HANDLER ====================
 app.use((_req: Request, _res: Response, next: NextFunction) => {
-  const error = new Error('Route not found');
-  (error as any).statusCode = 404;
-  next(error);
+  // Must be an AppError: the global handler only honours the status of AppError instances,
+  // so a bare Error would surface an unmatched route as a 500.
+  next(new NotFoundError('Route'));
 });
 
 // ==================== GLOBAL ERROR HANDLER ====================

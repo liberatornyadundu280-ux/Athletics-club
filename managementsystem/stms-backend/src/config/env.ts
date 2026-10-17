@@ -66,8 +66,8 @@ function validateEnv(): EnvConfig {
   }
 
   // Validate NODE_ENV
-  if (!['development', 'staging', 'production'].includes(config.NODE_ENV)) {
-    throw new Error(`NODE_ENV must be one of: development, staging, production`);
+  if (!['development', 'staging', 'test', 'production'].includes(config.NODE_ENV)) {
+    throw new Error(`NODE_ENV must be one of: development, staging, test, production`);
   }
 
   // Parse ALLOWED_ORIGINS

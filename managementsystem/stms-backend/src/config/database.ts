@@ -19,7 +19,7 @@ export async function connectToDatabase(): Promise<Db> {
     maxPoolSize: 100,
     minPoolSize: 10,
     maxIdleTimeMS: 30000,
-    waitQueueTimeoutMS: 5000,
+    waitQueueTimeoutMS: 30000,
     connectTimeoutMS: 10000,
     socketTimeoutMS: 45000,
   });

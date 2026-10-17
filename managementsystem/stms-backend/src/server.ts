@@ -6,6 +6,7 @@ import { logger } from './middleware/logger.middleware';
 import { closeDatabaseConnection } from './config/database';
 import { closeRateLimitRedisClient } from './middleware/rate-limit.middleware';
 import { closeTokenRedisClient } from './utils/tokens';
+import { closeMLRedisClient } from './config/redis';
 import app, { initializeApp } from './app';
 
 async function startServer(): Promise<void> {
@@ -41,10 +42,11 @@ async function startServer(): Promise<void> {
           closeDatabaseConnection(),
           closeRateLimitRedisClient(),
           closeTokenRedisClient(),
+          closeMLRedisClient(),
         ]);
         results.forEach((result, index) => {
           if (result.status === 'rejected') {
-            logger.warn({ component: ['MongoDB', 'rate-limit Redis', 'token Redis'][index] }, 'Resource shutdown reported an error');
+            logger.warn({ component: ['MongoDB', 'rate-limit Redis', 'token Redis', 'ML Redis'][index] }, 'Resource shutdown reported an error');
           }
         });
         clearTimeout(forceShutdown);
@@ -61,6 +63,7 @@ async function startServer(): Promise<void> {
       closeDatabaseConnection(),
       closeRateLimitRedisClient(),
       closeTokenRedisClient(),
+      closeMLRedisClient(),
     ]);
     process.exit(1);
   }

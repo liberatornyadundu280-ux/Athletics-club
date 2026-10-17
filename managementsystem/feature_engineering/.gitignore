@@ -1,0 +1,18 @@
+# Local, machine-specific configuration — never commit.
+# These files hold database and Cloudinary credentials.
+config.local.yaml
+*.local.yaml
+.env
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# Model artifacts and logs
+logs/
+*.log

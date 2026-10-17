@@ -1,28 +1,25 @@
 import { Db, IndexDescription } from 'mongodb';
+import { ensureCollection, ensureIndexes } from './helpers';
 
 export const up = async (db: Db): Promise<void> => {
   // ==================== USERS COLLECTION ====================
-  await db.createCollection('users', {
-    validator: {
-      $jsonSchema: {
-        bsonType: 'object',
-        required: ['firebaseUid', 'email', 'name', 'role', 'clubIds', 'status', 'createdAt', 'updatedAt'],
-        properties: {
-          firebaseUid: { bsonType: 'string' },
-          email: { bsonType: 'string', pattern: '^.+@.+$' },
-          name: { bsonType: 'string', minLength: 1, maxLength: 100 },
-          avatarUrl: { bsonType: ['string', 'null'] },
-          role: { enum: ['system_admin', 'club_admin', 'coach', 'athlete'] },
-          clubIds: { bsonType: 'array', items: { bsonType: 'objectId' } },
-          activeClubId: { bsonType: ['objectId', 'null'] },
-          permissions: { bsonType: 'array', items: { bsonType: 'string' } },
-          status: { enum: ['active', 'invited', 'deactivated', 'deleted'] },
-          lastLoginAt: { bsonType: ['date', 'null'] },
-          createdAt: { bsonType: 'date' },
-          updatedAt: { bsonType: 'date' },
-          deletedAt: { bsonType: ['date', 'null'] },
-        },
-      },
+  await ensureCollection(db, 'users', {
+    bsonType: 'object',
+    required: ['firebaseUid', 'email', 'name', 'role', 'clubIds', 'status', 'createdAt', 'updatedAt'],
+    properties: {
+      firebaseUid: { bsonType: 'string' },
+      email: { bsonType: 'string', pattern: '^.+@.+$' },
+      name: { bsonType: 'string', minLength: 1, maxLength: 100 },
+      avatarUrl: { bsonType: ['string', 'null'] },
+      role: { enum: ['system_admin', 'club_admin', 'coach', 'athlete'] },
+      clubIds: { bsonType: 'array', items: { bsonType: 'objectId' } },
+      activeClubId: { bsonType: ['objectId', 'null'] },
+      permissions: { bsonType: 'array', items: { bsonType: 'string' } },
+      status: { enum: ['active', 'invited', 'deactivated', 'deleted'] },
+      lastLoginAt: { bsonType: ['date', 'null'] },
+      createdAt: { bsonType: 'date' },
+      updatedAt: { bsonType: 'date' },
+      deletedAt: { bsonType: ['date', 'null'] },
     },
   });
 
@@ -34,40 +31,36 @@ export const up = async (db: Db): Promise<void> => {
     { key: { role: 1 }, name: 'idx_users_role' },
     { key: { createdAt: -1 }, name: 'idx_users_created_at_desc' },
   ];
-  await db.collection('users').createIndexes(userIndexes);
+  await ensureIndexes(db, 'users', userIndexes);
 
   // ==================== CLUBS COLLECTION ====================
-  await db.createCollection('clubs', {
-    validator: {
-      $jsonSchema: {
+  await ensureCollection(db, 'clubs', {
+    bsonType: 'object',
+    required: ['name', 'slug', 'branding', 'settings', 'createdBy', 'createdAt', 'updatedAt'],
+    properties: {
+      name: { bsonType: 'string', minLength: 2, maxLength: 100 },
+      slug: { bsonType: 'string', pattern: '^[a-z0-9-]+$', maxLength: 50 },
+      branding: {
         bsonType: 'object',
-        required: ['name', 'slug', 'branding', 'settings', 'createdBy', 'createdAt', 'updatedAt'],
+        required: ['primaryColor', 'secondaryColor'],
         properties: {
-          name: { bsonType: 'string', minLength: 2, maxLength: 100 },
-          slug: { bsonType: 'string', pattern: '^[a-z0-9-]+$', maxLength: 50 },
-          branding: {
-            bsonType: 'object',
-            required: ['primaryColor', 'secondaryColor'],
-            properties: {
-              logoUrl: { bsonType: ['string', 'null'] },
-              primaryColor: { bsonType: 'string', pattern: '^#[0-9A-Fa-f]{6}$' },
-              secondaryColor: { bsonType: 'string', pattern: '^#[0-9A-Fa-f]{6}$' },
-            },
-          },
-          settings: {
-            bsonType: 'object',
-            properties: {
-              timezone: { bsonType: 'string' },
-              attendanceMinPercent: { bsonType: 'int', minimum: 0, maximum: 100 },
-              workoutVerificationRequired: { bsonType: 'bool' },
-              notificationDefaults: { bsonType: 'object' },
-            },
-          },
-          createdBy: { bsonType: 'objectId' },
-          createdAt: { bsonType: 'date' },
-          updatedAt: { bsonType: 'date' },
+          logoUrl: { bsonType: ['string', 'null'] },
+          primaryColor: { bsonType: 'string', pattern: '^#[0-9A-Fa-f]{6}$' },
+          secondaryColor: { bsonType: 'string', pattern: '^#[0-9A-Fa-f]{6}$' },
         },
       },
+      settings: {
+        bsonType: 'object',
+        properties: {
+          timezone: { bsonType: 'string' },
+          attendanceMinPercent: { bsonType: 'int', minimum: 0, maximum: 100 },
+          workoutVerificationRequired: { bsonType: 'bool' },
+          notificationDefaults: { bsonType: 'object' },
+        },
+      },
+      createdBy: { bsonType: 'objectId' },
+      createdAt: { bsonType: 'date' },
+      updatedAt: { bsonType: 'date' },
     },
   });
 
@@ -76,26 +69,22 @@ export const up = async (db: Db): Promise<void> => {
     { key: { createdBy: 1 }, name: 'idx_clubs_created_by' },
     { key: { createdAt: -1 }, name: 'idx_clubs_created_at_desc' },
   ];
-  await db.collection('clubs').createIndexes(clubIndexes);
+  await ensureIndexes(db, 'clubs', clubIndexes);
 
   // ==================== CLUB MEMBERSHIPS COLLECTION ====================
-  await db.createCollection('club_memberships', {
-    validator: {
-      $jsonSchema: {
-        bsonType: 'object',
-        required: ['userId', 'clubId', 'role', 'status', 'joinedAt', 'createdAt', 'updatedAt'],
-        properties: {
-          userId: { bsonType: 'objectId' },
-          clubId: { bsonType: 'objectId' },
-          role: { enum: ['member', 'captain', 'alumni', 'head_coach', 'assistant_coach', 'specialist_coach'] },
-          status: { enum: ['active', 'pending', 'transferred_out'] },
-          joinedAt: { bsonType: 'date' },
-          invitedBy: { bsonType: ['objectId', 'null'] },
-          invitedAt: { bsonType: ['date', 'null'] },
-          createdAt: { bsonType: 'date' },
-          updatedAt: { bsonType: 'date' },
-        },
-      },
+  await ensureCollection(db, 'club_memberships', {
+    bsonType: 'object',
+    required: ['userId', 'clubId', 'role', 'status', 'joinedAt', 'createdAt', 'updatedAt'],
+    properties: {
+      userId: { bsonType: 'objectId' },
+      clubId: { bsonType: 'objectId' },
+      role: { enum: ['member', 'captain', 'alumni', 'head_coach', 'assistant_coach', 'specialist_coach'] },
+      status: { enum: ['active', 'pending', 'transferred_out'] },
+      joinedAt: { bsonType: 'date' },
+      invitedBy: { bsonType: ['objectId', 'null'] },
+      invitedAt: { bsonType: ['date', 'null'] },
+      createdAt: { bsonType: 'date' },
+      updatedAt: { bsonType: 'date' },
     },
   });
 
@@ -106,26 +95,22 @@ export const up = async (db: Db): Promise<void> => {
     { key: { clubId: 1, role: 1 }, name: 'idx_memberships_club_role' },
     { key: { invitedBy: 1 }, name: 'idx_memberships_invited_by' },
   ];
-  await db.collection('club_memberships').createIndexes(membershipIndexes);
+  await ensureIndexes(db, 'club_memberships', membershipIndexes);
 
   // ==================== AUDIT LOGS COLLECTION ====================
-  await db.createCollection('audit_logs', {
-    validator: {
-      $jsonSchema: {
-        bsonType: 'object',
-        required: ['userId', 'action', 'resource', 'clubId', 'timestamp', 'ip'],
-        properties: {
-          userId: { bsonType: 'objectId' },
-          action: { bsonType: 'string' },
-          resource: { bsonType: 'string' },
-          resourceId: { bsonType: ['objectId', 'null'] },
-          clubId: { bsonType: 'objectId' },
-          metadata: { bsonType: 'object' },
-          timestamp: { bsonType: 'date' },
-          ip: { bsonType: 'string' },
-          userAgent: { bsonType: 'string' },
-        },
-      },
+  await ensureCollection(db, 'audit_logs', {
+    bsonType: 'object',
+    required: ['userId', 'action', 'resource', 'clubId', 'timestamp', 'ip'],
+    properties: {
+      userId: { bsonType: 'objectId' },
+      action: { bsonType: 'string' },
+      resource: { bsonType: 'string' },
+      resourceId: { bsonType: ['objectId', 'null'] },
+      clubId: { bsonType: 'objectId' },
+      metadata: { bsonType: 'object' },
+      timestamp: { bsonType: 'date' },
+      ip: { bsonType: 'string' },
+      userAgent: { bsonType: 'string' },
     },
   });
 
@@ -137,7 +122,7 @@ export const up = async (db: Db): Promise<void> => {
     // TTL index - keep audit logs for 7 years (regulatory)
     { key: { timestamp: 1 }, expireAfterSeconds: 7 * 365 * 24 * 60 * 60, name: 'idx_audit_ttl_7y' },
   ];
-  await db.collection('audit_logs').createIndexes(auditIndexes);
+  await ensureIndexes(db, 'audit_logs', auditIndexes);
 
   // ==================== REFRESH TOKENS COLLECTION (Redis-backed, but schema for reference) ====================
   // Actually stored in Redis with key: `refresh_token:{hashedToken}` -> { userId, clubId, expiresAt }

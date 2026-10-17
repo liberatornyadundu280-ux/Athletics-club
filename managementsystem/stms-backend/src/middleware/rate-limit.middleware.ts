@@ -1,39 +1,132 @@
 // src/middleware/rate-limit.middleware.ts
-// Redis-backed rate limiting
+// Rate limiting, with a graceful in-process fallback when Redis is unreachable.
 
-import rateLimit from 'express-rate-limit';
+import rateLimit, { MemoryStore, Store, Options, ClientRateLimitInfo } from 'express-rate-limit';
 import RedisStore from 'rate-limit-redis';
-import { createClient } from 'redis';
-import { env } from '../config/env';
-import { RateLimitError } from '../utils/errors';
+import { RedisClientType } from 'redis';
+import { createConfiguredRedisClient, isRedisReady } from '../config/redis';
 
-// Create Redis client for rate limiting
-const redisClient = createClient({
-  url: env.REDIS_URL,
-});
+// One dedicated connection for rate limiting. The connection is started in the background
+// and never awaited: while it is pending — or if it never succeeds — the resilient store
+// below serves every counter from memory.
+const redisClient: RedisClientType = createConfiguredRedisClient('Rate limit Redis');
 
-let isClosingRedisClient = false;
-redisClient.on('error', (err) => {
-  if (!isClosingRedisClient) console.error('Rate limit Redis error:', err);
-});
-
-const redisConnection = redisClient.connect().catch((err) => {
-  if (!isClosingRedisClient) console.error('Rate limit Redis connection failed:', err);
+void redisClient.connect().catch(() => {
+  // Reported once by attachRedisLogging; the fallback keeps the API usable.
 });
 
 export async function closeRateLimitRedisClient(): Promise<void> {
-  isClosingRedisClient = true;
   if (redisClient.isReady) {
     await redisClient.close();
   } else if (redisClient.isOpen) {
+    // During a pending connection, destroy instead of queuing QUIT behind it.
     redisClient.destroy();
   }
-  await redisConnection;
 }
 
-const getRateLimitStore = () => new RedisStore({
-  sendCommand: (...args: string[]) => redisClient.sendCommand(args),
-});
+/**
+ * A rate-limit store that prefers Redis and falls back to per-process counting.
+ *
+ * Redis shares counters across instances, which is what production wants. But a limiter
+ * that hard-fails when its store is unreachable takes the whole API down with it — and
+ * because login sits behind `authLimiter`, a Redis blip would make the system impossible
+ * to sign into. Degrading the *strictness* of the limit is far better than degrading
+ * availability.
+ */
+class ResilientRateLimitStore implements Store {
+  /** Counters may live in this process only, so keys are not shared between instances. */
+  localKeys = true;
+
+  private readonly fallback = new MemoryStore();
+  private redisStore: RedisStore | null = null;
+
+  constructor(private readonly client: RedisClientType) {}
+
+  /**
+   * Built on first use rather than in the constructor. `RedisStore` eagerly issues its two
+   * `SCRIPT LOAD` commands when constructed, and against an unreachable server those sit
+   * in the command queue and abort after the command timeout — a stray error at startup
+   * for a store we are not even using yet.
+   */
+  private getRedisStore(): RedisStore {
+    this.redisStore ??= new RedisStore({
+      prefix: 'stms:rate-limit:',
+      sendCommand: (...args: string[]) => this.client.sendCommand(args),
+    });
+    return this.redisStore;
+  }
+
+  init(options: Options): void {
+    this.fallback.init(options);
+  }
+
+  private async delegate<T>(
+    viaRedis: () => Promise<T>,
+    viaMemory: () => T | Promise<T>
+  ): Promise<T> {
+    if (isRedisReady(this.client)) {
+      try {
+        return await viaRedis();
+      } catch {
+        // Connection dropped mid-request: serve this request from memory rather than
+        // failing it.
+      }
+    }
+    return await viaMemory();
+  }
+
+  /**
+   * Only used to expose `middleware.getKey`; it plays no part in counting, and the memory
+   * store has no equivalent, so it reports "no counter" while Redis is unavailable.
+   */
+  get(key: string): Promise<ClientRateLimitInfo | undefined> {
+    if (!isRedisReady(this.client)) return Promise.resolve(undefined);
+    return this.getRedisStore().get(key).catch(() => undefined);
+  }
+
+  increment(key: string) {
+    return this.delegate(
+      () => this.getRedisStore().increment(key),
+      () => this.fallback.increment(key)
+    );
+  }
+
+  decrement(key: string) {
+    return this.delegate(
+      () => this.getRedisStore().decrement(key),
+      () => this.fallback.decrement(key)
+    );
+  }
+
+  resetKey(key: string) {
+    return this.delegate(
+      () => this.getRedisStore().resetKey(key),
+      () => this.fallback.resetKey(key)
+    );
+  }
+
+  async resetAll(): Promise<void> {
+    await this.fallback.resetAll();
+    if (isRedisReady(this.client)) {
+      // RedisStore does not implement resetAll; clear the keys it owns directly.
+      await this.client
+        .keys('stms:rate-limit:*')
+        .then((keys) => (keys.length ? this.client.del(keys) : undefined))
+        .catch(() => {});
+    }
+  }
+
+  async shutdown(): Promise<void> {
+    await this.fallback.shutdown();
+  }
+}
+
+/**
+ * Each limiter needs its own store instance — express-rate-limit rejects a shared one,
+ * because it prefixes keys per limiter and a shared store would double-count. They all
+ * share the single Redis connection above.
+ */
+const getRateLimitStore = () => new ResilientRateLimitStore(redisClient);
 
 /**
  * General API rate limiter: 100 requests per 15 minutes per IP

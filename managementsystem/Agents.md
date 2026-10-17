@@ -104,6 +104,14 @@ Built in sprints; each sprint is reviewed and evaluated before the next one star
 - [ ] Backend unit tests are stale — 5 of 11 tests in `tests/unit/auth.service.test.ts` fail: they pass non-ObjectId strings (`'user-123'`, `'club-456'`) to `switchClub`, `refreshToken` and `logout`, which now resolve records by ObjectId. Marked non-blocking in CI until rewritten.
 - [ ] Lint debt — recorded 2026-10-17, `stms-backend` reports 84 problems (57 errors) and `stms-frontend` 850 (805 errors), mostly `@typescript-eslint/no-explicit-any`. Lint runs but does not pass.
 
+- [x] Credentials removed from tracked configuration — done 2026-10-17, `feature_engineering/config.local.yaml` untracked and gitignored, live MongoDB and Cloudinary secrets stripped out of `stms_ml/config.yaml`, and the Python pipeline now overlays `MONGO_URI` / `MONGO_DB` / `REDIS_URL` / `CLOUDINARY_*` from the environment. Also fixed a latent bug: the URI was written as a multiline YAML scalar, so it carried a trailing newline.
+- [x] Schema migrations actually runnable — done 2026-10-17, added `src/migrate.ts` with shared logic in `src/migrations/runner.ts` and an ordered registry. Migrations are now idempotent via `ensureCollection` (create, or `collMod` when present) and `ensureIndexes`, because `connectToDatabase()` pre-creates several of the same collections and would have thrown `NamespaceExists`. `users`, `clubs`, `club_memberships`, `audit_logs` and `daily_readiness` now carry live `$jsonSchema` validators, and the unique indexes on `users.email`, `users.firebaseUid` and `clubs.slug` exist for the first time. Rollback no longer drops indexes the application owns.
+- [x] STMS database isolated from the campus system — done 2026-10-17, the Atlas `MONGODB_URI` had no database name, so the driver fell back to MongoDB's default `test`. That database is shared with an unrelated campus management application (90 accounts in the same `users` collection under a different schema). STMS now targets `stms_dev`, matching `docker-compose.yml` and `.env.example`; `test` was left untouched. Applying the `users` validator there would have rejected the other application's writes.
+- [x] Development seed — done 2026-10-17, `npm run db:seed` applies pending migrations, then upserts a club, a `system_admin` and a `coach` login, the 24-athlete synthetic roster and a 12-exercise catalogue. Idempotent, and refuses to run against production without `--force`.
+- [ ] Rotate the leaked credentials — the MongoDB Atlas password and Cloudinary API secret were committed in `HEAD` and in `1270414`. They must be rotated in the Atlas and Cloudinary consoles; removing them from the files does not invalidate them.
+- [ ] Deployment environment needs the same database fix — Render's `MONGODB_URI` must end with `/stms_dev`, otherwise production will read the shared `test` database.
+- [ ] Seed demo history — `training_sessions`, `attendance_records`, `workouts` and `performance_results` are still empty, so those screens have nothing to show during review.
+
 Example of a completed line:
 `- [x] 3. Attendance module — done 2026-10-03, added QR check-in flow (skill used: frontend-design)`
 
@@ -146,8 +154,19 @@ cd managementsystem/stms-frontend && npm install && npm run dev
 
 - **Install:** `npm install` in each project (no root workspace)
 - **Run locally:** `npm run dev` in each project; backend stack via `docker-compose up -d` in `managementsystem/`
+- **Database:** `npm run migrate` · `npm run migrate:list` · `npm run migrate:down` · `npm run db:seed` (from `stms-backend`)
 - **Test:** `npm run test:unit` · `npm run test:integration` (backend; integration needs MongoDB + Redis)
 - **Build:** `npm run build` in each project
 - **Lint / typecheck:** `npm run lint` · `npm run typecheck`
+
+First-time database setup (from `stms-backend`):
+
+```bash
+npm run migrate      # apply schema validators and indexes
+npm run db:seed      # create a club, two logins, the sample roster and exercises
+npm run migrate:list # confirm what has been applied
+```
+
+`MONGODB_URI` must name the database — `.../stms_dev`, not just the host. Without it the driver silently uses MongoDB's default database, `test`.
 
 _Keep this file current as scope, stack, or process decisions change — it's the fastest way to bring a new session, or a new contributor, up to speed._

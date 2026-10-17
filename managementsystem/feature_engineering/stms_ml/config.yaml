@@ -1,18 +1,23 @@
 # STMS ML Feature Engineering Configuration
-# Copy to config.local.yaml and adjust for your environment
+# This file is committed and MUST NOT contain credentials.
+#
+# Values below are defaults only. Environment variables win over anything set here:
+#   MONGO_URI, MONGO_DB, REDIS_URL,
+#   CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
+# Put machine-specific values in config.local.yaml (gitignored) or, preferably,
+# in the environment. See feature_engineering/.env.example.
 
 # --- MongoDB Connection ---
 mongodb:
-  uri: "mongodb+srv://Liberator:5huOhhdPezTMCBdTYH@cluster0.bqmgnic.mongodb.net/?appName=Cluster0
-"
+  uri: ""
   database: "stms_dev"
   # For local: "mongodb://localhost:27017"
 
 # --- Cloudinary (Model Artifacts) ---
 cloudinary:
-  cloud_name: "dxul800bac"
-  api_key: "42377462629883923"
-  api_secret: "0YDF7x0N8NP5PH6HCuu89T8Yhu14"
+  cloud_name: ""
+  api_key: ""
+  api_secret: ""
   model_folder: "stms/models"
 
 # --- Redis Streams (Inference Queue) ---
