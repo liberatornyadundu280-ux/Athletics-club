@@ -15,6 +15,7 @@ import { UnauthorizedError, ConflictError } from '../utils/errors';
 import { ERROR_CODES } from '../utils/errors';
 import type { UserDocument } from '../types';
 import { permissionsForRole } from '../utils/role-permissions';
+import { logger } from '../middleware/logger.middleware';
 
 const router = Router();
 const getClubIds = (user: Partial<UserDocument>): string[] =>
@@ -44,14 +45,54 @@ const firebaseAuthHandler = asyncHandler(async (req, res) => {
 
   const firebaseUser = await firebaseAuth.getUser(uid);
   const db = (await import('../config/database')).getDatabase();
-  let user = await db.collection<UserDocument>('users').findOne({ firebaseUid: uid });
   const now = new Date();
+  const accountEmail = (firebaseUser.email || email).toLowerCase();
+
+  // Prefer the Firebase uid, but fall back to the verified email. A uid is not a stable
+  // identity: Firebase issues a fresh one when an account is deleted and recreated, and the
+  // same address can carry both a password and a Google record. Matching on uid alone then
+  // misses, and the insert below collides with the unique email index — which surfaces as a
+  // 409 "email already exists" the user has no way to clear.
+  let user = await db.collection<UserDocument>('users').findOne({ firebaseUid: uid });
+  let linkedToNewUid = false;
+
+  if (!user) {
+    const existingByEmail = await db
+      .collection<UserDocument>('users')
+      .findOne({ email: accountEmail }, { collation: { locale: 'en', strength: 2 } });
+
+    if (existingByEmail) {
+      // Link only a verified address. Linking an unverified one would let anyone who
+      // registers the same address inherit the existing account's role, clubs and history.
+      if (!decoded.email_verified) {
+        throw new UnauthorizedError(
+          'An account already exists for this email. Sign in with the provider you originally used, or verify this email address first.'
+        );
+      }
+
+      const previousUid = existingByEmail.firebaseUid;
+      await db.collection('users').updateOne(
+        { _id: existingByEmail._id },
+        { $set: { firebaseUid: uid, email: accountEmail, updatedAt: now } }
+      );
+
+      user = existingByEmail;
+      user.firebaseUid = uid;
+      user.email = accountEmail;
+      linkedToNewUid = true;
+
+      logger.warn(
+        { email: accountEmail, userId: existingByEmail._id.toString(), previousUid, newUid: uid },
+        'Linked an existing account to a new Firebase uid'
+      );
+    }
+  }
 
   if (!user) {
     const userDoc = {
       firebaseUid: uid,
-      email: firebaseUser.email || email,
-      name: firebaseUser.displayName || name || email.split('@')[0],
+      email: accountEmail,
+      name: firebaseUser.displayName || name || accountEmail.split('@')[0],
       avatarUrl: firebaseUser.photoURL || picture || null,
       role: 'athlete' as const,
       clubIds: [],
@@ -67,16 +108,24 @@ const firebaseAuthHandler = asyncHandler(async (req, res) => {
     user = { ...userDoc, _id: inserted.insertedId } as UserDocument;
   } else {
     if (user.status !== 'active') throw new UnauthorizedError('This account is not active');
-    if (!user.permissions?.length) {
+
+    const permissionsMissing = !user.permissions?.length;
+    if (permissionsMissing) {
       user.permissions = permissionsForRole(user.role);
       await db.collection('users').updateOne({ _id: user._id }, { $set: { permissions: user.permissions } });
+    }
+
+    // Custom claims live on the uid, so a newly linked account needs them written even when
+    // its stored permissions were already in place.
+    if (permissionsMissing || linkedToNewUid) {
       await setUserClaims(uid, {
         role: user.role,
         clubIds: getClubIds(user),
         activeClubId: user.activeClubId?.toString() || null,
-        permissions: user.permissions,
+        permissions: user.permissions || [],
       });
     }
+
     user.lastLoginAt = now;
     user.updatedAt = now;
     await db.collection('users').updateOne({ _id: user._id }, { $set: { lastLoginAt: now, updatedAt: now } });

@@ -139,3 +139,44 @@
 - The AI/ML model remains last by design — `ruleEngine.ts` already produces recommendations, and the current model's training data is synthetic and its targets are not real coach decisions.
 - Backend unit tests (5 of 11) and lint debt are unchanged from Session 4.
 - This session's changes are not yet committed.
+
+## Session 6 — 2026-10-18
+
+**Contributor(s):** AI Assistant (opencode)
+
+**Focus:** Get the system actually running on a developer machine. Login turned out to have a hard dependency on Redis, and Redis was unreachable from the local machine, so the system could not be signed into at all.
+
+**Decisions made:**
+
+- **Redis becomes an enhancement outside production, not a requirement.** `authLimiter` sits in front of `POST /auth/firebase`, so a rate-limit store that fails takes login down with it — and refresh-token storage (`storeRefreshToken`) is on the same login path. Both now fall back to an in-process store, which degrades the *strictness* of the limit and the *durability* of sessions rather than availability. Production still prefers the shared instance. The fallback is announced once, and announced as an error under `NODE_ENV=production`, because per-process refresh tokens are genuinely not shared between instances.
+- **Never `await connect()` against an unreachable server.** node-redis retries on its own, so that promise never settles; awaiting it stalls the request for the entire command timeout. `getMLRedisClient()` now starts the connection in the background and refuses the request immediately until the client is ready, which lets the caller's existing "fall back to the rule engine" path run in the same request instead of 15 seconds later.
+- **The rate-limit Redis store is constructed lazily.** `rate-limit-redis` eagerly issues two `SCRIPT LOAD` commands from its constructor; against an unreachable server those sit in the command queue and abort after the command timeout. That was the stray `AbortSignal`/`commands-queue` error appearing 15 seconds after startup, and it predates this session.
+- **Degrading must not mean failing quietly.** A single line per outage replaces node-redis's per-retry stack-trace flood, and a `ready` event re-arms the warning so a genuine production outage is still visible in the logs.
+- **WSL2 is the blocker for Docker on this machine, not the fallback.** Docker Desktop is installed but cannot start because no WSL2 distribution is present. Local Redis is therefore genuinely unavailable, which is what made the fallback the right fix rather than a workaround.
+- **A login must be matched by email as well as by Firebase uid.** `firebaseAuthHandler` looked the account up by `firebaseUid` only and inserted when that missed. The seeded admin's stored uid (`MQwguByzZURTlyeRV7BMUUGf7vi1`) no longer exists in Firebase — the account's real uid is `66jke2z9ofYOqdqlq1PGbAa16F92` — so every Google sign-in missed the lookup, fell through to an insert, and hit the unique email index added by migration 001. The result was `409 email already exists`, which the user could not clear from the app. The handler now falls back to the verified email and links the record to the current uid.
+- **Linking by email requires a verified address.** A uid can be reissued, but email is not something to link blindly: an unverified address would let anyone who registers the same address inherit the existing account's role, clubs and history. The fallback therefore only links when `email_verified` is true, and otherwise returns a 401 explaining how to proceed.
+
+**Changes / additions:**
+
+- Rewrote `src/config/redis.ts`: added `describeRedisError` (collapses node-redis's `AggregateError` into one readable line) and `attachRedisLogging` (logs the first failure of an outage, stays quiet until `ready`, then re-arms). Added a capped exponential `reconnectStrategy` so the process recovers if Redis appears later without hammering it, and an `isRedisReady` helper. `getMLRedisClient()` no longer caches a rejected connection promise, so a late Redis recovery is picked up instead of failing forever.
+- Rewrote `src/middleware/rate-limit.middleware.ts` around a `ResilientRateLimitStore` that delegates to `RedisStore` when the client is ready and to `express-rate-limit`'s own `MemoryStore` otherwise, catching mid-request drops and serving those from memory too. Redis stays required for cross-instance counting; only the fallback is per-process (`localKeys = true`). Each limiter gets its own instance — express-rate-limit v7 rejects a shared store (`ERR_ERL_STORE_REUSE`).
+- Rewrote `src/utils/tokens.ts` with a small TTL-aware `MemoryTokenStore` covering the commands the refresh-token store uses (`SETEX`, `GET`, `DEL`, `SADD`, `SREM`, `SMEMBERS`). Redis is still the source of truth when reachable.
+- Wired `closeMLRedisClient` into the shutdown paths in `src/server.ts`; it destroys rather than quits when the connection is still pending.
+- Fixed `verifyRefreshToken`: it threw a bare `Error`, and because the global handler only honours the status of `AppError` instances, a revoked or expired refresh token answered **500 `INTERNAL_ERROR`** instead of 401. It now throws `UnauthorizedError` with `TOKEN_EXPIRED`.
+- Fixed the 404 handler in `src/app.ts` for the same reason: it attached `statusCode = 404` to a plain `Error`, so unmatched routes reported **500**. It now throws `NotFoundError`.
+- Fixed `firebaseAuthHandler` in `src/routes/auth.routes.ts` so a reissued Firebase uid can no longer deadlock sign-in: it now falls back to a case-insensitive match on the verified email, updates the stored `firebaseUid`, and rewrites the custom claims for the new uid. Linked accounts are logged as warnings. Also normalises the stored email to lower case.
+- Repaired the data: the seeded admin's `users.firebaseUid` was updated to the real uid (it self-heals on first sign-in now), and the 12 `exercises` documents still pointing at the stale uid as `createdBy` were corrected. No references to the stale uid remain in any collection.
+- Reproduced the user's failure and confirmed the fix with a real Firebase ID token for the account's actual uid: `POST /api/v1/auth/google` returned **409** before and **200** after, with `role: system_admin` preserved and the stored uid corrected.
+- Verified end to end with Redis down, using a real Firebase ID token minted through the Admin SDK and exchanged over REST (no password needed): login → refresh (rotating) → logout → refresh again is rejected with 401. Also confirmed the limiter still counts — 5 × 400 then 429 — and that no request produced a 500.
+- `typecheck` and `build` pass; `eslint` reports no new problems in the touched files.
+
+**Skill(s) used:** none (no skill loaded)
+
+**Open questions / next steps:**
+
+- **The Redis-*available* path is still unverified on this machine.** Docker Desktop cannot start (no WSL2 distribution) and there is no native Redis, so the `RedisStore` and Redis-backed token paths were reasoned through rather than exercised. They are close to untouched in substance, but they should be confirmed against a real Redis before relying on them.
+- To get a local Redis: enable WSL2, then `docker run -d --name stms-redis -p 127.0.0.1:6379:6379 redis:7-alpine` and set `REDIS_URL=redis://localhost:6379`. Until then the backend simply runs without it.
+- Rotate the leaked credentials, move Render's `MONGODB_URI` to `/stms_dev`, and switch `REDIS_URL` to the **internal** Key Value URL in the same region as the service. All still outstanding from Session 5.
+- **A stray Firebase account exists for `libyeratornyadundu280@gmail.com`** — note the "libyerator" typo. It is password-only and absent from Mongo, so signing in with it would silently provision a new `athlete` account rather than reaching the admin. Worth deleting from the Firebase console.
+- Seed demo history, and keep the model last.
+- The rate-limit key prefix changed from the previous default `rl:` to `stms:rate-limit:`, so live counters reset once on deploy. Harmless, but worth knowing.
