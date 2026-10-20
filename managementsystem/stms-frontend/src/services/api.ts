@@ -438,7 +438,9 @@ class ApiService {
   async updateNotificationPreferences(announcements: boolean) { const response = await this.client.patch<ApiResponse<any>>('/announcements/preferences', { announcements }); return response.data.data!; }
 
   async getRecommendations(params?: { athleteId?: string }) { const response = await this.client.get<ApiResponse<any[]>>('/recommendations', { params }); return response.data.data || []; }
-  async generateRecommendation(data: { athleteId?: string; trigger?: string }) { const response = await this.client.post<ApiResponse<any>>('/recommendations/generate', data); return response.data.data!; }
+  // Inference waits on the Python worker, which has to read ~20 queries from Atlas and run
+  // the model; the default 15s client timeout aborts before the result arrives.
+  async generateRecommendation(data: { athleteId?: string; trigger?: string }) { const response = await this.client.post<ApiResponse<any>>('/recommendations/generate', data, { timeout: 45000 }); return response.data.data!; }
   async reviewRecommendation(id: string, data: { status: 'accepted' | 'modified' | 'dismissed'; workoutId?: string; coachNote?: string }) { const response = await this.client.patch<ApiResponse<any>>(`/recommendations/${id}/review`, data); return response.data.data!; }
 
   async getWorkouts() { const response = await this.client.get<ApiResponse<any[]>>('/workouts'); return response.data.data || []; }

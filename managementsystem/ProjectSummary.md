@@ -255,7 +255,7 @@
 - `stms-backend/src/seed-history.ts` + `db:seed:history`: deterministic 8-week demo history (8 workout templates, 24 sessions, 624 attendance records, 156 assignments, 117 logs, 3 competitions, 208 results, 78 fitness tests, 26 goals, 331 readiness check-ins, 3 injuries), batched with `bulkWrite`, idempotent, tagged `demoSeed: true`, removable with `--reset`.
 - `stms-backend/src/services/ruleEngine.ts`: roster event labels resolve to event groups, and catalogue phases map to explicit CNS ranks so ordering cannot compare `NaN`.
 - `stms-backend/src/services/recommendation.service.ts`: cold-start recommendations are now genuinely data-driven — they read load, ACWR, attendance, readiness, injuries, PBs and goals, and their drivers cite the numbers they saw.
-- Frontend `api.ts` / `AuthContext.tsx`: signed-out marker suppresses silent session restore after a failed logout until the next sign-in.
+- Frontend `api.ts` / `AuthContext.tsx`: signed-out marker suppresses silent session restore after a failed logout until the next sign-in; recommendation generation now has a 45-second request timeout (the default 15 seconds aborted before the worker replied).
 - Verified with a real Firebase ID token against `stms_dev`: `POST /api/v1/recommendations/generate` returns `modelVersion: ml-model_next_workout_rpe_20261001_043023.pkl`, and four different athletes produced distinct focus, RPE range and confidence (RPE 4.6–7.4 ranges, sprint vs throws vs recovery focuses). The cold-start path cites real values (e.g. "3 completed sessions in 28 days at an average RPE of 6.7", "ACWR 2.83").
 - `typecheck` passes in both projects (`tsc --noEmit`).
 
