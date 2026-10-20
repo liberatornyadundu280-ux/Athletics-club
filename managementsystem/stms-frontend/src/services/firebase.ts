@@ -6,6 +6,8 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
   sendPasswordResetEmail,
+  setPersistence,
+  browserLocalPersistence,
   UserCredential,
 } from 'firebase/auth';
 
@@ -28,10 +30,18 @@ export function initializeFirebase() {
   if (typeof window !== 'undefined') {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
-    googleProvider = new GoogleAuthProvider();
-    googleProvider.setCustomParameters({
-      prompt: 'select_account',
+
+    // Keep the Firebase session in localStorage so a returning visitor is recognised
+    // without a round-trip through the account chooser. This is the default in browsers,
+    // but stating it explicitly keeps it from silently changing with an SDK upgrade.
+    void setPersistence(auth, browserLocalPersistence).catch((error) => {
+      console.warn('Could not persist the Firebase session:', error);
     });
+
+    googleProvider = new GoogleAuthProvider();
+    // No forced `select_account`: with an existing Google session, "Continue with Google"
+    // now completes in one step instead of always opening the account picker. Google still
+    // lets the visitor switch accounts if they want to.
   }
   return { app, auth, googleProvider };
 }

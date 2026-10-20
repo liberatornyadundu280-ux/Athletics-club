@@ -4,6 +4,13 @@ import { ApiResponse, Athlete, ClubDiscoveryItem, ClubEnrollmentRequest, Enrollm
 // ==================== AXIOS INSTANCE ====================
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
+/**
+ * Set when the user signs out. The refresh token lives in an HttpOnly cookie that only the
+ * server can clear, so this local marker prevents a stale cookie from silently restoring the
+ * session on the next page load if the logout request never reached the backend.
+ */
+const SIGNED_OUT_MARKER = 'stms:signedOut';
+
 class ApiService {
   private client: AxiosInstance;
   private refreshTokenPromise: Promise<string> | null = null;
@@ -51,9 +58,21 @@ class ApiService {
             }
             return this.client(originalRequest);
           } catch (refreshError) {
-            // Refresh failed - logout user
+            // Another tab may have rotated the session while this request was in flight.
+            // Refresh tokens are single-use, so our copy was consumed and the cookie now
+            // belongs to that tab — reusing its access token avoids signing the user out.
+            const latestToken = localStorage.getItem('accessToken');
+            const attemptedToken = originalRequest.headers?.Authorization?.toString().replace(/^Bearer /, '');
+            if (latestToken && latestToken !== attemptedToken) {
+              originalRequest.headers.Authorization = `Bearer ${latestToken}`;
+              return this.client(originalRequest);
+            }
+
+            // The session is genuinely over. Notify the React tree instead of hard-navigating
+            // to /login: a visitor who is only browsing should stay where they are and get
+            // the sign-in prompt in place.
             this.clearAuth();
-            window.location.href = '/login';
+            window.dispatchEvent(new Event('stms:auth-expired'));
             return Promise.reject(refreshError);
           }
         }
@@ -119,6 +138,20 @@ class ApiService {
     return this.refreshAccessToken();
   }
 
+  /**
+   * Silent session restore. Returns false when there is no usable refresh cookie, which is
+   * the normal case for a visitor who has never signed in — callers must treat that as
+   * "anonymous", not as an error.
+   */
+  async tryRefreshAccessToken(): Promise<boolean> {
+    try {
+      await this.refreshAccessToken();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   // ==================== AUTH ====================
   async register(data: { email: string; password: string; role: 'athlete' | 'coach'; name: string }) {
     const response = await this.client.post<ApiResponse<{ accessToken: string; expiresIn: number; tokenType: string; user: any; permissions?: string[] }>>(
@@ -153,7 +186,17 @@ class ApiService {
       await this.client.post('/auth/logout');
     } finally {
       this.clearAuth();
+      // The refresh cookie is HttpOnly, so the client cannot delete it. If the request above
+      // failed (or the browser dropped the Set-Cookie), the cookie survives and the next
+      // page load would silently sign the user back in. This marker suppresses that silent
+      // restore until the user signs in again.
+      localStorage.setItem(SIGNED_OUT_MARKER, '1');
     }
+  }
+
+  /** True after an explicit sign-out whose refresh cookie may still be alive. */
+  hasExplicitlySignedOut(): boolean {
+    return localStorage.getItem(SIGNED_OUT_MARKER) === '1';
   }
 
   async getMe() {
@@ -413,6 +456,8 @@ class ApiService {
 
   // ==================== UTILITIES ====================
   private setAuth(data: { accessToken: string; expiresIn: number; user: any; permissions?: string[] }) {
+    // A fresh interactive sign-in re-enables silent restore for later visits.
+    localStorage.removeItem(SIGNED_OUT_MARKER);
     localStorage.setItem('accessToken', data.accessToken);
     localStorage.setItem('tokenExpiresAt', String(Date.now() + data.expiresIn * 1000));
     localStorage.setItem('user', JSON.stringify(data.user));

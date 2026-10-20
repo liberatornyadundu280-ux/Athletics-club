@@ -1,7 +1,8 @@
 import React, { Suspense, lazy } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { MainLayout, AuthLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/context/AuthContext';
+import { SignInGate } from '@/components/auth/SignInGate';
 import LoadingScreen from '@/components/common/LoadingScreen';
 
 const Dashboard = lazy(() => import('@/pages/dashboard/Dashboard').then(m => ({ default: m.Dashboard })));
@@ -42,9 +43,10 @@ interface ProtectedRouteProps {
 
 function ProtectedRoute({ children, permissions = [], roles = [] }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, hasPermission, hasRole, user } = useAuth();
-  const location = useLocation();
   if (isLoading) return <LoadingScreen message="Checking permissions..." />;
-  if (!isAuthenticated) return <Navigate to="/login" replace state={{ from: { pathname: location.pathname, search: location.search } }} />;
+  // Visitors may walk the whole app; a module that needs an account invites them to sign in
+  // in place instead of bouncing them to a login screen they did not ask for.
+  if (!isAuthenticated) return <SignInGate />;
   if (roles.length > 0 && user && !roles.includes(user.role)) return <Navigate to="/dashboard" replace />;
   if (permissions.length > 0 && !permissions.some(permission => hasPermission(permission))) return <Navigate to="/dashboard" replace />;
   return <>{children}</>;

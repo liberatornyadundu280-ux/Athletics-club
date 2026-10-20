@@ -180,3 +180,93 @@
 - **A stray Firebase account exists for `libyeratornyadundu280@gmail.com`** — note the "libyerator" typo. It is password-only and absent from Mongo, so signing in with it would silently provision a new `athlete` account rather than reaching the admin. Worth deleting from the Firebase console.
 - Seed demo history, and keep the model last.
 - The rate-limit key prefix changed from the previous default `rl:` to `stms:rate-limit:`, so live counters reset once on deploy. Harmless, but worth knowing.
+## Session 7 — 2026-10-20
+
+**Contributor(s):** AI Assistant (opencode)
+
+**Focus:** Make sign-in usable in practice. Authentication was working, but a *correct* sign-in could still be refused with 429, a session did not survive a short break, and a visitor had no way to look around without creating an account.
+
+**Decisions made:**
+
+- **The auth limiter was protecting the wrong thing.** `/auth/google` and `/auth/firebase` exchange a *verified Firebase ID token* for a backend session; the password never reaches this service and Firebase throttles password attempts itself. So a 5-per-15-minute per-IP counter bought almost no security while costing a lot: campus and office networks put everyone behind one NAT address, and every unsuccessful exchange burned a slot until even a correct sign-in was refused. The limit is now 30 per 15 minutes in production and 300 in development (where every user shares `127.0.0.1`), and successful requests are still skipped.
+- **`trust proxy` is required, not a nicety.** Render terminates TLS and forwards the client address in `X-Forwarded-For`. Without `app.set('trust proxy', 1)`, `req.ip` is the proxy's own address, so every visitor shares one rate-limit counter — one busy user would 429 everybody. This was latent in production and would have looked like a random outage.
+- **Refresh tokens fall back to MongoDB, not process memory.** Session 6's in-memory fallback lost every session whenever the API restarted, which is the opposite of "stay signed in" on a machine without Redis. MongoDB is already a hard dependency and survives restarts, so the fallback moved there (`refresh_tokens`, with a TTL index mirroring the Redis key expiry). Redis remains the preferred store.
+- **`sameSite` has to depend on the deployment.** The refresh cookie was `strict` everywhere. In development the frontend proxies `/api` and both are the same origin, but in production the frontend (Vercel) and API (Render) are different sites, where a `strict` cookie is never sent — the session would silently never persist. It is now `none` + `secure` in production and `lax` in development, with the cookie options defined once instead of repeated in five places.
+- **An expired access token means "unknown", not "signed out".** Access tokens last 15 minutes; the refresh cookie lasts weeks. The old initialiser bailed out as soon as the access token was expired, so every return visit after a short break landed on the login page even though the session was still valid. It now silently refreshes first and only concludes "anonymous" when that fails.
+- **Visitors browse; modules ask for an account in place.** `ProtectedRoute` used to redirect every unauthenticated visit to `/login`. That made the app look closed. It now renders an in-place sign-in panel that names the module and explains what it holds, inside the normal app shell, so a visitor can walk the navigation and understand the product. Only role/permission failures for an *authenticated* user still redirect.
+- **A rejected ID token is a 401, not a 500.** `verifyIdToken` throws a Firebase SDK error, and the global handler treats unknown errors as server faults — so an expired or tampered token answered 500 and logged a stack trace as if the server were broken.
+
+**Changes / additions:**
+
+- `src/middleware/rate-limit.middleware.ts`: environment-aware limits (production 1000 API / 30 auth per 15 minutes; development 6000 / 300), structured `{ status, message, code: 'RATE_LIMITED' }` bodies, and CORS preflights excluded from counting.
+- `src/app.ts`: `app.set('trust proxy', 1)`.
+- `src/utils/tokens.ts`: replaced the in-process `MemoryTokenStore` with a MongoDB-backed fallback, exported `REFRESH_TOKEN_TTL_DAYS` (default 30, override with the new optional env var), and simplified `readRefreshToken` to return the stored record rather than a JSON string.
+- `src/routes/auth.routes.ts`: one `refreshCookieOptions()` / `refreshCookieBase()` pair replaces five duplicated cookie literals; `verifyIdToken` failures are translated to `UnauthorizedError` / `TOKEN_INVALID`.
+- `src/migrations/003-refresh-tokens.ts`: creates the fallback collection with a TTL index on `expiresAt` and a `userId` index for "revoke all". Applied to `stms_dev`; rollback removes only the indexes it created.
+- Frontend `AuthContext`: restores the session through the refresh cookie before deciding the visitor is anonymous; listens for a new `stms:auth-expired` event so a failed mid-session refresh resets the context instead of hard-reloading to `/login`.
+- Frontend `api.ts`: the 401 interceptor no longer does `window.location.href = '/login'`; it dispatches the event, and it reuses a newly stored access token when another tab has already rotated the session (refresh tokens are single-use, so the losing tab used to be signed out).
+- Frontend `firebase.ts`: explicit `browserLocalPersistence`, and the forced Google account chooser (`prompt: 'select_account'`) is gone so "Continue with Google" completes in one step when a Google session already exists.
+- Frontend `components/auth/SignInGate.tsx`: the in-place sign-in panel, with per-module copy.
+- Frontend `Sidebar` / `Header` / `App`: guests get the full module list, a "Browsing as guest" footer and a plain Sign in button; admin-only destinations stay hidden. The landing page's "Explore the platform" CTA now opens the app instead of the login form.
+- `src/components/layout/MainLayout.tsx`: moved a `useEffect` above an early return, fixing a latent hooks-order violation.
+- Verified: ten consecutive invalid sign-ins returned 401 each with no 429, and a valid sign-in still returned 200 immediately afterwards; login → refresh rotates and the superseded cookie is rejected with 401; **after a full backend restart the saved cookie still refreshed and `/auth/me` returned the same `system_admin` account**, which is the "stay signed in" guarantee proven end to end. `refresh_tokens` shows the TTL and `userId` indexes in `stms_dev`.
+- The auth screens were unreadable whenever the OS was in light mode: the global `body` rule read `--color-text-primary` / `--color-track-900`, neither of which exists in the Tailwind v4 `@theme` block, and a bare `var()` is invalid at computed-value time — so `color` fell back to the browser default, black. The rest of the app looked fine only because `MainLayout` sets `body.style.color` inline. Both declarations now carry fallbacks. The login and register screens also used a `surface-*` scale that does not exist in this palette (so those classes were no-ops), and were moved onto the real `white` / `mist` / `fog` / `volt` / `line` tokens; `AuthLayout` now sets an explicit base text colour.
+- `AuthLayout` gained a Back button (history when there is an entry, home otherwise) and the STMS mark is now a link to the home page, with an accessible label.
+- `typecheck` and `build` pass in both projects; `eslint` reports no new problems in the touched files.
+
+**Skill(s) used:** none (no skill loaded)
+
+**Open questions / next steps:**
+
+- **Guest access is a shell plus an in-place prompt, not sample data.** Visitors can see the navigation and what each module does, but no real athlete data. Publishing demonstration data on those pages is a separate product and privacy decision.
+- **Sign-out depends on the API call succeeding.** If `/auth/logout` fails (flaky network), the local state is cleared but the HttpOnly cookie survives, so a later page load silently restores the session. A retry, or a client-side "signed out" marker that suppresses silent restore, would close that gap.
+- **The multi-tab race is mitigated heuristically** (reuse a newer access token when our refresh fails) rather than solved. A grace window on refresh-token rotation would be the rigorous fix.
+- The Redis-*available* path is still unverified locally; production deployment remains the first real exercise of it.
+- Production also requires `ALLOWED_ORIGINS` to list the frontend origin and `FRONTEND_URL` to be set, otherwise CORS blocks the response and the `sameSite: 'none'` cookie never arrives.
+- Rotate the leaked credentials, move Render's `MONGODB_URI` to `/stms_dev`, and switch `REDIS_URL` to the internal Key Value URL. Still outstanding from Session 5.
+- Seed demo history, and keep the model last.
+
+## Session 8 — 2026-10-20
+
+**Contributor(s):** AI Assistant (opencode)
+
+**Focus:** Make the recommendation engine produce real recommendations from real club data. Sign-in, guest access and the module screens were already usable, but every recommendation still came from the rule engine either because inference crashed, saw the wrong features, or timed out.
+
+**Decisions made:**
+
+- **The model must be served with the contract it was trained on.** The shipped model was trained on the analytics dataset's 31 columns (`age`, `session_rpe`, `gender_F`, `sRPE_acwr`, `periodization_phase_off-season`, …), while the runtime feature pipeline emits 211 descriptive keys (`age_years`, `avg_session_rpe`, `gender_female`, …). Only 4 names matched, so 27 inputs were silently fed to the model as zeros. Rather than retrain or change the architecture, the worker now adapts the pipeline output into the training contract and records where each value came from.
+- **Do not scale inputs the model was never trained on.** `train.py` fits the XGBoost model on the raw feature matrix and then saves a `StandardScaler` beside it without ever transforming the training data. The worker applied that scaler at inference, feeding the trees a distribution they had never seen; every athlete collapsed to roughly the same RPE. Scaling is now opt-in and off for this model.
+- **A missing feature group should fail loudly, not silently.** `FeaturePipeline` defaulted to a hand-written list of extractor groups that omitted `readiness`, so 24 readiness features never reached inference. The default is now "every registered extractor", with the config's `enabled_groups` selecting a subset when one is supplied. This is the kind of omission that makes a model look broken while the code looks fine.
+- **Roster text is not a taxonomy.** Coaches write `"100m sprint"`, `"long jump"`, `"javelin"`; the extractors compared those strings to snake_case config keys and classified every real athlete as `unknown`. Both the Python extractor and the Node rule engine now normalise labels before mapping them to event groups.
+- **Workers own computation; the backend owns persistence.** The worker was inserting its own `recommendations` document *and* returning a result the backend inserted, producing two rows per request. It now only returns the result over the stream.
+- **Explainability travels with the prediction.** The worker already computed recovery text and the drivers behind its output, but the result payload dropped them, so ML recommendations rendered with an empty "why this suggestion" list. The result contract now carries `recovery`, `drivers` and the real `modelVersion`.
+- **Consumer groups are wrong for request/response fan-out.** The backend read results with `XREADGROUP` and a shared group; a result consumed by the wrong in-flight request stayed pending forever, so concurrent recommendations could silently time out. Results are now read with `XREAD` from a cursor captured before publishing.
+- **A stale session after sign-out is a correctness bug.** When `/auth/logout` failed, the HttpOnly refresh cookie survived and the next page load silently restored the session. A local signed-out marker now suppresses silent restore until the next interactive sign-in.
+- **Latency is bounded by Atlas round-trip time, not by the model.** Feature extraction issues ~21 sequential queries; from this network Atlas answers in ~500 ms, which alone accounted for 10–25 seconds per recommendation. Extractors now run concurrently and the ML timeout is 30 seconds instead of 10.
+
+**Changes / additions:**
+
+- `feature_engineering/stms_ml/inference_worker.py`: added `_apply_model_contract()` and `_current_periodization_phase()`; mapped age/training age/base fitness/readiness/session load/ACWR/compliance/attendance/injury/gender/event group/periodization into the model's 31 columns; stopped applying the scaler unless the bundle says it was used in training; removed the duplicate Mongo insert; returns `recovery`, `drivers` and `modelVersion`; fixed the shared ACWR calculation and 0–1 vs 0–100 readiness handling; bounded the results stream with `MAXLEN ≈ 1000`; set `socket_timeout=None` on the blocking Redis client.
+- `feature_engineering/stms_ml/features/base.py`: extractor groups default to all registered extractors; extraction runs in a thread pool and preserves deterministic feature precedence; a broken group records `<group>_error` instead of failing inference.
+- `feature_engineering/stms_ml/features/pipeline.py`: `enabled_groups` comes from config when present.
+- `feature_engineering/stms_ml/features/event_specific.py`: normalised roster event labels to sprints/jumps/throws/middle-distance/long-distance/combined.
+- `stms-backend/src/services/recommendation.service.ts`: ML result now supplies recovery, drivers and the worker's model version; results read with `XREAD` from a per-request cursor; `ML_INFERENCE_TIMEOUT_MS` raised to 30 000 locally.
+- `stms-backend/src/config/redis.ts`: `getMLRedisClient()` waits up to 2 seconds for readiness instead of throwing on first use, so the first recommendation after a restart no longer silently uses the rule engine.
+- `stms-backend/src/seed-history.ts` + `db:seed:history`: deterministic 8-week demo history (8 workout templates, 24 sessions, 624 attendance records, 156 assignments, 117 logs, 3 competitions, 208 results, 78 fitness tests, 26 goals, 331 readiness check-ins, 3 injuries), batched with `bulkWrite`, idempotent, tagged `demoSeed: true`, removable with `--reset`.
+- `stms-backend/src/services/ruleEngine.ts`: roster event labels resolve to event groups, and catalogue phases map to explicit CNS ranks so ordering cannot compare `NaN`.
+- `stms-backend/src/services/recommendation.service.ts`: cold-start recommendations are now genuinely data-driven — they read load, ACWR, attendance, readiness, injuries, PBs and goals, and their drivers cite the numbers they saw.
+- Frontend `api.ts` / `AuthContext.tsx`: signed-out marker suppresses silent session restore after a failed logout until the next sign-in.
+- Verified with a real Firebase ID token against `stms_dev`: `POST /api/v1/recommendations/generate` returns `modelVersion: ml-model_next_workout_rpe_20261001_043023.pkl`, and four different athletes produced distinct focus, RPE range and confidence (RPE 4.6–7.4 ranges, sprint vs throws vs recovery focuses). The cold-start path cites real values (e.g. "3 completed sessions in 28 days at an average RPE of 6.7", "ACWR 2.83").
+- `typecheck` passes in both projects (`tsc --noEmit`).
+
+**Skill(s) used:** none (no skill loaded)
+
+**Open questions / next steps:**
+
+- **Latency is dominated by the network to Atlas.** A plain authenticated GET takes ~4.5 s from this machine, and a full recommendation 20–30 s. On Render in the same region as Atlas this should drop sharply; until measured there, treat the 30-second timeout as a ceiling rather than a target. A short-lived feature cache per athlete, or generating recommendations asynchronously while the UI polls, would remove the wait from the click path.
+- **ACWR is noisy on short histories.** The cold-start path correctly reports the ratio it computed, but 3 sessions in 28 days makes 2.83 statistically fragile. Consider suppressing ACWR advice below a minimum chronic-session count.
+- The worker still logs `datetime.utcnow()` deprecation warnings; schedule a pass to timezone-aware timestamps.
+- The Python extractors' performance/results features still compare roster event text against snake_case event keys, so sprint/jump result features under-report even though `event_group_*` is now correct.
+- Start the worker before the backend in local development, and set `ML_INFERENCE_TIMEOUT_MS=30000` alongside `ML_MODEL_ENABLED=true`.
+- Rotate the leaked credentials, move Render's `MONGODB_URI` to `/stms_dev`, set `ALLOWED_ORIGINS`/`FRONTEND_URL`, and delete the stray `libyeratornyadundu280@gmail.com` Firebase account. Still outstanding.
+- Frontend deployment (Vercel) → landing page → model hosting remain the last milestones.

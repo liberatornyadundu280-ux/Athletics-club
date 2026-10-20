@@ -70,8 +70,8 @@ export function Login() {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h1 className="text-heading-lg font-bold text-surface-900 dark:text-surface-100">Welcome back</h1>
-        <p className="text-body text-surface-500 dark:text-surface-400 mt-2">
+        <h1 className="text-heading-lg font-bold text-white">Welcome back</h1>
+        <p className="text-body text-mist mt-2">
           Sign in to your STMS account
         </p>
       </div>
@@ -98,7 +98,7 @@ export function Login() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="text-surface-400 hover:text-surface-600"
+              className="text-fog hover:text-white"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -114,11 +114,11 @@ export function Login() {
             <input
               type="checkbox"
               {...register('rememberMe')}
-              className="w-4 h-4 rounded border-surface-300 text-primary-800 focus:ring-2 focus:ring-primary-500"
+              className="w-4 h-4 rounded border-line accent-volt focus:ring-2 focus:ring-volt"
             />
-            <span className="text-body-sm text-surface-600 dark:text-surface-400">Remember me</span>
+            <span className="text-body-sm text-mist">Remember me</span>
           </label>
-          <Link to="/forgot-password" className="text-body-sm text-primary-800 hover:text-primary-700">
+          <Link to="/forgot-password" className="text-body-sm text-volt hover:text-volt-deep">
             Forgot password?
           </Link>
         </div>
@@ -130,10 +130,10 @@ export function Login() {
 
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-surface-200 dark:border-surface-700" />
+          <div className="w-full border-t border-line" />
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="bg-white dark:bg-surface-950 px-2 text-surface-500">Or continue with</span>
+          <span className="bg-panel px-2 text-fog">Or continue with</span>
         </div>
       </div>
 
@@ -159,9 +159,9 @@ export function Login() {
         )}
       </Button>
 
-      <p className="text-center text-body-sm text-surface-500 dark:text-surface-400">
+      <p className="text-center text-body-sm text-mist">
         Don't have an account?{' '}
-        <Link to="/register" state={location.state} className="text-primary-800 hover:text-primary-700 font-medium">
+        <Link to="/register" state={location.state} className="text-volt hover:text-volt-deep font-medium">
           Sign up
         </Link>
       </p>

@@ -154,21 +154,30 @@ export function Sidebar({ className, collapsed = false, onToggleCollapse }: Side
   const navigate = useNavigate();
   const { user, hasPermission, hasRole } = useAuth();
 
-  if (!user) return null;
+  // Guests see the full module list so they can explore what the platform does before
+  // creating an account. Admin-only destinations stay hidden — they would only lead to a
+  // permission redirect.
+  const isGuest = !user;
 
-  const filteredNavItems = navigationConfig.filter(item => {
-    if (item.roles && !hasRole(item.roles)) return false;
-    if (item.permissions && !item.permissions.some(p => hasPermission(p))) return false;
-    return true;
-  });
+  const filteredNavItems = isGuest
+    ? navigationConfig
+    : navigationConfig.filter(item => {
+      if (item.roles && !hasRole(item.roles)) return false;
+      if (item.permissions && !item.permissions.some(p => hasPermission(p))) return false;
+      return true;
+    });
 
-  const filteredClubAdminItems = clubAdminNavItems.filter(item => {
-    if (item.roles && !hasRole(item.roles)) return false;
-    if (item.permissions && !item.permissions.some(p => hasPermission(p))) return false;
-    return true;
-  });
+  const filteredClubAdminItems = isGuest
+    ? []
+    : clubAdminNavItems.filter(item => {
+      if (item.roles && !hasRole(item.roles)) return false;
+      if (item.permissions && !item.permissions.some(p => hasPermission(p))) return false;
+      return true;
+    });
 
-  const filteredSystemAdminItems = systemAdminNavItems.filter(item => item.roles && hasRole(item.roles));
+  const filteredSystemAdminItems = isGuest
+    ? []
+    : systemAdminNavItems.filter(item => item.roles && hasRole(item.roles));
   const allNavItems: NavItem[] = [...filteredNavItems, ...filteredClubAdminItems, ...filteredSystemAdminItems];
 
   const tabs = allNavItems.map(item => ({
@@ -262,16 +271,26 @@ export function Sidebar({ className, collapsed = false, onToggleCollapse }: Side
       <div className={cn('p-space-md border-t border-line transition-all duration-300', collapsed && 'px-space-md')}>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-volt/10 flex items-center justify-center text-volt font-medium flex-shrink-0">
-            {user.name.charAt(0).toUpperCase()}
+            {user ? user.name.charAt(0).toUpperCase() : <Zap size={16} strokeWidth={2.4} />}
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0">
               <p className="text-body-sm font-medium text-white truncate">
-                {user.name}
+                {user ? user.name : 'Browsing as guest'}
               </p>
-              <p className="text-caption text-fog truncate capitalize">
-                {user.role.replace('_', ' ')}
-              </p>
+              {user ? (
+                <p className="text-caption text-fog truncate capitalize">
+                  {user.role.replace('_', ' ')}
+                </p>
+              ) : (
+                <button
+                  onClick={() => navigate('/login')}
+                  className="text-caption text-volt hover:underline"
+                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                >
+                  Sign in
+                </button>
+              )}
             </div>
           )}
         </div>

@@ -5,6 +5,7 @@ import rateLimit, { MemoryStore, Store, Options, ClientRateLimitInfo } from 'exp
 import RedisStore from 'rate-limit-redis';
 import { RedisClientType } from 'redis';
 import { createConfiguredRedisClient, isRedisReady } from '../config/redis';
+import { isProduction } from '../config/env';
 
 // One dedicated connection for rate limiting. The connection is started in the background
 // and never awaited: while it is pending — or if it never succeeds — the resilient store
@@ -129,32 +130,60 @@ class ResilientRateLimitStore implements Store {
 const getRateLimitStore = () => new ResilientRateLimitStore(redisClient);
 
 /**
- * General API rate limiter: 100 requests per 15 minutes per IP
+ * Limits are deliberately generous, because these counters protect the wrong thing when
+ * they are tight.
+ *
+ * Sign-in here exchanges a **verified Firebase ID token** for a backend session: the
+ * password never reaches this service, and Firebase throttles password attempts itself. So
+ * these limits guard against endpoint abuse, not credential guessing. Meanwhile a small
+ * per-IP budget costs a lot — campus and office networks put everyone behind one NAT
+ * address, and every unsuccessful exchange (a stale token, a closed popup, a 409 from a
+ * half-provisioned account) used to burn a slot until even a correct sign-in was refused
+ * with 429. Successful requests are skipped, so ordinary use never consumes the budget.
+ *
+ * Development gets a much larger budget on purpose: every user on a developer machine
+ * shares 127.0.0.1, so a production-sized limit would throttle the whole machine.
+ */
+const productionLimits = { api: 1000, auth: 30 };
+const developmentLimits = { api: 6000, auth: 300 };
+const limits = isProduction() ? productionLimits : developmentLimits;
+
+const rateLimitedMessage = (message: string) => ({
+  status: 'error',
+  message,
+  code: 'RATE_LIMITED',
+});
+
+/**
+ * General API limiter per IP. An SPA dashboard easily issues dozens of requests per visit,
+ * so this is a guard against runaway loops rather than a per-user throttle.
  */
 export const apiLimiter = rateLimit({
   store: getRateLimitStore(),
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
-  message: 'Too many requests from this IP, please try again later',
+  max: limits.api,
+  message: rateLimitedMessage('Too many requests from this address. Please try again shortly.'),
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => req.ip || 'unknown',
-  skip: (req) => req.path === '/healthz', // Don't rate limit health checks
+  // Health checks and CORS preflights are infrastructure, not usage.
+  skip: (req) => req.path === '/healthz' || req.method === 'OPTIONS',
 });
 
 /**
- * Strict rate limiter for auth endpoints: 5 requests per 15 minutes per IP
- * Skip successful requests to allow legitimate users
+ * Rate limiter for auth endpoints. Successful requests do not count, so a user who signs in
+ * normally is never affected; only repeated failures accumulate.
  */
 export const authLimiter = rateLimit({
   store: getRateLimitStore(),
   windowMs: 15 * 60 * 1000,
-  max: 5,
-  message: 'Too many authentication attempts, please try again later',
+  max: limits.auth,
+  message: rateLimitedMessage('Too many authentication attempts. Please wait a moment and try again.'),
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => `auth:${req.ip}`,
   skipSuccessfulRequests: true,
+  skip: (req) => req.method === 'OPTIONS',
 });
 
 /**

@@ -2,6 +2,7 @@
 Base Feature Extractor Class
 """
 from abc import ABC, abstractmethod
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 import pandas as pd
@@ -85,11 +86,7 @@ class FeaturePipeline:
         self.athlete_id = athlete_id
         self.as_of = as_of or datetime.utcnow()
         self.config = config or {}
-        self.enabled_groups = enabled_groups or [
-            "workload", "compliance", "performance",
-            "attendance", "injury", "fitness",
-            "demographics", "event_specific"
-        ]
+        self.enabled_groups = enabled_groups  # None means "every registered extractor"
         self._extractors = {}
 
     def register(self, name: str, extractor: BaseFeatureExtractor):
@@ -97,20 +94,41 @@ class FeaturePipeline:
         self._extractors[name] = extractor
 
     def extract_all(self) -> Dict[str, Any]:
-        """Extract all enabled feature groups."""
+        """Extract all enabled feature groups.
+
+        Extractors are independent read-only queries, so they run concurrently. Sequentially
+        they cost one network round trip per query (~21 in total); against a remote Atlas
+        cluster that pushed a single recommendation to 10-25 seconds. Running the groups in
+        parallel bounds the wait to the slowest group instead of the sum of every query.
+        """
         features = {}
         features["athlete_id"] = self.athlete_id
         features["club_id"] = self.club_id
         features["extracted_at"] = self.as_of.isoformat()
 
-        for name, extractor in self._extractors.items():
-            if name in self.enabled_groups:
-                try:
-                    extracted = extractor.extract()
+        selected = [
+            (name, extractor)
+            for name, extractor in self._extractors.items()
+            if self.enabled_groups is None or name in self.enabled_groups
+        ]
+
+        def run(item):
+            name, extractor = item
+            try:
+                return name, extractor.extract(), None
+            except Exception as exc:  # one broken group must not fail the whole pipeline
+                return name, None, str(exc)
+
+        if not selected:
+            return features
+
+        with ThreadPoolExecutor(max_workers=min(len(selected), 9)) as pool:
+            # map() preserves registration order, so feature precedence stays deterministic.
+            for name, extracted, error in pool.map(run, selected):
+                if error is not None:
+                    features[f"{name}_error"] = error
+                else:
                     features.update(extracted)
-                except Exception as e:
-                    # Log error but don't fail the whole pipeline
-                    features[f"{name}_error"] = str(e)
 
         return features
 

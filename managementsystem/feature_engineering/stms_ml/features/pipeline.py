@@ -111,16 +111,26 @@ class RecommendationFeaturePipeline:
         enabled_groups: Optional[List[str]] = None,
     ) -> FeaturePipeline:
         """Create a feature pipeline with all extractors registered."""
-        if not self.db:
+        if self.db is None:
             raise RuntimeError("Not connected to MongoDB. Call connect() first.")
+
+        feature_config = self.config.get("features", {})
+        configured_groups = feature_config.get("enabled_groups")
+        enabled = (
+            [name for name, is_on in configured_groups.items() if is_on]
+            if isinstance(configured_groups, dict)
+            else None
+        )
+        if enabled_groups is not None:
+            enabled = enabled_groups
 
         pipeline = FeaturePipeline(
             db=self.db,
             club_id=club_id,
             athlete_id=athlete_id,
             as_of=as_of,
-            config=self.config.get("features", {}),
-            enabled_groups=enabled_groups,
+            config=feature_config,
+            enabled_groups=enabled,
         )
 
         # Register all feature extractors

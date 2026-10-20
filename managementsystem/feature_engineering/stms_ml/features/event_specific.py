@@ -93,6 +93,30 @@ class EventSpecificFeatures(BaseFeatureExtractor):
         return specializations[0] if specializations else "unknown"
 
     def _get_event_group(self, event: str) -> str:
+        """Map the way coaches write an event ("100m sprint", "long jump") onto an event group.
+
+        The config keys are snake_case, while roster data is free text. Matching raw strings
+        silently classified every real athlete as "unknown".
+        """
+        e = (event or "").lower().strip()
+
+        if any(k in e for k in ("decathlon", "heptathlon", "pentathlon")):
+            return "combined"
+        if any(k in e for k in ("shot put", "discus", "javelin", "hammer")):
+            return "throws"
+        if "jump" in e or "vault" in e:
+            return "jumps"
+        if "cross country" in e or "marathon" in e or "10000" in e:
+            return "long_distance"
+        if any(k in e for k in ("800", "1500", "3000", "mile")):
+            return "middle_distance"
+        if "sprint" in e or "hurdle" in e:
+            return "sprints"
+        if e in ("60m", "100m", "200m", "400m"):
+            return "sprints"
+        if e in ("5000m", "10000m"):
+            return "long_distance"
+
         for group, events in self.event_groups.items():
             if event in events:
                 return group

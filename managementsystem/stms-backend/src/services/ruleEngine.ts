@@ -77,6 +77,30 @@ interface AthleteProfile {
   status: string;
 }
 
+export type EventGroup = 'sprints' | 'middle_distance' | 'long_distance' | 'jumps' | 'throws' | 'combined' | 'unknown';
+
+/**
+ * Roster events are stored the way coaches write them ("100m sprint", "long jump"), not the
+ * snake_case keys used by the ML config. Matching the raw string meant every athlete resolved
+ * to "unknown", so template retrieval quietly ignored the event group.
+ */
+export function eventGroupForEvents(events: string[] | undefined): EventGroup {
+  for (const raw of events ?? []) {
+    const event = raw.toLowerCase().trim();
+
+    if (event.includes('decathlon') || event.includes('heptathlon') || event.includes('pentathlon')) return 'combined';
+    if (event.includes('shot put') || event.includes('discus') || event.includes('javelin') || event.includes('hammer')) return 'throws';
+    if (event.includes('jump') || event.includes('vault')) return 'jumps';
+    if (event.includes('cross country') || event.includes('marathon') || event.includes('10000')) return 'long_distance';
+    if (event.includes('800') || event.includes('1500') || event.includes('3000') || event.includes('mile')) return 'middle_distance';
+    if (event.includes('sprint') || event.includes('hurdle')) return 'sprints';
+    if (/^(60|100|200|400)m$/.test(event)) return 'sprints';
+    if (/^(5000|10000)m$/.test(event)) return 'long_distance';
+  }
+
+  return 'unknown';
+}
+
 export class RuleEngine {
   /**
    * 1. Filter exercises based on active injuries
@@ -156,21 +180,31 @@ export class RuleEngine {
    * Reorders exercises within a workout to follow proper sequence
    */
   static enforceCNSOrdering(exercises: Exercise[]): Exercise[] {
+    // The catalogue uses coaching vocabulary (technique, speed, power, prevention, core,
+    // recovery) rather than the four canonical phases. Unmapped phases used to produce NaN
+    // comparisons, which left the order to the engines' sort implementation.
     const phaseOrder: Record<string, number> = {
-      'warmup': 1,
-      'mobility': 2,
-      'explosive': 3,
-      'strength': 4,
-      'cooldown': 5,
+      warmup: 1,
+      mobility: 1,
+      technique: 2,
+      explosive: 3,
+      power: 3,
+      speed: 3,
+      strength: 4,
+      prevention: 4,
+      core: 5,
+      cooldown: 6,
+      recovery: 6,
     };
+    const rank = (phase?: string) => phaseOrder[phase ?? ''] ?? 4;
 
     // Sort by phase order, then by CNS intensity (lower first within phase)
     return [...exercises].sort((a, b) => {
-      const phaseA = phaseOrder[a.phase || 'strength'];
-      const phaseB = phaseOrder[b.phase || 'strength'];
-      
+      const phaseA = rank(a.phase);
+      const phaseB = rank(b.phase);
+
       if (phaseA !== phaseB) return phaseA - phaseB;
-      
+
       // Within same phase, lower CNS intensity first
       const cnsA = a.cnsIntensity || 3;
       const cnsB = b.cnsIntensity || 3;
@@ -379,20 +413,7 @@ export class RuleEngine {
     else if (month >= 10 || month <= 2) periodizationPhase = 'off-season';
 
     // Get event group
-    const eventGroup = athlete.eventSpecialization[0] || 'unknown';
-    const eventGroups = {
-      sprints: ['100m', '200m', '400m', '60m', '100m_hurdles', '110m_hurdles', '400m_hurdles'],
-      middle_distance: ['800m', '1500m', '3000m', 'mile'],
-      jumps: ['long_jump', 'triple_jump', 'high_jump', 'pole_vault'],
-      throws: ['shot_put', 'discus', 'hammer', 'javelin'],
-    };
-    let matchedGroup = 'unknown';
-    for (const [group, events] of Object.entries(eventGroups)) {
-      if (events.includes(eventGroup)) {
-        matchedGroup = group;
-        break;
-      }
-    }
+    const matchedGroup = eventGroupForEvents(athlete.eventSpecialization);
 
     // Map ML intensity to level
     const intensityLevel = mlOutput.rpe >= 8 ? 'high' : (mlOutput.rpe >= 6 ? 'moderate' : 'low');

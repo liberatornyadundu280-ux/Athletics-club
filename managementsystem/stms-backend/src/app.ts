@@ -31,6 +31,11 @@ import readinessRoutes from './routes/readiness.routes';
 
 const app = express();
 
+// Render (and most PaaS providers) terminate TLS at a proxy and forward the real client
+// address in `X-Forwarded-For`. Without this, `req.ip` is the proxy's own address, so every
+// visitor shares one rate-limit counter — one busy user would 429 everybody else.
+app.set('trust proxy', 1);
+
 // ==================== SECURITY MIDDLEWARE ====================
 app.use(helmet({
   contentSecurityPolicy: {

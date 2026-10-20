@@ -2,6 +2,7 @@
 // Authentication routes
 
 import { Router } from 'express';
+import type { CookieOptions } from 'express';
 import { ObjectId } from 'mongodb';
 import { authenticate } from '../middleware/auth.middleware';
 import { asyncHandler } from '../middleware/error-handler';
@@ -10,12 +11,37 @@ import { authLimiter } from '../middleware/rate-limit.middleware';
 import { z } from 'zod';
 import { firebaseAuth } from '../config/firebase';
 import { setUserClaims } from '../config/firebase';
-import { generateTokens, storeRefreshToken, revokeRefreshToken, verifyRefreshToken } from '../utils/tokens';
+import { generateTokens, storeRefreshToken, revokeRefreshToken, verifyRefreshToken, REFRESH_TOKEN_TTL_DAYS } from '../utils/tokens';
 import { UnauthorizedError, ConflictError } from '../utils/errors';
 import { ERROR_CODES } from '../utils/errors';
+import { isProduction } from '../config/env';
 import type { UserDocument } from '../types';
 import { permissionsForRole } from '../utils/role-permissions';
 import { logger } from '../middleware/logger.middleware';
+
+const REFRESH_COOKIE_NAME = 'refreshToken';
+
+/**
+ * The refresh cookie is what keeps someone signed in: HttpOnly so scripts cannot read it,
+ * and long-lived so a browser restart or a few days away does not end the session.
+ *
+ * `sameSite` has to depend on the deployment. In development the frontend proxies `/api` to
+ * the backend, so both are the same origin and `lax` is correct. In production the frontend
+ * (Vercel) and API (Render) are different sites, and a `strict` cookie is simply not sent on
+ * those requests — the session would silently never persist. `none` requires `secure`,
+ * which production has.
+ */
+const refreshCookieBase = (): CookieOptions => ({
+  httpOnly: true,
+  secure: isProduction(),
+  sameSite: isProduction() ? 'none' : 'lax',
+  path: '/',
+});
+
+const refreshCookieOptions = (): CookieOptions => ({
+  ...refreshCookieBase(),
+  maxAge: REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000,
+});
 
 const router = Router();
 const getClubIds = (user: Partial<UserDocument>): string[] =>
@@ -39,7 +65,20 @@ const googleAuthSchema = z.object({
 
 const firebaseAuthHandler = asyncHandler(async (req, res) => {
   const { idToken } = req.body;
-  const decoded = await firebaseAuth.verifyIdToken(idToken, true);
+
+  // A tampered, expired or revoked ID token is a client condition. `verifyIdToken` throws a
+  // Firebase SDK error, which the global handler would otherwise report as a 500 and log as
+  // an application fault — noise that hides real failures.
+  let decoded: Awaited<ReturnType<typeof firebaseAuth.verifyIdToken>>;
+  try {
+    decoded = await firebaseAuth.verifyIdToken(idToken, true);
+  } catch (error) {
+    logger.warn({ error: (error as Error).message }, 'Rejected an invalid Firebase ID token');
+    throw new UnauthorizedError('Invalid or expired sign-in token. Please try again.', {
+      code: ERROR_CODES.TOKEN_INVALID,
+    });
+  }
+
   const { uid, email, name, picture } = decoded;
   if (!email) throw new UnauthorizedError('Firebase account must have an email');
 
@@ -140,13 +179,7 @@ const firebaseAuthHandler = asyncHandler(async (req, res) => {
   };
   const { accessToken, refreshToken, expiresIn, tokenType } = await generateTokens({ uid, email: user.email, ...claims });
   await storeRefreshToken(uid, refreshToken);
-  res.cookie('refreshToken', refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000,
-    path: '/',
-  });
+  res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieOptions());
 
   res.json({
     status: 'success',
@@ -181,8 +214,6 @@ const acceptInvitationSchema = z.object({
 
 // ==================== HELPERS ====================
 // These would be in a separate auth service - inline for now
-
-const REFRESH_TOKEN_TTL_DAYS = 7;
 
 function readCookie(req: { headers: { cookie?: string } }, name: string): string | undefined {
   const entry = req.headers.cookie?.split(';').map(value => value.trim()).find(value => value.startsWith(`${name}=`));
@@ -284,13 +315,7 @@ router.post('/register', authLimiter, validate(registerSchema), asyncHandler(asy
   await storeRefreshToken(firebaseUid, refreshToken);
 
   // Set refresh token cookie
-  res.cookie('refreshToken', refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000,
-    path: '/',
-  });
+  res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieOptions());
 
   res.status(201).json({
     status: 'success',
@@ -340,13 +365,7 @@ router.post('/refresh', asyncHandler(async (req, res) => {
   await revokeRefreshToken(refreshToken);
 
   // Set new cookie
-  res.cookie('refreshToken', newRefreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000,
-    path: '/',
-  });
+  res.cookie(REFRESH_COOKIE_NAME, newRefreshToken, refreshCookieOptions());
 
   res.json({
     status: 'success',
@@ -369,12 +388,7 @@ router.post('/logout', asyncHandler(async (req, res) => {
     await revokeRefreshToken(refreshToken);
   }
 
-  res.clearCookie('refreshToken', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    path: '/',
-  });
+  res.clearCookie(REFRESH_COOKIE_NAME, refreshCookieBase());
 
   res.json({ status: 'success', message: 'Logged out successfully' });
 }));
@@ -505,13 +519,7 @@ router.post('/accept-invitation', authenticate, validate(acceptInvitationSchema)
     permissions,
   });
   await storeRefreshToken(user.firebaseUid, refreshToken);
-  res.cookie('refreshToken', refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000,
-    path: '/',
-  });
+  res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieOptions());
 
   res.json({
     status: 'success',
@@ -590,13 +598,7 @@ router.post('/switch-club', authenticate, validate(switchClubSchema), asyncHandl
   await setUserClaims(userId, updatedClaims);
   const tokenPair = await generateTokens({ uid: userId, email: user.email, ...updatedClaims });
   await storeRefreshToken(userId, tokenPair.refreshToken);
-  res.cookie('refreshToken', tokenPair.refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000,
-    path: '/',
-  });
+  res.cookie(REFRESH_COOKIE_NAME, tokenPair.refreshToken, refreshCookieOptions());
 
   res.json({
     status: 'success',

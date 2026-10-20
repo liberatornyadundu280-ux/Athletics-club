@@ -90,20 +90,27 @@ let mlRedisClient: RedisClientType | null = null;
 /**
  * Return a *ready* ML inference client.
  *
- * This deliberately does not await `connect()`. Against an unreachable server that promise
- * never settles, because node-redis keeps retrying — so awaiting it would stall every
- * recommendation request for the full command timeout. The connection is started in the
- * background instead and this throws immediately until it is ready; `callMLInference`
- * catches that and the caller falls back to the rule engine within the same request.
+ * `connect()` is not awaited unconditionally: against an unreachable server node-redis keeps
+ * retrying, so awaiting it would stall a recommendation request for the whole command
+ * timeout. Instead the connection starts in the background and this waits a short bounded
+ * time for it to become ready. Without that wait the first recommendation after every
+ * backend restart silently used the rule engine (the client was created but not yet ready).
  */
-export async function getMLRedisClient(): Promise<RedisClientType> {
+export async function getMLRedisClient(readyTimeoutMs = 2000): Promise<RedisClientType> {
   if (mlRedisClient?.isReady) return mlRedisClient;
 
+  const client = mlRedisClient ?? createConfiguredRedisClient('ML Redis');
   if (!mlRedisClient) {
-    mlRedisClient = createConfiguredRedisClient('ML Redis');
-    void mlRedisClient.connect().catch(() => {
+    mlRedisClient = client;
+    void client.connect().catch(() => {
       // Reported once by attachRedisLogging; callers fall back to the rule engine.
     });
+  }
+
+  const deadline = Date.now() + readyTimeoutMs;
+  while (Date.now() < deadline) {
+    if (client.isReady) return client;
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
   throw new Error('Redis is not available; ML inference is disabled for this request');

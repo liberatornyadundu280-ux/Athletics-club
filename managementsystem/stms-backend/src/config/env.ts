@@ -32,6 +32,7 @@ const optionalEnvVars = [
   'ML_INFERENCE_STREAM_KEY',
   'ML_INFERENCE_CONSUMER_GROUP',
   'ML_INFERENCE_TIMEOUT_MS',
+  'REFRESH_TOKEN_TTL_DAYS',
 ] as const;
 
 type RequiredEnv = typeof requiredEnvVars[number];

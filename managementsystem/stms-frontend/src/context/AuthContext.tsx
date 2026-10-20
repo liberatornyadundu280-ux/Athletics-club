@@ -48,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearError: () => {},
   });
 
-  // Initialize auth state from localStorage and Firebase
+  // Restore a previous session before deciding that the visitor is anonymous.
   useEffect(() => {
     let mounted = true;
 
@@ -59,47 +59,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           api.clearAuth();
         }
 
-        const storedUser = api.getStoredUser();
-        if (!storedUser || api.isTokenExpired()) {
+        // The user signed out on purpose. Do not let a still-valid HttpOnly refresh cookie
+        // silently sign them back in — the logout request may not have reached the backend.
+        if (api.hasExplicitlySignedOut()) {
+          api.clearAuth();
           if (mounted) setState(prev => ({ ...prev, isLoading: false }));
           return;
         }
 
-        try {
-          const { user, permissions } = await authApi.getMe();
-          if (mounted) {
-            setState(prev => ({
-              ...prev,
-              user,
-              permissions,
-              activeClubId: user.activeClubId || null,
-              isAuthenticated: true,
-              isLoading: false,
-              error: null,
-            }));
-          }
-        } catch {
-          try {
-            await api.refreshAccessToken();
-            const { user, permissions } = await authApi.getMe();
-            if (mounted) {
-              setState(prev => ({
-                ...prev,
-                user,
-                permissions,
-                activeClubId: user.activeClubId || null,
-                isAuthenticated: true,
-                isLoading: false,
-                error: null,
-              }));
-            }
-          } catch {
+        // The access token only lives 15 minutes, so treat "expired" as "unknown" rather
+        // than "signed out": the httpOnly refresh cookie is the real session and it lasts for
+        // weeks. Without this, every return visit after a short break landed on the login
+        // page even though the session was still perfectly valid.
+        if (!api.getStoredUser() || api.isTokenExpired()) {
+          const restored = await api.tryRefreshAccessToken();
+
+          // A second tab loading at the same moment may have already rotated the session:
+          // refresh tokens are single-use, so our copy fails while that tab's succeeds. Use
+          // the token it stored rather than showing this tab the sign-in prompt.
+          const restoredByAnotherTab = Boolean(api.getStoredUser()) && !api.isTokenExpired();
+
+          if (!restored && !restoredByAnotherTab) {
             api.clearAuth();
             if (mounted) setState(prev => ({ ...prev, isLoading: false }));
+            return;
           }
         }
+
+        const { user, permissions } = await authApi.getMe();
+        if (mounted) {
+          setState(prev => ({
+            ...prev,
+            user,
+            permissions,
+            activeClubId: user.activeClubId || null,
+            isAuthenticated: true,
+            isLoading: false,
+            error: null,
+          }));
+        }
       } catch (error) {
-        console.error('Auth init error:', error);
+        // The cookie was accepted but the profile could not be read. Discard the session
+        // rather than leaving the UI half-signed-in.
+        api.clearAuth();
+        console.warn('Could not restore the previous session:', error);
         if (mounted) {
           setState(prev => ({ ...prev, isLoading: false }));
         }
@@ -111,6 +114,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       mounted = false;
     };
+  }, []);
+
+  // The axios interceptor raises this when a mid-session refresh fails. Resetting the
+  // context keeps the router in step instead of leaving a stale `isAuthenticated: true`.
+  useEffect(() => {
+    const handleExpired = () => {
+      setState(prev => ({
+        ...prev,
+        user: null,
+        permissions: [],
+        activeClubId: null,
+        isAuthenticated: false,
+        isLoading: false,
+      }));
+    };
+
+    window.addEventListener('stms:auth-expired', handleExpired);
+    return () => window.removeEventListener('stms:auth-expired', handleExpired);
   }, []);
 
   const setError = useCallback((error: string | null) => {

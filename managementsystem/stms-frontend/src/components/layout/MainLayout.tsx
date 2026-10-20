@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/utils/helpers';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
-import { Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Menu, X, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Zap } from 'lucide-react';
 
@@ -16,10 +16,7 @@ export function MainLayout() {
     location.pathname.startsWith('/register') ||
     location.pathname.startsWith('/forgot-password');
 
-  if (isAuthPage) {
-    return <Outlet />;
-  }
-
+  // Hooks must run on every render, so this sits above the early return.
   useEffect(() => {
     // Ensure app background for authenticated routes
     document.body.style.backgroundColor = '#0b0d12'; // coal
@@ -29,6 +26,10 @@ export function MainLayout() {
       document.body.style.color = '';
     };
   }, []);
+
+  if (isAuthPage) {
+    return <Outlet />;
+  }
 
   const toggleSidebarCollapse = () => {
     setSidebarCollapsed(prev => !prev);
@@ -99,16 +100,41 @@ export function MainLayout() {
 
 // ==================== AUTH LAYOUT ====================
 export function AuthLayout() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // `key === 'default'` means this is the first entry in the history stack, so "back" would
+  // leave the app entirely. Fall through to the home page in that case.
+  const canGoBack = location.key !== 'default';
+
   return (
-    <div className="min-h-screen bg-ink flex items-center justify-center px-space-md py-space-2xl">
+    <div className="min-h-screen bg-ink text-text-primary flex items-center justify-center px-space-md py-space-2xl">
+      <button
+        type="button"
+        onClick={() => (canGoBack ? navigate(-1) : navigate('/'))}
+        className="fixed left-4 top-4 z-10 inline-flex items-center gap-2 rounded-lg border border-line bg-panel/70 px-3 py-2 text-body-sm text-mist backdrop-blur transition-colors hover:border-volt/40 hover:text-white sm:left-6 sm:top-6"
+        aria-label="Go back"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back
+      </button>
+
       <div className="w-full max-w-md">
         <div className="text-center mb-space-2xl">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-lg bg-volt mx-auto mb-4">
-            <Zap size={24} strokeWidth={2.6} className="text-ink" />
-          </div>
-          <h1 className="font-display text-3xl tracking-wide text-white">
-            ST<span className="text-volt">M</span>S
-          </h1>
+          {/* The mark doubles as the way home, which is what visitors expect from a logo. */}
+          <Link
+            to="/"
+            aria-label="STMS — go to the home page"
+            title="Go to the home page"
+            className="group inline-flex flex-col items-center rounded-xl focus-visible:ring-2 focus-visible:ring-volt focus-visible:ring-offset-2 focus-visible:ring-offset-ink"
+          >
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-lg bg-volt mx-auto mb-4 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-105">
+              <Zap size={24} strokeWidth={2.6} className="text-ink" />
+            </div>
+            <h1 className="font-display text-3xl tracking-wide text-white">
+              ST<span className="text-volt">M</span>S
+            </h1>
+          </Link>
           <p className="text-body text-mist mt-2">
             Smart Trainer Management System
           </p>

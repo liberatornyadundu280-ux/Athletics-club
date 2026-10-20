@@ -75,7 +75,16 @@ class InferenceWorker:
         self.db = self.mongo_client[self.database_name]
 
         # Redis
-        self.redis_client = redis.from_url(self.redis_url, decode_responses=True)
+        # BLOCK reads (XREADGROUP) legitimately wait block_ms; redis-py's default socket
+        # timeout is 5s, so a 5s block raced the socket and the worker spun on
+        # "Timeout reading from socket" instead of consuming triggers.
+        self.redis_client = redis.from_url(
+            self.redis_url,
+            decode_responses=True,
+            socket_timeout=None,
+            socket_connect_timeout=5,
+            health_check_interval=30,
+        )
 
         # Create consumer group if not exists
         try:
@@ -105,6 +114,7 @@ class InferenceWorker:
         self.model = model_data["model"]
         self.feature_names = model_data.get("feature_names", [])
         self.target = model_data.get("target", "next_workout_rpe")
+        self.scaler_in_training = bool(model_data.get("scaler_used", False))
         logger.info(f"Loaded model: {model_data.get('model_type')} for target {self.target}")
 
         if self.scaler_path and os.path.exists(self.scaler_path):
@@ -127,11 +137,105 @@ class InferenceWorker:
 
         X = np.array(feature_vector).reshape(1, -1)
 
-        # Scale if scaler available
-        if self.scaler:
+        # train.py fits the tree model on the raw feature matrix and saves a StandardScaler
+        # beside it without ever transforming the training data. Applying that scaler here
+        # fed the model a distribution it had never seen, so every athlete collapsed to the
+        # same ~5.7 prediction. Scaling is therefore opt-in, for a model that was genuinely
+        # trained on scaled inputs.
+        if self.scaler is not None and self._scaler_was_used_in_training():
             X = self.scaler.transform(X)
 
         return X
+
+    def _scaler_was_used_in_training(self) -> bool:
+        """Read the training-side flag if the model bundle records one (default: no)."""
+        return bool(getattr(self, "scaler_in_training", False))
+
+    def _current_periodization_phase(self) -> str:
+        """Mirror the backend's rule engine so the model sees the same phase it expects."""
+        month = datetime.utcnow().month
+        if 6 <= month <= 8:
+            return "competition"
+        if month >= 10 or month <= 2:
+            return "off-season"
+        return "pre-comp"
+
+    def _apply_model_contract(self, features: Dict[str, Any]) -> Dict[str, Any]:
+        """Translate pipeline feature names into the names the shipped model was trained on.
+
+        The model was trained on the analytics dataset columns (`age`, `session_rpe`,
+        `gender_F`, ...) while the runtime pipeline emits descriptive names (`age_years`,
+        `avg_session_rpe`, `gender_female`, ...). Only 4 of 31 inputs matched by name, so 27
+        were silently fed to the model as zeros.
+        """
+        f = dict(features)
+
+        def num(key: str, default: float = 0.0) -> float:
+            value = f.get(key, default)
+            if isinstance(value, bool):
+                return 1.0 if value else 0.0
+            if isinstance(value, (int, float)):
+                return float(value)
+            return float(default)
+
+        soreness = num("readiness_latest_soreness", 3.0)
+        sleep = num("readiness_latest_sleep", 3.0)
+        stress = num("readiness_latest_stress", 3.0)
+        # 1.0 when the athlete reports excellent readiness, 0.0 when they report the worst.
+        readiness_composite = ((6 - soreness) + (6 - sleep) + (6 - stress)) / 15.0
+
+        percentile_keys = [
+            key
+            for key, value in f.items()
+            if key.startswith("fitness_")
+            and key.endswith("percentile_club")
+            and isinstance(value, (int, float))
+        ]
+        base_fitness = (
+            # Percentile features are 0-100 around the club median; the training data used a
+            # 62-95 score centred on ~78, so map 50th percentile to 75 and 90th to 95.
+            50.0 + (sum(float(f[key]) for key in percentile_keys) / len(percentile_keys)) * 0.5
+            if percentile_keys
+            else 75.0
+        )
+
+        phase = self._current_periodization_phase()
+        injury_prone = 1.0 if (num("injuries_per_year") >= 1.5 or num("max_severity_ever") >= 2) else 0.0
+
+        f.update(
+            {
+                "age": num("age_years", 18.0),
+                "training_age": num("training_age_years", 1.0),
+                "base_fitness_score": base_fitness,
+                "daily_soreness": soreness,
+                "daily_sleep_quality": sleep,
+                "daily_stress_energy": stress,
+                "readiness_soreness_7d_avg": num("readiness_soreness_acute_avg", 3.0),
+                "readiness_sleep_7d_avg": num("readiness_sleep_acute_avg", 3.0),
+                "readiness_stress_7d_avg": num("readiness_stress_acute_avg", 3.0),
+                "readiness_composite_score": readiness_composite,
+                "high_soreness_days_7d": num("high_soreness_days_7d"),
+                "session_duration_mins": num("avg_session_duration"),
+                "session_rpe": num("avg_session_rpe"),
+                "session_sRPE_load": num("avg_session_srpe"),
+                "sRPE_load_acute_7d": num("acute_workload"),
+                "sRPE_load_chronic_28d": num("chronic_workload"),
+                "sRPE_acwr": num("acwr", 1.0),
+                "active_injury_flag": 1.0 if f.get("has_active_injury") else 0.0,
+                "injury_prone_flag": injury_prone,
+                "compliance_rate_30d": num("completion_rate_28d", 1.0),
+                "attendance_rate_30d": num("attendance_rate_28d", 1.0),
+                "gender_F": num("gender_female"),
+                "gender_M": num("gender_male"),
+            }
+        )
+
+        for group in ("jumps", "middle_distance", "sprints", "throws"):
+            f[f"event_group_{group}"] = num(f"event_group_{group}")
+        for phase_name in ("competition", "off-season", "pre-comp", "transition"):
+            f[f"periodization_phase_{phase_name}"] = 1.0 if phase == phase_name else 0.0
+
+        return f
 
     def _generate_recommendation(
         self,
@@ -142,6 +246,8 @@ class InferenceWorker:
         features: Dict[str, Any],
     ) -> Dict[str, Any]:
         """Generate recommendation from model prediction."""
+        features = self._apply_model_contract(features)
+
         # Predict
         X = self._prepare_features(features)
         prediction = self.model.predict(X)[0]
@@ -197,17 +303,18 @@ class InferenceWorker:
         if features.get("has_active_injury", False):
             risk += 0.3
         
-        # High acute:chronic workload ratio
-        acwr = features.get("acute_workload", 0) / max(features.get("chronic_workload", 1), 1)
+        # High acute:chronic workload ratio. The extractor already computes the standard
+        # 7-day vs 28-day ratio; dividing raw totals here understated it by 4x.
+        acwr = float(features.get("sRPE_acwr", features.get("acwr", 1.0)) or 1.0)
         if acwr > 1.5:
             risk += 0.2
         elif acwr > 1.3:
             risk += 0.1
-        
+
         # High pain/soreness
         if features.get("avg_pain_7d", 0) > 4:
             risk += 0.15
-        if features.get("avg_soreness_7d", 0) > 5:
+        if float(features.get("readiness_soreness_7d_avg", 0) or 0) > 4:
             risk += 0.1
         
         # Low compliance
@@ -227,14 +334,16 @@ class InferenceWorker:
             adjustment -= 0.05
         
         # High ACWR suggests reduce
-        acwr = features.get("acute_workload", 0) / max(features.get("chronic_workload", 1), 1)
+        acwr = float(features.get("sRPE_acwr", features.get("acwr", 1.0)) or 1.0)
         if acwr > 1.3:
             adjustment -= 0.1
         elif acwr < 0.8:
             adjustment += 0.05  # Room to progress
-        
-        # Good readiness suggests can progress
+
+        # Good readiness suggests can progress. The contract expresses readiness on 0-1;
+        # older extractor output used 0-100.
         readiness = features.get("readiness_composite_score", 50)
+        readiness = float(readiness) * 100 if float(readiness) <= 1 else float(readiness)
         if readiness > 70:
             adjustment += 0.05
         elif readiness < 40:
@@ -362,9 +471,9 @@ class InferenceWorker:
                 club_id, athlete_id, trigger, actor_uid, features
             )
 
-            # Store in MongoDB
-            self.db.recommendations.insert_one(recommendation)
-            logger.info(f"Recommendation created for athlete {athlete_id}")
+            # The backend owns persistence. The worker returns its result over the stream;
+            # writing here as well produced two recommendation documents per request.
+            logger.info(f"Recommendation generated for athlete {athlete_id}")
 
             # Write result to results stream for backend to pick up
             self._write_result(request_id, club_id, athlete_id, trigger, recommendation, features)
@@ -381,10 +490,7 @@ class InferenceWorker:
         """Write inference result to results stream."""
         try:
             result_stream_key = f"{self.stream_key}:results"
-            
-            # Extract predicted RPE from features or use a default
-            predicted_rpe = features.get("predicted_rpe", 6.0)
-            
+
             result = {
                 "requestId": request_id,
                 "data": json.dumps({
@@ -393,16 +499,18 @@ class InferenceWorker:
                     "trigger": trigger,
                     "focus": recommendation["focus"],
                     "intensity": recommendation["intensity"],
-                    "rpe": predicted_rpe,
-                    "injuryRisk": features.get("injury_risk_score", 0.1),
-                    "progressionAdjustment": features.get("progression_adjustment", 0.0),
+                    "recovery": recommendation.get("recovery", ""),
+                    "drivers": recommendation.get("drivers", []),
+                    "rpe": recommendation.get("predicted_rpe", 6.0),
+                    "injuryRisk": recommendation.get("injury_risk_score", 0.1),
+                    "progressionAdjustment": recommendation.get("progression_adjustment", 0.0),
                     "confidence": recommendation["confidence"],
                     "modelVersion": recommendation["modelVersion"],
                     "generatedAt": recommendation["generatedAt"].isoformat() if hasattr(recommendation["generatedAt"], 'isoformat') else str(recommendation["generatedAt"]),
                 })
             }
             
-            self.redis_client.xadd(result_stream_key, result)
+            self.redis_client.xadd(result_stream_key, result, maxlen=1000, approximate=True)
             logger.debug(f"Wrote result to stream for request {request_id}")
         except Exception as e:
             logger.error(f"Failed to write result to stream: {e}")
@@ -428,7 +536,7 @@ class InferenceWorker:
                     "error": error,
                 })
             }
-            self.redis_client.xadd(result_stream_key, result)
+            self.redis_client.xadd(result_stream_key, result, maxlen=1000, approximate=True)
         except Exception as e:
             logger.error(f"Failed to write error result to stream: {e}")
 
@@ -473,7 +581,13 @@ class InferenceWorker:
                 logger.error(f"Redis connection error: {e}. Reconnecting...")
                 time.sleep(5)
                 try:
-                    self.redis_client = redis.from_url(self.redis_url, decode_responses=True)
+                    self.redis_client = redis.from_url(
+                        self.redis_url,
+                        decode_responses=True,
+                        socket_timeout=None,
+                        socket_connect_timeout=5,
+                        health_check_interval=30,
+                    )
                 except Exception:
                     pass
             except Exception as e:

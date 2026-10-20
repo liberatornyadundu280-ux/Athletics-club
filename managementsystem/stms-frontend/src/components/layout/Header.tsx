@@ -41,7 +41,7 @@ export function Header() {
             ST<span className="text-volt">M</span>S
           </span>
         </button>
-        <ClubSwitcher />
+        {user && <ClubSwitcher />}
       </div>
 
       {/* Right side - Actions */}
@@ -65,7 +65,12 @@ export function Header() {
           <Bell className="h-5 w-5" />
         </Button>
 
-        {/* User Menu */}
+        {/* User Menu — visitors get a plain sign-in action instead */}
+        {!user ? (
+          <Button size="sm" onClick={() => navigate('/login')}>
+            Sign in
+          </Button>
+        ) : (
         <div className="relative" ref={userMenuRef}>
           <Button
             variant="ghost"
@@ -121,6 +126,7 @@ export function Header() {
             </div>
           )}
         </div>
+        )}
       </div>
     </header>
   );

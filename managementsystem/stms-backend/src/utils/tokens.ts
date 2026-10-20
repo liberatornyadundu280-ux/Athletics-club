@@ -2,9 +2,11 @@
 // JWT token generation and refresh token management.
 //
 // Refresh tokens live in Redis so that revoking one is effective across instances. When
-// Redis is unreachable the process keeps them in memory instead, so local development and
-// CI can sign in without running a Redis server. That fallback is reported on first use —
-// it is a development convenience, not a production strategy.
+// Redis is unreachable — the normal state on a developer machine with no Redis — they fall
+// back to MongoDB rather than to process memory. Memory would drop every session whenever
+// the API restarts, which is exactly the "stay signed in" behaviour a browser expects;
+// MongoDB is already a hard dependency and survives restarts. Either fallback is reported
+// on first use.
 
 import jwt from 'jsonwebtoken';
 import { createHash, randomBytes } from 'crypto';
@@ -15,7 +17,7 @@ import { JWTPayload } from '../types';
 
 const redisClient = createConfiguredRedisClient('Redis token');
 
-// Started in the background and never awaited; while it is pending the memory fallback
+// Started in the background and never awaited; while it is pending the Mongo fallback
 // handles every operation.
 void redisClient.connect().catch(() => {
   // Reported once by attachRedisLogging.
@@ -31,10 +33,17 @@ export async function closeTokenRedisClient(): Promise<void> {
 }
 
 const ACCESS_TOKEN_TTL = '15m';
-const REFRESH_TOKEN_TTL_DAYS = 7;
+
+/**
+ * How long a session survives without being used. The refresh token rotates on every
+ * access-token renewal (every 15 minutes of activity), so an active session never expires;
+ * this bound only applies to an idle one. Override with REFRESH_TOKEN_TTL_DAYS.
+ */
+export const REFRESH_TOKEN_TTL_DAYS = Number(env.REFRESH_TOKEN_TTL_DAYS) || 30;
 const REFRESH_TOKEN_TTL_SECONDS = REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60;
 const REFRESH_TOKEN_KEY_PREFIX = 'refresh_token:';
 const USER_REFRESH_TOKEN_SET_PREFIX = 'refresh_tokens_by_user:';
+const REFRESH_TOKEN_COLLECTION = 'refresh_tokens';
 
 export interface TokenPair {
   accessToken: string;
@@ -52,66 +61,35 @@ export interface TokenPayload {
   permissions: string[];
 }
 
-/**
- * In-process stand-in for the handful of Redis commands the refresh-token store uses.
- * Entries carry their own expiry, so a long-running process cannot accumulate stale keys.
- */
-class MemoryTokenStore {
-  private readonly entries = new Map<string, { value?: string; members?: Set<string>; expiresAt: number }>();
-
-  private live(key: string) {
-    const entry = this.entries.get(key);
-    if (!entry) return undefined;
-    if (entry.expiresAt <= Date.now()) {
-      this.entries.delete(key);
-      return undefined;
-    }
-    return entry;
-  }
-
-  setEx(key: string, ttlSeconds: number, value: string): void {
-    this.entries.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1000 });
-  }
-
-  get(key: string): string | null {
-    return this.live(key)?.value ?? null;
-  }
-
-  del(keys: string | string[]): void {
-    for (const key of Array.isArray(keys) ? keys : [keys]) {
-      this.entries.delete(key);
-    }
-  }
-
-  sAdd(key: string, member: string, ttlSeconds: number): void {
-    const entry = this.live(key) ?? { members: new Set<string>(), expiresAt: Date.now() + ttlSeconds * 1000 };
-    entry.members = entry.members ?? new Set<string>();
-    entry.members.add(member);
-    this.entries.set(key, entry);
-  }
-
-  sRem(key: string, member: string): void {
-    this.live(key)?.members?.delete(member);
-  }
-
-  sMembers(key: string): string[] {
-    return [...(this.live(key)?.members ?? [])];
-  }
+interface StoredRefreshToken {
+  userId: string;
+  createdAt: number;
 }
 
-const memoryTokens = new MemoryTokenStore();
+interface RefreshTokenDocument {
+  _id: string;
+  userId: string;
+  createdAt: Date;
+  expiresAt: Date;
+}
+
+async function getRefreshTokenCollection() {
+  const db = (await import('../config/database')).getDatabase();
+  return db.collection<RefreshTokenDocument>(REFRESH_TOKEN_COLLECTION);
+}
+
 let fallbackReported = false;
 
-function reportMemoryFallback(): void {
+function reportMongoFallback(): void {
   if (fallbackReported) return;
   fallbackReported = true;
 
   if (env.NODE_ENV === 'production') {
     console.error(
-      'Redis unavailable — refresh tokens are being held in memory. Sessions will not survive a restart and are NOT shared between instances.'
+      'Redis unavailable — refresh tokens are being stored in MongoDB. Sessions survive restarts, but every refresh now costs a database round-trip; restore Redis for production.'
     );
   } else {
-    console.warn('Redis unavailable — refresh tokens are held in memory for this process.');
+    console.warn('Redis unavailable — refresh tokens are stored in MongoDB for this process.');
   }
 }
 
@@ -168,26 +146,39 @@ export function hashRefreshToken(token: string): string {
 export async function storeRefreshToken(userId: string, refreshToken: string): Promise<void> {
   const key = `${REFRESH_TOKEN_KEY_PREFIX}${hashRefreshToken(refreshToken)}`;
   const indexKey = `${USER_REFRESH_TOKEN_SET_PREFIX}${userId}`;
-  const payload = JSON.stringify({ userId, createdAt: Date.now() });
 
-  if (!isRedisReady(redisClient)) {
-    reportMemoryFallback();
-    memoryTokens.setEx(key, REFRESH_TOKEN_TTL_SECONDS, payload);
-    memoryTokens.sAdd(indexKey, key, REFRESH_TOKEN_TTL_SECONDS);
+  if (isRedisReady(redisClient)) {
+    const payload = JSON.stringify({ userId, createdAt: Date.now() });
+    await redisClient.setEx(key, REFRESH_TOKEN_TTL_SECONDS, payload);
+    await redisClient.sAdd(indexKey, key);
+    await redisClient.expire(indexKey, REFRESH_TOKEN_TTL_SECONDS);
     return;
   }
 
-  await redisClient.setEx(key, REFRESH_TOKEN_TTL_SECONDS, payload);
-  await redisClient.sAdd(indexKey, key);
-  await redisClient.expire(indexKey, REFRESH_TOKEN_TTL_SECONDS);
+  reportMongoFallback();
+  const now = new Date();
+  await (await getRefreshTokenCollection()).updateOne(
+    { _id: key },
+    {
+      $set: {
+        userId,
+        createdAt: now,
+        expiresAt: new Date(now.getTime() + REFRESH_TOKEN_TTL_SECONDS * 1000),
+      },
+    },
+    { upsert: true }
+  );
 }
 
-async function readRefreshToken(key: string): Promise<string | null> {
+async function readRefreshToken(key: string): Promise<StoredRefreshToken | null> {
   if (isRedisReady(redisClient)) {
-    return redisClient.get(key);
+    const stored = await redisClient.get(key);
+    return stored ? (JSON.parse(stored) as StoredRefreshToken) : null;
   }
-  reportMemoryFallback();
-  return memoryTokens.get(key);
+
+  reportMongoFallback();
+  const document = await (await getRefreshTokenCollection()).findOne({ _id: key });
+  return document ? { userId: document.userId, createdAt: document.createdAt.getTime() } : null;
 }
 
 /**
@@ -203,7 +194,7 @@ export async function verifyRefreshToken(refreshToken: string): Promise<TokenPay
     throw new UnauthorizedError('Refresh token not found or expired', { code: ERROR_CODES.TOKEN_EXPIRED });
   }
 
-  const { userId } = JSON.parse(stored);
+  const { userId } = stored;
 
   // User documents are the source of truth for account and club state.
   const db = (await import('../config/database')).getDatabase();
@@ -232,22 +223,17 @@ export async function verifyRefreshToken(refreshToken: string): Promise<TokenPay
  */
 export async function revokeRefreshToken(refreshToken: string): Promise<void> {
   const key = `${REFRESH_TOKEN_KEY_PREFIX}${hashRefreshToken(refreshToken)}`;
-  const stored = await readRefreshToken(key);
 
-  if (!isRedisReady(redisClient)) {
-    memoryTokens.del(key);
+  if (isRedisReady(redisClient)) {
+    const stored = await readRefreshToken(key);
+    await redisClient.del(key);
     if (stored) {
-      const { userId } = JSON.parse(stored) as { userId: string };
-      memoryTokens.sRem(`${USER_REFRESH_TOKEN_SET_PREFIX}${userId}`, key);
+      await redisClient.sRem(`${USER_REFRESH_TOKEN_SET_PREFIX}${stored.userId}`, key);
     }
     return;
   }
 
-  await redisClient.del(key);
-  if (stored) {
-    const { userId } = JSON.parse(stored) as { userId: string };
-    await redisClient.sRem(`${USER_REFRESH_TOKEN_SET_PREFIX}${userId}`, key);
-  }
+  await (await getRefreshTokenCollection()).deleteOne({ _id: key });
 }
 
 /**
@@ -256,16 +242,15 @@ export async function revokeRefreshToken(refreshToken: string): Promise<void> {
 export async function revokeAllUserRefreshTokens(userId: string): Promise<void> {
   const indexKey = `${USER_REFRESH_TOKEN_SET_PREFIX}${userId}`;
 
-  if (!isRedisReady(redisClient)) {
-    reportMemoryFallback();
-    const tokenKeys = memoryTokens.sMembers(indexKey);
-    memoryTokens.del([...tokenKeys, indexKey]);
+  if (isRedisReady(redisClient)) {
+    const tokenKeys = await redisClient.sMembers(indexKey);
+    if (tokenKeys.length) await redisClient.del(tokenKeys);
+    await redisClient.del(indexKey);
     return;
   }
 
-  const tokenKeys = await redisClient.sMembers(indexKey);
-  if (tokenKeys.length) await redisClient.del(tokenKeys);
-  await redisClient.del(indexKey);
+  reportMongoFallback();
+  await (await getRefreshTokenCollection()).deleteMany({ userId });
 }
 
 /**

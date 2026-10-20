@@ -111,7 +111,7 @@ export default function Hero() {
           className="mt-10 flex flex-wrap items-center gap-4"
         >
           <ButtonPrimary href="/register">Start free trial</ButtonPrimary>
-          <ButtonGhost href="/login">Explore the platform</ButtonGhost>
+          <ButtonGhost href="/dashboard">Explore the platform</ButtonGhost>
         </motion.div>
       </div>
 

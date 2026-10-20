@@ -103,13 +103,13 @@ export function Register() {
 
   const strength = getPasswordStrength(password);
   const strengthLabels = ['Very weak', 'Weak', 'Fair', 'Good', 'Strong'];
-  const strengthColors = ['bg-danger-500', 'bg-danger-500', 'bg-gold-500', 'bg-green-500', 'bg-green-500'];
+  const strengthColors = ['bg-danger-500', 'bg-danger-500', 'bg-amber-500', 'bg-green-500', 'bg-green-500'];
 
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h1 className="text-heading-lg font-bold text-surface-900 dark:text-surface-100">Create your account</h1>
-        <p className="text-body text-surface-500 dark:text-surface-400 mt-2">
+        <h1 className="text-heading-lg font-bold text-white">Create your account</h1>
+        <p className="text-body text-mist mt-2">
           Join STMS and start managing your training
         </p>
       </div>
@@ -158,7 +158,7 @@ export function Register() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="text-surface-400 hover:text-surface-600"
+              className="text-fog hover:text-white"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -178,12 +178,12 @@ export function Register() {
                   key={i}
                   className={cn(
                     'h-1.5 flex-1 rounded-full transition-colors',
-                    i < strength ? strengthColors[i] : 'bg-surface-200 dark:bg-surface-700'
+                    i < strength ? strengthColors[i] : 'bg-line'
                   )}
                 />
               ))}
             </div>
-            <p className="text-caption text-surface-500">Password strength: {strengthLabels[strength]}</p>
+            <p className="text-caption text-fog">Password strength: {strengthLabels[strength]}</p>
           </div>
         )}
 
@@ -203,9 +203,9 @@ export function Register() {
             <input
               type="checkbox"
               {...register('terms')}
-              className="w-4 h-4 mt-0.5 rounded border-surface-300 text-primary-800 focus:ring-2 focus:ring-primary-500"
+              className="w-4 h-4 mt-0.5 rounded border-line accent-volt focus:ring-2 focus:ring-volt"
             />
-            <div className="text-body-sm text-surface-600 dark:text-surface-400">
+            <div className="text-body-sm text-mist">
               I agree to the STMS terms and privacy policy.
             </div>
           </label>
@@ -221,10 +221,10 @@ export function Register() {
 
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-surface-200 dark:border-surface-700" />
+          <div className="w-full border-t border-line" />
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="bg-white dark:bg-surface-950 px-2 text-surface-500">Or continue with</span>
+          <span className="bg-panel px-2 text-fog">Or continue with</span>
         </div>
       </div>
 
@@ -246,12 +246,12 @@ export function Register() {
         {googleLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Continue with Google'}
       </Button>
 
-      <p className="text-center text-body-sm text-surface-500 dark:text-surface-400">
+      <p className="text-center text-body-sm text-mist">
         Already have an account?{' '}
-        <Link to="/login" state={location.state} className="text-primary-800 hover:text-primary-700 font-medium">Sign in</Link>
+        <Link to="/login" state={location.state} className="text-volt hover:text-volt-deep font-medium">Sign in</Link>
       </p>
 
-      <p className="text-center text-caption text-surface-500 dark:text-surface-400">
+      <p className="text-center text-caption text-fog">
         By creating an account, you agree to STMS terms and privacy policy.
       </p>
     </div>

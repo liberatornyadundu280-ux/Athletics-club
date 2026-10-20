@@ -31,8 +31,12 @@ html.lenis body {
 }
 
 body {
-  background-color: var(--color-track-900);
-  color: var(--color-text-primary);
+  /* Both of these tokens are absent from the Tailwind v4 `@theme` block, and a `var()`
+     with no fallback is invalid at computed-value time — which falls back to the browser
+     default. That made every page which did not set its own colour render black text on a
+     dark background (the auth screens were unreadable). */
+  background-color: var(--color-track-900, #06070a);
+  color: var(--color-text-primary, #eef1f6);
   font-family: var(--font-sans);
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
