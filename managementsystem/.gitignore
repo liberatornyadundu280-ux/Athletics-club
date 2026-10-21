@@ -8,6 +8,8 @@ build/
 .next/
 .out/
 *.tsbuildinfo
+# Vite PWA regenerates this on every `npm run dev`; it is not source.
+dev-dist/
 
 # Environment files
 .env
