@@ -207,6 +207,11 @@ async function generateColdStartRecommendation(athlete: any, db: any, clubId: Ob
   const chronic = loadOf(logs);
   // Chronic load is a 28-day total, so the comparable weekly average is chronic / 4.
   const acwr = chronic > 0 ? acute / (chronic / 4) : 0;
+  // ACWR is unstable on a thin history: one hard session among three produces a ratio above
+  // 2 with no genuine spike, so it is not used for focus/intensity/recovery until the club
+  // has at least eight sessions to compare against.
+  const acwrSessions = logs.length;
+  const acwrUsable = acwrSessions >= 8;
   const avgRpe = logs.length
     ? logs.reduce((sum: number, row: any) => sum + (Number(row.perceivedEffort) || 0), 0) / logs.length
     : 0;
@@ -233,7 +238,7 @@ async function generateColdStartRecommendation(athlete: any, db: any, clubId: Ob
   let focus: string;
   if (injury) {
     focus = `Protect the ${injury.laterality && injury.laterality !== 'not_applicable' ? `${injury.laterality} ` : ''}${injury.bodyPart} and maintain the aerobic base`;
-  } else if (acwr > 1.5) {
+  } else if (acwrUsable && acwr > 1.5) {
     focus = 'Absorb the recent load before adding intensity';
   } else if (readinessLow) {
     focus = 'Restore readiness before the next demanding session';
@@ -256,15 +261,15 @@ async function generateColdStartRecommendation(athlete: any, db: any, clubId: Ob
   // ---- Intensity ----
   let intensity: string;
   if (injury && ['active', 'rehabilitating'].includes(String(injury.status))) intensity = 'Low · RPE 3–5';
-  else if (acwr > 1.5) intensity = 'Low · RPE 3–5';
+  else if (acwrUsable && acwr > 1.5) intensity = 'Low · RPE 3–5';
   else if (readinessLow) intensity = 'Low–moderate · RPE 4–6';
-  else if (acwr > 0 && acwr < 0.8 && !readinessLow) intensity = 'Moderate–high · RPE 7–8';
+  else if (acwrUsable && acwr < 0.8) intensity = 'Moderate–high · RPE 7–8';
   else intensity = 'Moderate · RPE 6–7';
 
   // ---- Recovery ----
   const recovery = injury
     ? 'Keep one full recovery day between sessions and continue the rehabilitation plan.'
-    : acwr > 1.5
+    : acwrUsable && acwr > 1.5
       ? 'Schedule two easy days this week; keep the next hard session at least 48 hours away.'
       : readinessLow
         ? 'Prioritise sleep and an easy mobility session before the next hard effort.'
@@ -291,8 +296,12 @@ async function generateColdStartRecommendation(athlete: any, db: any, clubId: Ob
     drivers.push(`Readiness today: soreness ${soreness}/5, sleep ${sleepQuality}/5, energy ${stressEnergy}/5`);
   }
 
-  if (chronic > 0 && acwr > 1.3) {
+  if (acwrUsable && acwr > 1.3) {
     drivers.push(`Acute:chronic workload ratio ${acwr.toFixed(2)} — above the 1.3 caution line`);
+  } else if (acwr > 1.3) {
+    drivers.push(
+      `Only ${acwrSessions} sessions in 28 days — the ${acwr.toFixed(2)} load ratio needs more history to interpret`
+    );
   }
 
   if (attendance.length >= 4) {

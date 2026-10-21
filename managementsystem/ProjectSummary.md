@@ -270,3 +270,34 @@
 - Start the worker before the backend in local development, and set `ML_INFERENCE_TIMEOUT_MS=30000` alongside `ML_MODEL_ENABLED=true`.
 - Rotate the leaked credentials, move Render's `MONGODB_URI` to `/stms_dev`, set `ALLOWED_ORIGINS`/`FRONTEND_URL`, and delete the stray `libyeratornyadundu280@gmail.com` Firebase account. Still outstanding.
 - Frontend deployment (Vercel) → landing page → model hosting remain the last milestones.
+
+## Session 9 — 2026-10-21
+
+**Contributor(s):** AI Assistant (opencode)
+
+**Focus:** Re-verify the engine after a full machine restart, and close the remaining credibility gaps: load warnings built on three sessions, a mis-scaled driver in the worker, and Redis paths that had only ever been reasoned about.
+
+**Decisions made:**
+
+- **A ratio is not evidence without a sample.** ACWR 2.83 from three sessions says more about the calendar than about the athlete. The ratio can still be computed and fed to the model, but it only changes focus, intensity, recovery, injury risk or progression once the 28-day window holds at least eight sessions. Below that, the recommendation reports how many sessions it saw and says the ratio needs more history instead of presenting it as a caution.
+- **Suppression must be visible.** Hiding a warning without explanation looks like the engine ignored the data. Every suppressed ACWR warning now appears as a driver that states the session count and the computed ratio.
+- **Verify Redis against a real server.** Docker remains unavailable on this machine, but a native Redis 8.10.2 build runs on 127.0.0.1:6379, so the Redis-backed token and rate-limit paths were exercised rather than assumed.
+
+**Changes / additions:**
+
+- `features/workload.py`: emits `sessions_28d` alongside the load windows, and zero when the athlete has no logs.
+- `inference_worker.py`: added `_acwr_is_usable()`; injury risk and progression adjustments only use ACWR when the sample is large enough. Also fixed a driver that compared 7-day acute load with the raw 28-day total — a condition that could not fire for a normally training athlete — so it now uses the real ratio and explains a thin history.
+- `recommendation.service.ts`: the cold-start path gates ACWR-driven focus, intensity and recovery on eight sessions; under that threshold it reports the ratio and the session count as a driver.
+- Untracked `stms-frontend/dev-dist` and added it to `managementsystem/.gitignore`; the Vite PWA regenerates it on every dev run, so it kept appearing as modified.
+- Verified after a full restart (Redis, worker and backend restarted): `POST /api/v1/recommendations/generate` returned `modelVersion: ml-model_next_workout_rpe_20261001_043023.pkl` in 11 seconds with drivers intact, and cold-start output for six athletes now reads e.g. `Only 4 sessions in 28 days — the 2.23 load ratio needs more history to interpret`.
+- Verified Redis persistence: `refresh_token:<hash>` exists with a 30-day TTL plus `refresh_tokens_by_user:<uid>`, and the limiter wrote `stms:rate-limit:auth:<ip>`. The worker consumed a trigger and returned a result over `stms:recommendation:triggers:results`.
+- `tsc --noEmit` passes for the backend; the edited Python modules compile; the frontend build was unaffected.
+
+**Skill(s) used:** none (no skill loaded)
+
+**Open questions / next steps:**
+
+- **Latency is still environmental.** A warm recommendation now takes ~11–15 seconds and a cold one up to ~25 seconds from this network because Atlas answers each query in ~500 ms. Confirm on Render before treating the 30-second ceiling as normal; if it persists, cache extracted features per athlete for a short window or move generation off the click path.
+- The Python performance/results extractors still compare roster event text against snake_case event keys, so sprint/jump result features under-report even though `event_group_*` is correct.
+- The worker still logs `datetime.utcnow()` deprecation warnings.
+- Rotate the leaked credentials, point Render's `MONGODB_URI` at `/stms_dev`, set `ALLOWED_ORIGINS`/`FRONTEND_URL`, then deploy frontend → landing → model host.

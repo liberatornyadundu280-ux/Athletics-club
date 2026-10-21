@@ -289,6 +289,15 @@ class InferenceWorker:
             "progression_adjustment": progression_adjustment,
         }
 
+    def _acwr_is_usable(self, features: Dict[str, Any]) -> bool:
+        """True when the 28-day window holds enough sessions for ACWR to mean something.
+
+        One hard session inside a three-session month produces a ratio above 2 with no real
+        spike, so ratios built on fewer than eight sessions are not used to raise injury
+        risk, suppress progression, or warn the coach.
+        """
+        return float(features.get("sessions_28d", 0) or 0) >= 8
+
     def _estimate_injury_risk(self, features: Dict[str, Any], predicted_rpe: float) -> float:
         """Estimate injury risk from features and predicted RPE."""
         risk = 0.1  # Base risk
@@ -306,10 +315,11 @@ class InferenceWorker:
         # High acute:chronic workload ratio. The extractor already computes the standard
         # 7-day vs 28-day ratio; dividing raw totals here understated it by 4x.
         acwr = float(features.get("sRPE_acwr", features.get("acwr", 1.0)) or 1.0)
-        if acwr > 1.5:
-            risk += 0.2
-        elif acwr > 1.3:
-            risk += 0.1
+        if self._acwr_is_usable(features):
+            if acwr > 1.5:
+                risk += 0.2
+            elif acwr > 1.3:
+                risk += 0.1
 
         # High pain/soreness
         if features.get("avg_pain_7d", 0) > 4:
@@ -335,10 +345,11 @@ class InferenceWorker:
         
         # High ACWR suggests reduce
         acwr = float(features.get("sRPE_acwr", features.get("acwr", 1.0)) or 1.0)
-        if acwr > 1.3:
-            adjustment -= 0.1
-        elif acwr < 0.8:
-            adjustment += 0.05  # Room to progress
+        if self._acwr_is_usable(features):
+            if acwr > 1.3:
+                adjustment -= 0.1
+            elif acwr < 0.8:
+                adjustment += 0.05  # Room to progress
 
         # Good readiness suggests can progress. The contract expresses readiness on 0-1;
         # older extractor output used 0-100.
@@ -410,8 +421,16 @@ class InferenceWorker:
         if features.get("total_pbs", 0) > 0:
             drivers.append(f"{features['total_pbs']} recent personal best(s)")
 
-        if features.get("acute_workload", 0) > features.get("chronic_workload", 1) * 1.3:
-            drivers.append("Acute workload significantly exceeds chronic (ACWR > 1.3)")
+        # Compare weekly acute load to the weekly average of the chronic window. Comparing
+        # acute to the raw 28-day total could never trigger for a normally training athlete.
+        acwr = float(features.get("sRPE_acwr", features.get("acwr", 1.0)) or 1.0)
+        if self._acwr_is_usable(features) and acwr > 1.3:
+            drivers.append(f"Acute:chronic workload ratio {acwr:.2f} — above the 1.3 caution line")
+        elif acwr > 1.3:
+            sessions = int(features.get("sessions_28d", 0) or 0)
+            drivers.append(
+                f"Only {sessions} sessions in 28 days — the {acwr:.2f} load ratio needs more history to interpret"
+            )
 
         if features.get("completion_rate_28d", 1) < 0.7:
             drivers.append(f"Workout completion rate is {features['completion_rate_28d']*100:.0f}%")

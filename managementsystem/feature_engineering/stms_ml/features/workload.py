@@ -46,6 +46,16 @@ class WorkloadFeatures(BaseFeatureExtractor):
         chronic_load = self._rolling_sum(daily_loads, self.chronic_window)
         features["chronic_workload"] = chronic_load
 
+        # Sessions inside the chronic window. A ratio built from three sessions is not
+        # evidence of a spike, so consumers need the sample size before treating ACWR as
+        # a warning signal.
+        features["sessions_28d"] = sum(
+            1
+            for log in logs
+            if log.get("completedAt")
+            and (self.as_of - log["completedAt"]).days <= self.chronic_window
+        )
+
         # ACWR
         features["acwr"] = self._safe_divide(acute_load, chronic_load, default=1.0)
 
@@ -159,6 +169,7 @@ class WorkloadFeatures(BaseFeatureExtractor):
         return {
             "acute_workload": 0.0,
             "chronic_workload": 0.0,
+            "sessions_28d": 0,
             "acwr": 1.0,
             "subacute_workload": 0.0,
             "acwr_subacute": 1.0,
