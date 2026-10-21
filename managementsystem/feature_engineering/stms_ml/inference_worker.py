@@ -411,6 +411,11 @@ class InferenceWorker:
         if features.get("active_injury_count", 0) > 0:
             drivers.append(f"{features['active_injury_count']} active injury/return-to-play record(s)")
 
+        # Freshly reported pain is the athlete's own signal and should not be pushed out of
+        # the top 3 by attendance/PB context.
+        if features.get("avg_pain_7d", 0) > 3:
+            drivers.append(f"Average pain score {features['avg_pain_7d']:.1f}/10 in last 7 days")
+
         if features.get("high_rpe_sessions", 0) >= 2:
             drivers.append(f"{features['high_rpe_sessions']} recent workouts at RPE 8+")
 
@@ -434,9 +439,6 @@ class InferenceWorker:
 
         if features.get("completion_rate_28d", 1) < 0.7:
             drivers.append(f"Workout completion rate is {features['completion_rate_28d']*100:.0f}%")
-
-        if features.get("avg_pain_7d", 0) > 3:
-            drivers.append(f"Average pain score {features['avg_pain_7d']:.1f}/10 in last 7 days")
 
         if not drivers:
             drivers.append("No significant risk factors detected; using standard progression")
