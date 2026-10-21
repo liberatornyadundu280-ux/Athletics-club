@@ -213,14 +213,16 @@ export class RuleEngine {
   }
 
   /**
-   * 3. Auto-regulate workout volume based on daily readiness
-   * Scales sets/reps based on soreness, sleep, stress, and ACWR
+   * Readiness/load multipliers used to auto-regulate a session.
+   *
+   * Exposed separately so the workout player can tell the athlete *how* the session was
+   * adjusted instead of only showing silently reduced sets.
    */
-  static autoRegulateWorkout(
-    workout: Workout,
+  static regulationMultipliers(
     readiness: DailyReadiness | null,
-    srpeLoad: SRPELoad | null
-  ): Workout {
+    srpeLoad: SRPELoad | null,
+    recentPain: number | null = null
+  ): { volume: number; intensity: number } {
     let volumeMultiplier = 1.0;
     let intensityMultiplier = 1.0;
 
@@ -249,7 +251,7 @@ export class RuleEngine {
     // sRPE load-based adjustments (ACWR)
     if (srpeLoad) {
       const acwr = srpeLoad.acwr;
-      
+
       if (acwr > 1.5) {
         // Significant overtraining risk
         volumeMultiplier *= 0.6;
@@ -265,9 +267,36 @@ export class RuleEngine {
       }
     }
 
+    // Pain reported after recent sessions eases the next one. The ML contract has no pain
+    // column, so this rule is what turns an athlete's pain feedback into a lighter session.
+    if (recentPain !== null && recentPain >= 4) {
+      if (recentPain >= 7) {
+        volumeMultiplier *= 0.65;
+        intensityMultiplier *= 0.75;
+      } else {
+        volumeMultiplier *= 0.8;
+        intensityMultiplier *= 0.85;
+      }
+    }
+
     // Clamp multipliers
-    volumeMultiplier = Math.max(0.5, Math.min(1.3, volumeMultiplier));
-    intensityMultiplier = Math.max(0.7, Math.min(1.2, intensityMultiplier));
+    return {
+      volume: Math.max(0.5, Math.min(1.3, volumeMultiplier)),
+      intensity: Math.max(0.7, Math.min(1.2, intensityMultiplier)),
+    };
+  }
+
+  /**
+   * 3. Auto-regulate workout volume based on daily readiness
+   * Scales sets/reps based on soreness, sleep, stress, and ACWR
+   */
+  static autoRegulateWorkout(
+    workout: Workout,
+    readiness: DailyReadiness | null,
+    srpeLoad: SRPELoad | null,
+    recentPain: number | null = null
+  ): Workout {
+    const { volume: volumeMultiplier, intensity: intensityMultiplier } = this.regulationMultipliers(readiness, srpeLoad, recentPain);
 
     // Apply to workout exercises
     const regulatedExercises = workout.exercises.map(ex => ({
@@ -405,6 +434,7 @@ export class RuleEngine {
 
     // Calculate sRPE load (last 28 days)
     const srpeLoad = await this.calculateSRPELoad(clubId, athleteId);
+    const recentPain = await this.calculateRecentPain(clubId, athleteId);
 
     // Determine periodization phase (simplified - could be more sophisticated)
     const month = new Date().getMonth() + 1;
@@ -454,15 +484,39 @@ export class RuleEngine {
     };
 
     // Apply rule 3: Auto-regulate based on readiness
-    const regulatedWorkout = this.autoRegulateWorkout(selectedTemplate, readiness, srpeLoad);
+    const regulatedWorkout = this.autoRegulateWorkout(selectedTemplate, readiness, srpeLoad, recentPain);
 
     return regulatedWorkout;
   }
 
   /**
-   * Helper: Calculate sRPE load for an athlete
+   * Mean pain (0-10) the athlete reported after sessions in the last week, or null when
+   * they have not reported any. Named separately from injury_wellness pain so a single
+   * post-session report still reaches the next prescription.
    */
-  private static async calculateSRPELoad(clubId: ObjectId, athleteId: ObjectId): Promise<SRPELoad> {
+  static async calculateRecentPain(clubId: ObjectId, athleteId: ObjectId, days = 7): Promise<number | null> {
+    const db = getDatabase();
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const logs = await db.collection('workout_logs').find({
+      clubId,
+      athleteId,
+      completedAt: { $gte: cutoff },
+      painLevel: { $exists: true, $gte: 0 },
+    }).project({ painLevel: 1 }).toArray();
+
+    if (logs.length === 0) return null;
+
+    const total = logs.reduce((sum, log) => sum + Number(log.painLevel ?? 0), 0);
+    return total / logs.length;
+  }
+
+  /**
+   * Helper: Calculate sRPE load for an athlete.
+   * Returns null below 8 sessions: a ratio from a handful of logs is not a reason to cut
+   * or advance a session, matching the guard used by the recommendation and ML paths.
+   */
+  private static async calculateSRPELoad(clubId: ObjectId, athleteId: ObjectId): Promise<SRPELoad | null> {
     const db = getDatabase();
     const now = new Date();
     const acuteCutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -482,6 +536,8 @@ export class RuleEngine {
         perceivedEffort: { $exists: true }
       }).toArray(),
     ]);
+
+    if (chronicLogs.length < 8) return null;
 
     const calcLoad = (logs: any[]) => logs.reduce((sum, log) => {
       const rpe = log.perceivedEffort || 5;

@@ -304,3 +304,36 @@
 - The Python performance/results extractors still compare roster event text against snake_case event keys, so sprint/jump result features under-report even though `event_group_*` is correct.
 - The worker still logs `datetime.utcnow()` deprecation warnings.
 - Rotate the leaked credentials, point Render's `MONGODB_URI` at `/stms_dev`, set `ALLOWED_ORIGINS`/`FRONTEND_URL`, then deploy frontend → landing → model host.
+
+## Session 10 — 2026-10-21
+
+**Contributor(s):** AI Assistant (opencode)
+
+**Focus:** Close the athlete-feedback gap: the workout player never asked how the athlete felt or whether anything hurt, so the readiness endpoints had no user, pain never reached the pipeline, and nothing could make the next assigned session lighter.
+
+**Decisions made:**
+
+- **Readiness has to change the session in front of the athlete.** A check-in that only feeds the next recommendation is easy to ignore. The player now asks before the session starts, saves the answers to `daily_readiness`, and re-opens the assignment so the server can auto-regulate the sets, duration and intensity the athlete is about to perform.
+- **Pain is reported after the session and applied to the next one.** Pain cannot be known before the work that caused it. Completion now accepts a 0–10 pain score and an optional location; those are stored on the workout log and the rule engine eases the next prescription when recent pain averages ≥4/10.
+- **Pain needs a rule path because the model has no pain column.** The served 31-feature contract cannot react to pain directly, so pain feeds the worker's injury/pain features (`avg_pain_7d` now merges workout-log pain with `injury_wellness`) and the deterministic regulator. This is inference-time adaptation, not online learning: the model is not retrained by these reports.
+- **Every adjustment must state its numbers.** The player shows volume/intensity percentages plus the check-in values or recent pain, and the message names ACWR when load also contributed. A silently shrunken session looks like a bug.
+- **The 8-session ACWR guard applies to every path.** `RuleEngine.calculateSRPELoad()` now returns null below eight sessions, so the recommendation's rule-based workout cannot be cut from a handful of logs even though the player path already had the guard.
+
+**Changes / additions:**
+
+- `WorkoutPlayer.tsx`: pre-session 1–5 check-in card (soreness, sleep, energy), a calibration banner that explains the result, and post-session pain score/location alongside RPE, duration and notes.
+- `api.ts`: `submitReadiness()` and a `readinessApi` export; the player re-fetches the assignment after a check-in.
+- `workout.routes.ts`: `getReadinessContext()` loads today's readiness, 28-day sRPE and 7-day reported pain; `GET /assignments/:id` returns an auto-regulated workout plus `guidance` (`needsCheckIn`, readiness score, volume/intensity, message). Completion accepts `painLevel` and `painLocation`. ACWR still requires eight sessions.
+- `ruleEngine.ts`: extracted `regulationMultipliers()` so the route can report what was applied; added optional `recentPain` (≥4 → −20% volume/−15% intensity, ≥7 → −35%/−25%); added `calculateRecentPain()`; `autoRegulateWorkout()` takes the pain value; `calculateSRPELoad()` returns null under eight sessions.
+- `features/injury.py`: `_get_workout_pain()` merges post-session pain into the wellness trend used by `avg_pain_7d`, `max_pain_7d` and `pain_trend`.
+- Verified with a real athlete Firebase token: a 5/1/2 check-in reduced the assigned workout from 4 to 2 sets and 90 to 52 minutes with the explanation `Readiness 3.3/5 — today's session has volume at 57% and intensity at 77%`; completing a disposable assignment with pain 8/10 stored the score and location; the pipeline then reported `avg_pain_7d: 8.0`, `max_pain_7d: 8.0`, `readiness_latest_soreness: 5`, `readiness_latest_sleep: 1`, `readiness_latest_stress: 2`. Removing the probe log restored 4 sets and 90 minutes. All probe readiness, log, assignment, attendance and recommendation records were deleted, and the real assignment was reset to `assigned`.
+- `tsc --noEmit` passes for both TypeScript projects; the edited Python module compiles.
+
+**Skill(s) used:** none (no skill loaded)
+
+**Open questions / next steps:**
+
+- **Thresholds are heuristics.** The 4/10 and 7/10 pain bands (and the 8-session ACWR gate) should be checked against real athlete reports; they currently protect the athlete but may feel conservative during a normal sore week.
+- **The assignment is still coach-authored.** Auto-regulation changes what the athlete sees when they open it, but the stored assignment remains the coach's prescription. If coaches want to see the calibrated version in their own views, persist a per-day adjusted copy rather than recomputing on every GET.
+- **Pain is post-session only.** There is no mid-session "stop, this hurts" action; adding one would need an immediate coach notification path, not just a feature update.
+- No online learning exists, by design. If the owner expects the model to improve from these logs, the next step is a scheduled retraining job that rebuilds the 31-feature dataset from `workout_logs` and `daily_readiness`, not per-request updates.

@@ -8,6 +8,7 @@ import { validate } from '../middleware/validation.middleware';
 import { ConflictError, ForbiddenError, NotFoundError } from '../utils/errors';
 import { captureWorkoutOpen } from '../services/attendance.service';
 import { generateRecommendation } from '../services/recommendation.service';
+import { RuleEngine } from '../services/ruleEngine';
 
 const router = Router();
 const id = z.string().regex(/^[0-9a-fA-F]{24}$/);
@@ -18,7 +19,7 @@ const workoutBody = z.object({ body: workoutSchema });
 const workoutPatch = z.object({ params: z.object({ id }), body: workoutSchema.partial() });
 const assignSchema = z.object({ params: z.object({ id }), body: z.object({ athleteIds: z.array(id).min(1).max(250), startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), notes: z.string().max(1000).optional() }) });
 const exerciseBody = z.object({ body: exerciseSchema });
-const completeSchema = z.object({ params: z.object({ id }), body: z.object({ durationMinutes: z.number().int().min(0).max(600).optional(), perceivedEffort: z.number().int().min(1).max(10).optional(), notes: z.string().max(2000).optional(), exerciseResults: z.array(z.object({ exerciseIndex: z.number().int().min(0).max(39), completedSets: z.number().int().min(0).max(30), actualReps: z.string().max(40).optional(), notes: z.string().max(500).optional() })).max(40).optional() }) });
+const completeSchema = z.object({ params: z.object({ id }), body: z.object({ durationMinutes: z.number().int().min(0).max(600).optional(), perceivedEffort: z.number().int().min(1).max(10).optional(), painLevel: z.number().int().min(0).max(10).optional(), painLocation: z.string().trim().max(80).optional(), notes: z.string().max(2000).optional(), exerciseResults: z.array(z.object({ exerciseIndex: z.number().int().min(0).max(39), completedSets: z.number().int().min(0).max(30), actualReps: z.string().max(40).optional(), notes: z.string().max(500).optional() })).max(40).optional() }) });
 
 function formatDoc(doc: any) { return { ...doc, id: doc._id.toString(), clubId: doc.clubId?.toString() || null, createdAt: doc.createdAt?.toISOString?.(), updatedAt: doc.updatedAt?.toISOString?.() }; }
 async function getWorkout(workoutId: string, clubId: ObjectId) {
@@ -49,6 +50,79 @@ async function getOwnAthlete(req: { user?: { uid: string } }, clubId: ObjectId) 
   const athlete = await db.collection('athletes').findOne({ clubId, userId: user._id, status: 'active' });
   if (!athlete) throw new ForbiddenError('No athlete profile is linked to this account');
   return athlete;
+}
+
+/** Below this many sessions the 7:28 ratio is too unstable to cut a session for. */
+const ACWR_MIN_SESSIONS = 8;
+
+/**
+ * Today's readiness plus the athlete's recent sRPE load.
+ *
+ * Used to calibrate the workout the athlete is about to start, so the prescription they see
+ * already reflects how they feel instead of only changing the next recommendation.
+ */
+async function getReadinessContext(clubId: ObjectId, athleteId: ObjectId) {
+  const db = getDatabase();
+  const today = new Date().toISOString().slice(0, 10);
+  const [readiness, recentPain] = await Promise.all([
+    db.collection('daily_readiness').findOne({ clubId, athleteId, date: today }),
+    RuleEngine.calculateRecentPain(clubId, athleteId),
+  ]);
+
+  const since = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000);
+  const logs = await db.collection('workout_logs')
+    .find({ clubId, athleteId, completedAt: { $gte: since } })
+    .project({ perceivedEffort: 1, durationMinutes: 1, completedAt: 1 })
+    .toArray();
+
+  if (logs.length < ACWR_MIN_SESSIONS) return { readiness, srpeLoad: null, recentPain };
+
+  const loadOf = (rows: any[]) => rows.reduce((sum, row) => sum + (Number(row.perceivedEffort) || 5) * (Number(row.durationMinutes) || 60), 0);
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const acute = loadOf(logs.filter(row => row.completedAt >= weekAgo));
+  const chronic = loadOf(logs);
+
+  return {
+    readiness,
+    srpeLoad: { acute, chronic, acwr: chronic > 0 ? acute / (chronic / 4) : 1 },
+    recentPain,
+  };
+}
+
+function readinessScore(readiness: any): number | null {
+  if (!readiness) return null;
+  const score = ((6 - Number(readiness.soreness)) + (6 - Number(readiness.sleepQuality)) + (6 - Number(readiness.stressEnergy))) / 3;
+  return Math.round(score * 10) / 10;
+}
+
+function regulationMessage(readiness: any, score: number | null, volume: number, intensity: number, recentPain: number | null, srpeLoad: any): string {
+  const notes: string[] = [];
+  if (recentPain !== null && recentPain >= 4) {
+    notes.push(`Recent pain averaged ${recentPain.toFixed(1)}/10, so the session was eased.`);
+  }
+  if (srpeLoad && srpeLoad.acwr > 1.3) {
+    notes.push(`Recent training load (ACWR ${srpeLoad.acwr.toFixed(2)}) also reduced it.`);
+  } else if (srpeLoad && srpeLoad.acwr < 0.8) {
+    notes.push(`Recent training load was low (ACWR ${srpeLoad.acwr.toFixed(2)}), so it was progressed slightly.`);
+  }
+
+  const suffix = notes.length ? ` ${notes.join(' ')}` : '';
+
+  if (!readiness) {
+    return `Check in with how you feel before starting so today’s session can be calibrated.${suffix}`;
+  }
+
+  const parts: string[] = [];
+  if (volume < 1) parts.push(`volume at ${Math.round(volume * 100)}%`);
+  if (intensity < 1) parts.push(`intensity at ${Math.round(intensity * 100)}%`);
+  if (volume > 1) parts.push(`volume at ${Math.round(volume * 100)}% (room to progress)`);
+  if (intensity > 1) parts.push(`intensity at ${Math.round(intensity * 100)}% (room to progress)`);
+
+  const base = parts.length
+    ? `Readiness ${score}/5 — today’s session has ${parts.join(' and ')}.`
+    : `Readiness ${score}/5 — today’s session is unchanged.`;
+
+  return `${base}${suffix}`;
 }
 
 router.get('/exercises', requirePermission('workout:read'), asyncHandler(async (req, res) => {
@@ -110,6 +184,8 @@ router.get('/assignments/:id', requirePermission('workout:read'), asyncHandler(a
     if (assignment.athleteId.toString() !== athlete._id.toString()) throw new ForbiddenError('This workout belongs to another athlete');
   }
   const workout = await getWorkout(assignment.workoutId.toString(), clubId);
+  let responseWorkout: any = workout;
+  let guidance: any = null;
   if (req.user!.role === 'athlete') {
     const now = new Date();
     await db.collection('workout_assignments').updateOne({ _id: assignment._id, status: 'assigned' }, { $set: { status: 'in_progress', startedAt: now, updatedAt: now } });
@@ -121,8 +197,32 @@ router.get('/assignments/:id', requirePermission('workout:read'), asyncHandler(a
       assignment.updatedAt = now;
     }
     if (assignment.athleteId) await captureWorkoutOpen(assignment.athleteId, clubId, workout._id);
+
+    // Calibrate the prescription to today's check-in before the athlete starts. Without
+    // this the same fixed sets were shown no matter how the athlete reported feeling.
+    const { readiness, srpeLoad, recentPain } = await getReadinessContext(clubId, assignment.athleteId);
+    const regulated: any = RuleEngine.autoRegulateWorkout(workout as any, readiness as any, srpeLoad as any, recentPain);
+    const { volume, intensity } = RuleEngine.regulationMultipliers(readiness as any, srpeLoad as any, recentPain);
+    if (typeof (workout as any).estimatedDuration === 'number') {
+      regulated.estimatedDuration = Math.max(10, Math.round((workout as any).estimatedDuration * volume));
+    }
+    responseWorkout = regulated;
+
+    const score = readinessScore(readiness);
+    guidance = {
+      checkedInToday: Boolean(readiness),
+      needsCheckIn: !readiness,
+      readiness: readiness
+        ? { soreness: readiness.soreness, sleepQuality: readiness.sleepQuality, stressEnergy: readiness.stressEnergy }
+        : null,
+      readinessScore: score,
+      recentPain: recentPain === null ? null : Math.round(recentPain * 10) / 10,
+      volumePercent: Math.round(volume * 100),
+      intensityPercent: Math.round(intensity * 100),
+      message: regulationMessage(readiness, score, volume, intensity, recentPain, srpeLoad),
+    };
   }
-  res.json({ status: 'success', data: { assignment: formatDoc(assignment), workout: formatDoc(workout) } });
+  res.json({ status: 'success', data: { assignment: formatDoc(assignment), workout: formatDoc(responseWorkout), guidance } });
 }));
 
 router.post('/:id/assign', requirePermission('workout:assign'), validate(assignSchema), asyncHandler(async (req, res) => {

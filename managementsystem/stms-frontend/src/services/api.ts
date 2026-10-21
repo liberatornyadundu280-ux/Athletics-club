@@ -455,6 +455,7 @@ class ApiService {
   async getWorkoutAssignments() { const response = await this.client.get<ApiResponse<any[]>>('/workouts/assignments'); return response.data.data || []; }
   async getWorkoutAssignment(id: string) { const response = await this.client.get<ApiResponse<any>>(`/workouts/assignments/${id}`); return response.data.data!; }
   async completeWorkoutAssignment(id: string, data: Record<string, unknown>) { const response = await this.client.post<ApiResponse<any>>(`/workouts/assignments/${id}/complete`, data); return response.data.data!; }
+  async submitReadiness(data: { date: string; soreness: number; sleepQuality: number; stressEnergy: number; notes?: string }) { const response = await this.client.post<ApiResponse<any>>('/readiness', data); return response.data.data!; }
 
   // ==================== UTILITIES ====================
   private setAuth(data: { accessToken: string; expiresIn: number; user: any; permissions?: string[] }) {
@@ -577,6 +578,10 @@ export const workoutApi = {
   getAssignments: api.getWorkoutAssignments.bind(api),
   getAssignment: api.getWorkoutAssignment.bind(api),
   complete: api.completeWorkoutAssignment.bind(api),
+};
+
+export const readinessApi = {
+  submit: api.submitReadiness.bind(api),
 };
 
 export const performanceApi = {

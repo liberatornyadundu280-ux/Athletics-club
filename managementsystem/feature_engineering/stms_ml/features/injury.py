@@ -27,7 +27,9 @@ class InjuryFeatures(BaseFeatureExtractor):
         features = {}
 
         injuries = self._get_injuries()
-        wellness = self._get_wellness()
+        # Post-session pain is reported on the workout log, while injury check-ins live in
+        # injury_wellness. Both are pain the athlete reported, so they feed the same trend.
+        wellness = sorted(self._get_wellness() + self._get_workout_pain(), key=lambda row: row.get("date", ""))
         rehab = self._get_rehab()
 
         if not injuries and not wellness:
@@ -79,6 +81,29 @@ class InjuryFeatures(BaseFeatureExtractor):
         }).sort("date", 1))
 
         return wellness
+
+    def _get_workout_pain(self) -> List[Dict[str, Any]]:
+        """Pain the athlete reported when finishing a workout (0-10), shaped as wellness rows."""
+        collection = self._get_collection("workout_logs")
+        cutoff = self.as_of - timedelta(days=14)
+
+        rows = collection.find({
+            "clubId": ObjectId(self.club_id),
+            "athleteId": ObjectId(self.athlete_id),
+            "completedAt": {"$gte": cutoff, "$lte": self.as_of},
+            "painLevel": {"$exists": True, "$gte": 0},
+        }).sort("completedAt", 1)
+
+        pain_rows = []
+        for row in rows:
+            completed_at = row.get("completedAt")
+            if not completed_at:
+                continue
+            pain_rows.append({
+                "date": completed_at.strftime("%Y-%m-%d"),
+                "pain": float(row.get("painLevel") or 0),
+            })
+        return pain_rows
 
     def _get_rehab(self) -> List[Dict[str, Any]]:
         injuries = self._get_injuries()
