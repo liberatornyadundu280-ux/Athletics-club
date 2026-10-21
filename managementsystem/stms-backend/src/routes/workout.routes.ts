@@ -35,6 +35,22 @@ async function validateExerciseReferences(exercises: z.infer<typeof workoutExerc
   if (count !== exerciseIds.length) throw new NotFoundError('One or more exercise library records');
 }
 
+/**
+ * Resolve the athlete profile owned by the signed-in user.
+ *
+ * Assignments reference `athletes._id`. The athlete routes used to compare that id with the
+ * `users._id` of the requester — two different collections — so every athlete was refused
+ * access to their own workout with "This workout belongs to another athlete".
+ */
+async function getOwnAthlete(req: { user?: { uid: string } }, clubId: ObjectId) {
+  const db = getDatabase();
+  const user = await db.collection('users').findOne({ firebaseUid: req.user!.uid, status: 'active' });
+  if (!user) throw new ForbiddenError('Your account is not active');
+  const athlete = await db.collection('athletes').findOne({ clubId, userId: user._id, status: 'active' });
+  if (!athlete) throw new ForbiddenError('No athlete profile is linked to this account');
+  return athlete;
+}
+
 router.get('/exercises', requirePermission('workout:read'), asyncHandler(async (req, res) => {
   const db = getDatabase(); const clubId = new ObjectId(req.clubId);
   const rows = await db.collection('exercises').find({ $or: [{ clubId }, { clubId: null }] }).sort({ name: 1 }).limit(500).toArray();
@@ -89,12 +105,21 @@ router.get('/assignments/:id', requirePermission('workout:read'), asyncHandler(a
   const db = getDatabase(); const clubId = new ObjectId(req.clubId);
   const assignment = await db.collection('workout_assignments').findOne({ _id: new ObjectId(req.params.id), clubId });
   if (!assignment) throw new NotFoundError('Workout assignment');
-  const user = await db.collection('users').findOne({ firebaseUid: req.user!.uid });
-  if (req.user!.role === 'athlete' && assignment.athleteId.toString() !== user?._id.toString()) throw new ForbiddenError('This workout belongs to another athlete');
+  if (req.user!.role === 'athlete') {
+    const athlete = await getOwnAthlete(req, clubId);
+    if (assignment.athleteId.toString() !== athlete._id.toString()) throw new ForbiddenError('This workout belongs to another athlete');
+  }
   const workout = await getWorkout(assignment.workoutId.toString(), clubId);
   if (req.user!.role === 'athlete') {
     const now = new Date();
     await db.collection('workout_assignments').updateOne({ _id: assignment._id, status: 'assigned' }, { $set: { status: 'in_progress', startedAt: now, updatedAt: now } });
+    // Reflect the transition in the response so the player does not render "assigned"
+    // again after opening the workout.
+    if (assignment.status === 'assigned') {
+      assignment.status = 'in_progress';
+      assignment.startedAt = now;
+      assignment.updatedAt = now;
+    }
     if (assignment.athleteId) await captureWorkoutOpen(assignment.athleteId, clubId, workout._id);
   }
   res.json({ status: 'success', data: { assignment: formatDoc(assignment), workout: formatDoc(workout) } });
@@ -122,14 +147,18 @@ router.post('/assignments/:id/complete', requirePermission('workout:complete'), 
   const db = getDatabase(); const clubId = new ObjectId(req.clubId);
   const assignment = await db.collection('workout_assignments').findOne({ _id: new ObjectId(req.params.id), clubId });
   if (!assignment) throw new NotFoundError('Workout assignment');
-  const user = await db.collection('users').findOne({ firebaseUid: req.user!.uid });
-  if (req.user!.role === 'athlete' && assignment.athleteId.toString() !== user?._id.toString()) throw new ForbiddenError('This workout belongs to another athlete');
+  if (req.user!.role === 'athlete') {
+    const athlete = await getOwnAthlete(req, clubId);
+    if (assignment.athleteId.toString() !== athlete._id.toString()) throw new ForbiddenError('This workout belongs to another athlete');
+  }
   const input = completeSchema.shape.body.parse(req.body); const now = new Date();
   if (assignment.status === 'completed') throw new ConflictError('This workout is already marked complete');
   await db.collection('workout_assignments').updateOne({ _id: assignment._id, clubId }, { $set: { status: 'completed', completedAt: now, completion: input, updatedAt: now } });
   await db.collection('workout_logs').insertOne({ _id: new ObjectId(), clubId, assignmentId: assignment._id, workoutId: assignment.workoutId, athleteId: assignment.athleteId, ...input, completedAt: now });
-  try { await generateRecommendation(clubId, assignment.athleteId, 'workout_completed', req.user!.uid); }
-  catch (error) { console.error('Could not refresh athlete recommendation after workout completion', error); }
+  // The completion is already persisted. Refreshing the recommendation can take tens of
+  // seconds against a remote Atlas cluster, so it must not hold up the athlete's "done".
+  void generateRecommendation(clubId, assignment.athleteId, 'workout_completed', req.user!.uid)
+    .catch(error => console.error('Could not refresh athlete recommendation after workout completion', error));
   res.json({ status: 'success', data: { completed: true, completedAt: now.toISOString() } });
 }));
 

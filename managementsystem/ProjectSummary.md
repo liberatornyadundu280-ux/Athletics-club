@@ -282,6 +282,7 @@
 - **A ratio is not evidence without a sample.** ACWR 2.83 from three sessions says more about the calendar than about the athlete. The ratio can still be computed and fed to the model, but it only changes focus, intensity, recovery, injury risk or progression once the 28-day window holds at least eight sessions. Below that, the recommendation reports how many sessions it saw and says the ratio needs more history instead of presenting it as a caution.
 - **Suppression must be visible.** Hiding a warning without explanation looks like the engine ignored the data. Every suppressed ACWR warning now appears as a driver that states the session count and the computed ratio.
 - **Verify Redis against a real server.** Docker remains unavailable on this machine, but a native Redis 8.10.2 build runs on 127.0.0.1:6379, so the Redis-backed token and rate-limit paths were exercised rather than assumed.
+- **A user account is not an athlete profile.** Workout assignments reference `athletes._id`; the athlete workout routes compared that to `users._id`. The two live in different collections, so every athlete was denied their own workout. Ownership now resolves through `athletes.userId`, and the same check still rejects another athlete's assignment.
 
 **Changes / additions:**
 
@@ -291,6 +292,8 @@
 - Untracked `stms-frontend/dev-dist` and added it to `managementsystem/.gitignore`; the Vite PWA regenerates it on every dev run, so it kept appearing as modified.
 - Verified after a full restart (Redis, worker and backend restarted): `POST /api/v1/recommendations/generate` returned `modelVersion: ml-model_next_workout_rpe_20261001_043023.pkl` in 11 seconds with drivers intact, and cold-start output for six athletes now reads e.g. `Only 4 sessions in 28 days — the 2.23 load ratio needs more history to interpret`.
 - Verified Redis persistence: `refresh_token:<hash>` exists with a 30-day TTL plus `refresh_tokens_by_user:<uid>`, and the limiter wrote `stms:rate-limit:auth:<ip>`. The worker consumed a trigger and returned a result over `stms:recommendation:triggers:results`.
+- `workout.routes.ts`: added `getOwnAthlete()` and used it in `GET /assignments/:id` and `POST /assignments/:id/complete`; the open response now reports the `in_progress` transition it just made; completion no longer waits for the recommendation refresh, so the athlete's "done" returns in ~4 seconds instead of 10–30.
+- Verified with a real athlete Firebase token: their own assignment returned 200 and another athlete's returned 403; completing a disposable assignment returned 200, created exactly one workout log, and the background recommendation was generated. The probe's assignment, log and recommendation were removed afterwards.
 - `tsc --noEmit` passes for the backend; the edited Python modules compile; the frontend build was unaffected.
 
 **Skill(s) used:** none (no skill loaded)
