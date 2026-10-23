@@ -1,0 +1,7 @@
+# Snapshots contain athlete names, emails and medical notes.
+data/
+
+# Local environment and caches.
+.venv/
+__pycache__/
+*.pyc

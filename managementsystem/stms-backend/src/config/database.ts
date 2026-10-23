@@ -62,6 +62,11 @@ export async function connectToDatabase(): Promise<Db> {
     ]),
     db.collection('exercises').createIndexes([
       { key: { clubId: 1, name: 1 }, name: 'idx_exercises_club_name' },
+      { key: { clubId: 1, category: 1, name: 1 }, name: 'idx_exercises_club_category_name' },
+      { key: { clubId: 1, eventGroups: 1 }, name: 'idx_exercises_club_event_groups' },
+      { key: { clubId: 1, level: 1 }, name: 'idx_exercises_club_level' },
+      { key: { clubId: 1, source: 1 }, name: 'idx_exercises_club_source' },
+      { key: { name: 1 }, name: 'idx_exercises_name' },
     ]),
     db.collection('workouts').createIndexes([
       { key: { clubId: 1, updatedAt: -1 }, name: 'idx_workouts_club_updated' },

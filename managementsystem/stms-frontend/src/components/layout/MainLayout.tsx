@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/utils/helpers';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
-import { Menu, X, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Menu, X, ArrowLeft, Check } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Zap } from 'lucide-react';
 
@@ -15,17 +15,6 @@ export function MainLayout() {
   const isAuthPage = location.pathname.startsWith('/login') ||
     location.pathname.startsWith('/register') ||
     location.pathname.startsWith('/forgot-password');
-
-  // Hooks must run on every render, so this sits above the early return.
-  useEffect(() => {
-    // Ensure app background for authenticated routes
-    document.body.style.backgroundColor = '#0b0d12'; // coal
-    document.body.style.color = '#eef1f6';
-    return () => {
-      document.body.style.backgroundColor = '';
-      document.body.style.color = '';
-    };
-  }, []);
 
   if (isAuthPage) {
     return <Outlet />;
@@ -65,10 +54,10 @@ export function MainLayout() {
         <Header />
 
         {/* Main content area */}
-        <main className="pt-16 pb-space-2xl px-space-md lg:px-space-xl min-h-screen" id="main-content">
-          <div className="w-full max-w-full">
+        <main className="min-h-[calc(100vh-3.5rem)] px-space-md pb-space-2xl lg:px-space-xl" id="main-content">
+          <div className="w-full max-w-full pt-space-lg">
             {/* Mobile sidebar toggle */}
-            <div className="lg:hidden mb-space-md flex items-center justify-between">
+            <div className="mb-space-md flex items-center justify-between lg:hidden">
               <Button
                 variant="secondary"
                 size="sm"
@@ -78,14 +67,6 @@ export function MainLayout() {
               >
                 {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                 <span className="ml-2">{sidebarOpen ? 'Close Menu' : 'Open Menu'}</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleSidebarCollapse}
-                aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              >
-                {sidebarCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
               </Button>
             </div>
 
@@ -108,43 +89,89 @@ export function AuthLayout() {
   const canGoBack = location.key !== 'default';
 
   return (
-    <div className="min-h-screen bg-ink text-text-primary flex items-center justify-center px-space-md py-space-2xl">
+    <div className="relative min-h-screen overflow-hidden bg-ink text-text-primary">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[36rem] bg-[radial-gradient(60%_60%_at_18%_0%,rgba(216,255,62,0.10),transparent_70%)]"
+      />
+
       <button
         type="button"
         onClick={() => (canGoBack ? navigate(-1) : navigate('/'))}
-        className="fixed left-4 top-4 z-10 inline-flex items-center gap-2 rounded-lg border border-line bg-panel/70 px-3 py-2 text-body-sm text-mist backdrop-blur transition-colors hover:border-volt/40 hover:text-white sm:left-6 sm:top-6"
+        className="fixed left-4 top-4 z-10 inline-flex items-center gap-2 rounded-radius-md border border-border bg-panel/80 px-3 py-2 text-body-sm text-text-secondary backdrop-blur transition-colors hover:border-volt/40 hover:text-text-primary sm:left-6 sm:top-6"
         aria-label="Go back"
       >
         <ArrowLeft className="h-4 w-4" />
         Back
       </button>
 
-      <div className="w-full max-w-md">
-        <div className="text-center mb-space-2xl">
-          {/* The mark doubles as the way home, which is what visitors expect from a logo. */}
+      <div className="relative mx-auto grid min-h-screen w-full max-w-6xl items-center gap-10 px-5 py-20 lg:grid-cols-[1.05fr_minmax(0,420px)] lg:gap-16 lg:px-8">
+        {/* Brand statement — the reason to sign in, not decoration. */}
+        <section className="hidden lg:block">
           <Link
             to="/"
             aria-label="STMS — go to the home page"
-            title="Go to the home page"
-            className="group inline-flex flex-col items-center rounded-xl focus-visible:ring-2 focus-visible:ring-volt focus-visible:ring-offset-2 focus-visible:ring-offset-ink"
+            className="inline-flex items-center gap-3 rounded-radius-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-volt"
           >
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-lg bg-volt mx-auto mb-4 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-105">
-              <Zap size={24} strokeWidth={2.6} className="text-ink" />
-            </div>
-            <h1 className="font-display text-3xl tracking-wide text-white">
+            <span className="flex h-11 w-11 items-center justify-center rounded-radius-md bg-volt text-ink">
+              <Zap size={22} strokeWidth={2.6} aria-hidden="true" />
+            </span>
+            <span className="font-display text-2xl uppercase tracking-[0.14em] text-text-primary">
               ST<span className="text-volt">M</span>S
-            </h1>
+            </span>
           </Link>
-          <p className="text-body text-mist mt-2">
-            Smart Trainer Management System
+
+          <h2 className="mt-10 font-display text-[clamp(2.5rem,4.4vw,3.75rem)] uppercase leading-[0.95] tracking-[-0.01em] text-text-primary">
+            Every session.
+            <br />
+            Every athlete.
+            <br />
+            <span className="text-volt">Accounted for.</span>
+          </h2>
+
+          <p className="mt-5 max-w-md text-body leading-relaxed text-text-secondary">
+            Attendance, workouts, performance and recovery in one place — so your athletes always
+            know what is next and your records stay straight.
+          </p>
+
+          <ul className="mt-9 space-y-3">
+            {[
+              'Attendance that takes seconds, not spreadsheets',
+              'Workouts athletes can open and complete themselves',
+              'Performance, injuries and goals in one record',
+            ].map(item => (
+              <li key={item} className="flex items-start gap-2.5 text-body-sm text-text-secondary">
+                <Check className="mt-0.5 h-4 w-4 shrink-0 text-volt" aria-hidden="true" />
+                {item}
+              </li>
+            ))}
+          </ul>
+
+          <p className="mt-12 text-caption text-text-muted">Smart Trainer Management System</p>
+        </section>
+
+        <div className="w-full">
+          <Link
+            to="/"
+            aria-label="STMS — go to the home page"
+            className="mb-8 inline-flex items-center gap-2.5 rounded-radius-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-volt lg:hidden"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-radius-md bg-volt text-ink">
+              <Zap size={20} strokeWidth={2.6} aria-hidden="true" />
+            </span>
+            <span className="font-display text-xl uppercase tracking-[0.14em] text-text-primary">
+              ST<span className="text-volt">M</span>S
+            </span>
+          </Link>
+
+          <div className="rounded-radius-lg border border-border bg-panel/80 p-6 shadow-lg backdrop-blur sm:p-7">
+            <Outlet />
+          </div>
+
+          <p className="mt-5 text-center text-caption text-text-muted">
+            Need help? Ask your club administrator.
           </p>
         </div>
-        <div className="bg-panel border border-line rounded-2xl p-space-xl">
-          <Outlet />
-        </div>
-        <p className="text-center text-caption text-fog mt-6">
-          Need help? Ask your club administrator.
-        </p>
       </div>
     </div>
   );

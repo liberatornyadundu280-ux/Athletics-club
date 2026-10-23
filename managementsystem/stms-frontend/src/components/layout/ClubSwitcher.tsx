@@ -55,20 +55,74 @@ export function ClubSwitcher({ className }: { className?: string }) {
   };
 
   return (
-    <div className={cn('relative', className)} ref={dropdownRef}>
-      <Button variant="outline" size="sm" disabled={loading || clubs.length === 0} onClick={() => setIsOpen(open => !open)} className="min-w-[180px] justify-between gap-2" aria-label="Switch club" aria-expanded={isOpen} aria-haspopup="listbox">
-        <span className="flex min-w-0 items-center gap-2"><Building2 className="h-4 w-4 shrink-0 text-volt" /><span className="truncate">{loading ? 'Loading clubs…' : activeClub?.name || 'No club selected'}</span></span>
-        <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', isOpen && 'rotate-180')} />
-      </Button>
+    <div className={cn('relative min-w-0', className)} ref={dropdownRef}>
+      <button
+        type="button"
+        disabled={loading || clubs.length === 0}
+        onClick={() => setIsOpen(open => !open)}
+        aria-label="Switch club"
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        className={cn(
+          'group flex h-9 min-w-0 items-center gap-2 rounded-md border border-transparent px-2 text-body-sm',
+          'transition-colors hover:border-border hover:bg-white/[0.04] disabled:opacity-60',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-volt/70',
+          isOpen && 'border-border bg-white/[0.04]'
+        )}
+      >
+        <Building2 className="h-4 w-4 shrink-0 text-volt" aria-hidden="true" />
+        <span className="max-w-[220px] truncate font-medium text-text-primary">
+          {loading ? 'Loading clubs…' : activeClub?.name || 'No club selected'}
+        </span>
+        <ChevronDown className={cn('h-3.5 w-3.5 shrink-0 text-text-muted transition-transform duration-200', isOpen && 'rotate-180')} aria-hidden="true" />
+      </button>
 
-      {isOpen && <div className="bg-panel border border-line absolute left-0 z-50 mt-2 w-72 overflow-hidden rounded-xl shadow-[0_20px_40px_-10px_rgba(0,0,0,0.5)]">
-        <div className="border-b border-line px-4 py-3"><p className="text-xs font-semibold text-fog">YOUR CLUBS</p><p className="mt-1 text-sm text-mist">Switch the workspace you're training with.</p></div>
-        <div className="max-h-64 overflow-y-auto p-2" role="listbox" aria-label="Club workspaces">
-          {clubs.map(club => <button key={club.id} role="option" aria-selected={club.id === activeClubId} disabled={switching} onClick={() => void handleSwitchClub(club.id)} className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left hover:bg-white/[0.03] disabled:opacity-60"><span className="flex h-9 w-9 items-center justify-center rounded-lg" style={{ backgroundColor: `${club.branding?.primaryColor || '#d7ff3f'}40` }}><Building2 className="h-4 w-4" style={{ color: club.branding?.primaryColor || '#d7ff3f' }} /></span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-white">{club.name}</span><span className="block truncate text-xs text-fog">{club.slug}</span></span>{club.id === activeClubId && <Check className="h-4 w-4 text-volt" />}</button>)}
+      {isOpen && (
+        <div className="absolute left-0 z-50 mt-2 w-72 overflow-hidden rounded-radius-lg border border-border bg-surface shadow-shadow-xl animate-fade-in">
+          <div className="border-b border-border px-4 py-3">
+            <p className="text-body-sm font-semibold text-text-primary">Your clubs</p>
+            <p className="mt-0.5 text-caption text-text-secondary">Choose the workspace you're training with.</p>
+          </div>
+          <div className="max-h-64 overflow-y-auto p-1.5" role="listbox" aria-label="Club workspaces">
+            {clubs.map(club => {
+              const colour = club.branding?.primaryColor || '#D8FF3E';
+              return (
+                <button
+                  key={club.id}
+                  role="option"
+                  aria-selected={club.id === activeClubId}
+                  disabled={switching}
+                  onClick={() => void handleSwitchClub(club.id)}
+                  className="flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-white/[0.05] disabled:opacity-60"
+                >
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md" style={{ backgroundColor: `${colour}24` }}>
+                    <Building2 className="h-4 w-4" style={{ color: colour }} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-body-sm font-medium text-text-primary">{club.name}</span>
+                    <span className="block truncate text-caption text-text-muted">{club.slug}</span>
+                  </span>
+                  {club.id === activeClubId && <Check className="h-4 w-4 shrink-0 text-volt" />}
+                </button>
+              );
+            })}
+          </div>
+          {!loading && clubs.length === 0 && (
+            <p className="px-4 pb-4 text-body-sm text-text-muted">No active club memberships found for this account.</p>
+          )}
+          {hasPermission('club:settings') && (
+            <div className="border-t border-border p-1.5">
+              <button
+                onClick={() => { setIsOpen(false); navigate('/settings/club'); }}
+                className="dropdown-item inline-flex items-center gap-2.5"
+              >
+                <Settings2 className="h-4 w-4" />
+                Club settings
+              </button>
+            </div>
+          )}
         </div>
-        {!loading && clubs.length === 0 && <p className="px-4 py-4 text-sm text-fog">No active club memberships found for this account.</p>}
-        {hasPermission('club:settings') && <div className="border-t border-line p-2"><button onClick={() => { setIsOpen(false); navigate('/settings/club'); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-mist hover:bg-white/[0.03] hover:text-white"><Settings2 className="h-4 w-4" />Club settings</button></div>}
-      </div>}
+      )}
     </div>
   );
 }

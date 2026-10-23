@@ -13,6 +13,8 @@
 //                       (default: FIREBASE_INITIAL_ADMIN_EMAIL, else admin@example.com)
 //   --coach <email>     coach email (default: coach@example.com)
 //   --reset-passwords   give existing seeded accounts a new password
+//   --refresh-starters  update existing starter workouts that a coach has not edited
+//   --prune-starters    remove old starter workouts that have no assignments or logs
 //   --force             permit seeding while NODE_ENV=production
 //
 // Re-running is safe: every record is upserted on a natural key (email, slug, club+name).
@@ -30,6 +32,8 @@ import { firebaseAuth, setUserClaims } from './config/firebase';
 import { env } from './config/env';
 import { applyPendingMigrations } from './migrations/runner';
 import { permissionsForRole } from './utils/role-permissions';
+import { seedExerciseLibrary } from './services/exercise-library';
+import { seedStarterWorkouts } from './services/starter-workouts';
 import type { UserRole } from './types';
 
 const DEFAULT_CLUB_NAME = 'Riverside Athletics Club';
@@ -43,6 +47,8 @@ type SeedOptions = {
   adminEmail: string;
   coachEmail: string;
   resetPasswords: boolean;
+  refreshStarters: boolean;
+  pruneStarters: boolean;
   force: boolean;
 };
 
@@ -53,32 +59,6 @@ type SeededAccount = {
   uid: string;
   reused: boolean;
 };
-
-type ExerciseSeed = {
-  name: string;
-  description: string;
-  equipment: string[];
-  primaryMuscles: string[];
-  phase: string;
-  energySystem: string;
-  movementPattern: string;
-  cnsIntensity: number;
-};
-
-const EXERCISE_CATALOGUE: ExerciseSeed[] = [
-  { name: 'Back Squat', description: 'Barbell back squat to full depth.', equipment: ['Barbell', 'Squat rack'], primaryMuscles: ['Quadriceps', 'Glutes'], phase: 'strength', energySystem: 'anaerobic', movementPattern: 'squat', cnsIntensity: 4 },
-  { name: 'Romanian Deadlift', description: 'Hip hinge, controlled eccentric.', equipment: ['Barbell'], primaryMuscles: ['Hamstrings', 'Glutes'], phase: 'strength', energySystem: 'anaerobic', movementPattern: 'hinge', cnsIntensity: 3 },
-  { name: 'Bench Press', description: 'Barbell bench press, controlled tempo.', equipment: ['Barbell', 'Bench'], primaryMuscles: ['Pectorals', 'Triceps'], phase: 'strength', energySystem: 'anaerobic', movementPattern: 'push', cnsIntensity: 3 },
-  { name: 'Pull-Up', description: 'Strict pull-ups, full range.', equipment: ['Pull-up bar'], primaryMuscles: ['Lats', 'Biceps'], phase: 'strength', energySystem: 'anaerobic', movementPattern: 'pull', cnsIntensity: 3 },
-  { name: 'Nordic Hamstring Curl', description: 'Eccentric hamstring control — proven injury prevention.', equipment: ['Partner', 'Pad'], primaryMuscles: ['Hamstrings'], phase: 'prevention', energySystem: 'anaerobic', movementPattern: 'hinge', cnsIntensity: 2 },
-  { name: 'Box Jump', description: 'Explosive jump onto a box, step down.', equipment: ['Plyo box'], primaryMuscles: ['Quadriceps', 'Calves'], phase: 'power', energySystem: 'phosphagen', movementPattern: 'jump', cnsIntensity: 5 },
-  { name: 'Med Ball Overhead Throw', description: 'Explosive overhead throw for trunk power.', equipment: ['Medicine ball'], primaryMuscles: ['Core', 'Shoulders'], phase: 'power', energySystem: 'phosphagen', movementPattern: 'throw', cnsIntensity: 4 },
-  { name: 'A-Skip Drill', description: 'Sprint mechanics drill for ground contact timing.', equipment: [], primaryMuscles: ['Hip flexors'], phase: 'technique', energySystem: 'phosphagen', movementPattern: 'sprint', cnsIntensity: 2 },
-  { name: 'Flying 30m Sprint', description: 'Maximal velocity sprint with a 20m build-up.', equipment: ['Cones'], primaryMuscles: ['Hamstrings', 'Glutes'], phase: 'speed', energySystem: 'phosphagen', movementPattern: 'sprint', cnsIntensity: 5 },
-  { name: 'Bounding', description: 'Alternating horizontal bounds for elastic strength.', equipment: [], primaryMuscles: ['Hamstrings', 'Calves'], phase: 'power', energySystem: 'phosphagen', movementPattern: 'jump', cnsIntensity: 4 },
-  { name: 'Plank', description: 'Front plank hold, neutral spine.', equipment: ['Mat'], primaryMuscles: ['Core'], phase: 'core', energySystem: 'aerobic', movementPattern: 'isometric', cnsIntensity: 1 },
-  { name: 'Mobility Flow', description: 'Hip, ankle and thoracic mobility circuit.', equipment: ['Mat', 'Foam roller'], primaryMuscles: ['Full body'], phase: 'recovery', energySystem: 'aerobic', movementPattern: 'mobility', cnsIntensity: 1 },
-];
 
 function printUsage(): void {
   console.log(`
@@ -93,6 +73,8 @@ Flags:
   --admin <email>     system administrator email
   --coach <email>     coach email (default: ${DEFAULT_COACH_EMAIL})
   --reset-passwords   give existing seeded accounts a new password
+  --refresh-starters  update existing starter workouts that a coach has not edited
+  --prune-starters    remove old starter workouts that have no assignments or logs
   --force             permit seeding while NODE_ENV=production
 `);
 }
@@ -104,6 +86,8 @@ function parseFlags(argv: string[]): SeedOptions {
     adminEmail,
     coachEmail: DEFAULT_COACH_EMAIL,
     resetPasswords: false,
+    refreshStarters: false,
+    pruneStarters: false,
     force: false,
   };
 
@@ -130,6 +114,10 @@ function parseFlags(argv: string[]): SeedOptions {
       index += 1;
     } else if (arg === '--reset-passwords') {
       options.resetPasswords = true;
+    } else if (arg === '--refresh-starters') {
+      options.refreshStarters = true;
+    } else if (arg === '--prune-starters') {
+      options.pruneStarters = true;
     } else if (arg === '--force') {
       options.force = true;
     } else {
@@ -351,23 +339,6 @@ async function seedAthletes(db: Db, clubId: ObjectId, csvPath: string): Promise<
   return written;
 }
 
-async function seedExercises(db: Db, clubId: ObjectId, createdByUid: string): Promise<number> {
-  const now = new Date();
-
-  for (const exercise of EXERCISE_CATALOGUE) {
-    await db.collection('exercises').updateOne(
-      { clubId, name: exercise.name },
-      {
-        $set: { ...exercise, updatedAt: now },
-        $setOnInsert: { clubId, createdBy: createdByUid, contraindications: [], createdAt: now },
-      },
-      { upsert: true }
-    );
-  }
-
-  return EXERCISE_CATALOGUE.length;
-}
-
 async function syncClaims(db: Db, userId: ObjectId, uid: string, role: UserRole): Promise<void> {
   const user = await db.collection('users').findOne({ _id: userId });
   if (!user) return;
@@ -385,6 +356,7 @@ function printSummary(input: {
   club: { id: ObjectId; slug: string; name: string };
   athletes: number;
   exercises: number;
+  starterWorkouts: string;
   accounts: Array<{ account: SeededAccount; role: UserRole }>;
 }): void {
   console.log('\n──────────────────────────────────────────────────────────────');
@@ -394,6 +366,7 @@ function printSummary(input: {
   console.log(`  Club     : ${input.club.name}  (${input.club.slug}, ${input.club.id.toString()})`);
   console.log(`  Athletes : ${input.athletes}`);
   console.log(`  Exercises: ${input.exercises}`);
+  console.log(`  Workouts : ${input.starterWorkouts}`);
   console.log('\n  Sign in through the frontend with:');
   const roleWidth = Math.max(4, ...input.accounts.map(({ role }) => role.length));
   const emailWidth = Math.max(5, ...input.accounts.map(({ account }) => account.email.length));
@@ -431,7 +404,7 @@ async function main(): Promise<void> {
         : '  schema already up to date'
     );
 
-    console.log('\nSeeding club, staff accounts, roster and exercises...');
+    console.log('\nSeeding club, staff accounts, roster and exercise library...');
 
     const adminAccount = await ensureFirebaseAccount(options.adminEmail, 'Seed Administrator', {
       resetPassword: options.resetPasswords,
@@ -460,7 +433,11 @@ async function main(): Promise<void> {
     await grantClubToUser(db, coachUserId, club.id);
 
     const athleteCount = await seedAthletes(db, club.id, ROSTER_CSV);
-    const exerciseCount = await seedExercises(db, club.id, adminAccount.uid);
+    const exerciseSeed = await seedExerciseLibrary(db);
+    const starterWorkouts = await seedStarterWorkouts(db, club.id, coachAccount.uid, {
+      refresh: options.refreshStarters,
+      prune: options.pruneStarters,
+    });
 
     await syncClaims(db, adminUserId, adminAccount.uid, 'system_admin');
     await syncClaims(db, coachUserId, coachAccount.uid, 'coach');
@@ -471,7 +448,16 @@ async function main(): Promise<void> {
       databaseName: db.databaseName,
       club: { ...club, name: (clubDocument?.name as string) ?? options.clubName },
       athletes: athleteCount,
-      exercises: exerciseCount,
+      exercises: exerciseSeed.total,
+      starterWorkouts: [
+        `${starterWorkouts.total} starter sessions`,
+        `${starterWorkouts.inserted} inserted`,
+        `${starterWorkouts.updated} refreshed`,
+        `${starterWorkouts.existing - starterWorkouts.updated - starterWorkouts.protectedEdits} unchanged`,
+        ...(starterWorkouts.protectedEdits ? [`${starterWorkouts.protectedEdits} coach-edited kept`] : []),
+        ...(starterWorkouts.pruned ? [`${starterWorkouts.pruned} pruned`] : []),
+        ...(starterWorkouts.retained ? [`${starterWorkouts.retained} stale retained`] : []),
+      ].join(', '),
       accounts: [
         { account: adminAccount, role: 'system_admin' },
         { account: coachAccount, role: 'coach' },

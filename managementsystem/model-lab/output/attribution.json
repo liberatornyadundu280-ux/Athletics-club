@@ -1,0 +1,92 @@
+{
+  "athlete": {
+    "name": "Anaya Rao",
+    "event": "100m sprint / long jump",
+    "source": "live pipeline",
+    "id": "6ad37cc8d1fc4eb940703f9a"
+  },
+  "top_permutation": [
+    {
+      "feature": "readiness_composite_score",
+      "importance": 0.3843865307426452
+    },
+    {
+      "feature": "sRPE_acwr",
+      "importance": 0.14980317412567143
+    },
+    {
+      "feature": "readiness_sleep_7d_avg",
+      "importance": 0.08265847932052613
+    },
+    {
+      "feature": "readiness_stress_7d_avg",
+      "importance": 0.07142187800216675
+    },
+    {
+      "feature": "readiness_soreness_7d_avg",
+      "importance": 0.06787512741851806
+    },
+    {
+      "feature": "compliance_rate_30d",
+      "importance": 0.059813308551788326
+    },
+    {
+      "feature": "attendance_rate_30d",
+      "importance": 0.05966978076553344
+    },
+    {
+      "feature": "sRPE_load_acute_7d",
+      "importance": 0.047877804882049554
+    },
+    {
+      "feature": "base_fitness_score",
+      "importance": 0.03737597825622559
+    },
+    {
+      "feature": "sRPE_load_chronic_28d",
+      "importance": 0.027855292602539067
+    }
+  ],
+  "top_shap": [
+    {
+      "feature": "readiness_composite_score",
+      "mean_abs_shap": 0.30399760603904724
+    },
+    {
+      "feature": "sRPE_acwr",
+      "mean_abs_shap": 0.220778688788414
+    },
+    {
+      "feature": "readiness_sleep_7d_avg",
+      "mean_abs_shap": 0.050662558525800705
+    },
+    {
+      "feature": "readiness_soreness_7d_avg",
+      "mean_abs_shap": 0.041064999997615814
+    },
+    {
+      "feature": "sRPE_load_chronic_28d",
+      "mean_abs_shap": 0.037840813398361206
+    },
+    {
+      "feature": "readiness_stress_7d_avg",
+      "mean_abs_shap": 0.03683867305517197
+    },
+    {
+      "feature": "sRPE_load_acute_7d",
+      "mean_abs_shap": 0.03242173790931702
+    },
+    {
+      "feature": "compliance_rate_30d",
+      "mean_abs_shap": 0.029846424236893654
+    },
+    {
+      "feature": "attendance_rate_30d",
+      "mean_abs_shap": 0.029344851151108742
+    },
+    {
+      "feature": "base_fitness_score",
+      "mean_abs_shap": 0.017583772540092468
+    }
+  ]
+}

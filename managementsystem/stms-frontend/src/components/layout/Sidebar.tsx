@@ -2,9 +2,8 @@ import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/utils/helpers';
 import { useAuth } from '@/context/AuthContext';
-import { VTabs, VTabProps } from '@/components/ui/Split';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Zap } from 'lucide-react';
+import { VTab } from '@/components/ui/Split';
+import { ChevronLeft, ChevronRight, Zap } from 'lucide-react';
 import {
   Home,
   Users,
@@ -27,119 +26,146 @@ interface NavItem {
   icon: React.ReactNode;
   roles?: string[];
   permissions?: string[];
-  children?: NavItem[];
-  injuryCount?: number;
 }
 
-const navigationConfig: NavItem[] = [
-  {
-    id: 'dashboard',
-    label: 'Dashboard',
-    path: '/dashboard',
-    icon: <Home className="w-5 h-5" />,
-    roles: ['athlete', 'coach', 'club_admin', 'system_admin'],
-  },
-  {
-    id: 'athletes',
-    label: 'Athletes',
-    path: '/athletes',
-    icon: <Users className="w-5 h-5" />,
-    roles: ['athlete', 'coach', 'club_admin', 'system_admin'],
-    permissions: ['athlete:read'],
-  },
-  {
-    id: 'workouts',
-    label: 'Workouts',
-    path: '/workouts',
-    icon: <Dumbbell className="w-5 h-5" />,
-    roles: ['athlete', 'coach', 'club_admin', 'system_admin'],
-    permissions: ['workout:read'],
-  },
-  {
-    id: 'recommendations',
-    label: 'Smart Plan',
-    path: '/recommendations',
-    icon: <Sparkles className="w-5 h-5" />,
-    roles: ['athlete', 'coach', 'club_admin', 'system_admin'],
-    permissions: ['workout:read'],
-  },
-  {
-    id: 'attendance',
-    label: 'Attendance',
-    path: '/attendance',
-    icon: <Calendar className="w-5 h-5" />,
-    roles: ['athlete', 'coach', 'club_admin', 'system_admin'],
-    permissions: ['attendance:read'],
-  },
-  {
-    id: 'performance',
-    label: 'Performance',
-    path: '/performance',
-    icon: <Activity className="w-5 h-5" />,
-    roles: ['athlete', 'coach', 'club_admin', 'system_admin'],
-    permissions: ['performance:read'],
-  },
-  {
-    id: 'injuries',
-    label: 'Injuries',
-    path: '/injuries',
-    icon: <AlertTriangle className="w-5 h-5" />,
-    roles: ['coach', 'club_admin', 'system_admin'],
-    permissions: ['injury:read'],
-    injuryCount: 0,
-  },
-  {
-    id: 'permissions',
-    label: 'Permissions',
-    path: '/permissions',
-    icon: <FileText className="w-5 h-5" />,
-    roles: ['coach', 'club_admin', 'system_admin'],
-    permissions: ['permission:read'],
-  },
-  {
-    id: 'analytics',
-    label: 'Analytics',
-    path: '/analytics',
-    icon: <BarChart3 className="w-5 h-5" />,
-    roles: ['coach', 'club_admin', 'system_admin'],
-    permissions: ['analytics:read'],
-  },
-  {
-    id: 'announcements',
-    label: 'Announcements',
-    path: '/announcements',
-    icon: <Megaphone className="w-5 h-5" />,
-    roles: ['athlete', 'coach', 'club_admin', 'system_admin'],
-    permissions: ['announcement:read'],
-  },
-];
+interface NavGroup {
+  id: string;
+  label: string | null;
+  items: NavItem[];
+}
 
-const clubAdminNavItems: NavItem[] = [
+const navigationGroups: NavGroup[] = [
   {
-    id: 'users',
-    label: 'User Management',
-    path: '/settings/users',
-    icon: <Shield className="w-5 h-5" />,
-    roles: ['club_admin', 'system_admin'],
-    permissions: ['user:read'],
+    id: 'workspace',
+    label: null,
+    items: [
+      {
+        id: 'dashboard',
+        label: 'Today',
+        path: '/dashboard',
+        icon: <Home className="h-[18px] w-[18px]" />,
+        roles: ['athlete', 'coach', 'club_admin', 'system_admin'],
+      },
+    ],
   },
   {
-    id: 'club-settings',
-    label: 'Club Settings',
-    path: '/settings/club',
-    icon: <Settings className="w-5 h-5" />,
-    roles: ['club_admin', 'system_admin'],
-    permissions: ['club:settings'],
+    id: 'training',
+    label: 'Training',
+    items: [
+      {
+        id: 'athletes',
+        label: 'Athletes',
+        path: '/athletes',
+        icon: <Users className="h-[18px] w-[18px]" />,
+        roles: ['athlete', 'coach', 'club_admin', 'system_admin'],
+        permissions: ['athlete:read'],
+      },
+      {
+        id: 'workouts',
+        label: 'Workouts',
+        path: '/workouts',
+        icon: <Dumbbell className="h-[18px] w-[18px]" />,
+        roles: ['athlete', 'coach', 'club_admin', 'system_admin'],
+        permissions: ['workout:read'],
+      },
+      {
+        id: 'recommendations',
+        label: 'Smart plan',
+        path: '/recommendations',
+        icon: <Sparkles className="h-[18px] w-[18px]" />,
+        roles: ['athlete', 'coach', 'club_admin', 'system_admin'],
+        permissions: ['workout:read'],
+      },
+      {
+        id: 'attendance',
+        label: 'Attendance',
+        path: '/attendance',
+        icon: <Calendar className="h-[18px] w-[18px]" />,
+        roles: ['athlete', 'coach', 'club_admin', 'system_admin'],
+        permissions: ['attendance:read'],
+      },
+      {
+        id: 'performance',
+        label: 'Performance',
+        path: '/performance',
+        icon: <Activity className="h-[18px] w-[18px]" />,
+        roles: ['athlete', 'coach', 'club_admin', 'system_admin'],
+        permissions: ['performance:read'],
+      },
+    ],
   },
-];
-
-const systemAdminNavItems: NavItem[] = [
   {
-    id: 'platform-users',
-    label: 'Platform Users',
-    path: '/admin/users',
-    icon: <Shield className="w-5 h-5" />,
-    roles: ['system_admin'],
+    id: 'care',
+    label: 'Athlete care',
+    items: [
+      {
+        id: 'injuries',
+        label: 'Injuries',
+        path: '/injuries',
+        icon: <AlertTriangle className="h-[18px] w-[18px]" />,
+        roles: ['coach', 'club_admin', 'system_admin'],
+        permissions: ['injury:read'],
+      },
+      {
+        id: 'permissions',
+        label: 'Permissions',
+        path: '/permissions',
+        icon: <FileText className="h-[18px] w-[18px]" />,
+        roles: ['coach', 'club_admin', 'system_admin'],
+        permissions: ['permission:read'],
+      },
+    ],
+  },
+  {
+    id: 'club',
+    label: 'Club',
+    items: [
+      {
+        id: 'analytics',
+        label: 'Analytics',
+        path: '/analytics',
+        icon: <BarChart3 className="h-[18px] w-[18px]" />,
+        roles: ['coach', 'club_admin', 'system_admin'],
+        permissions: ['analytics:read'],
+      },
+      {
+        id: 'announcements',
+        label: 'Announcements',
+        path: '/announcements',
+        icon: <Megaphone className="h-[18px] w-[18px]" />,
+        roles: ['athlete', 'coach', 'club_admin', 'system_admin'],
+        permissions: ['announcement:read'],
+      },
+    ],
+  },
+  {
+    id: 'admin',
+    label: 'Administration',
+    items: [
+      {
+        id: 'users',
+        label: 'User management',
+        path: '/settings/users',
+        icon: <Shield className="h-[18px] w-[18px]" />,
+        roles: ['club_admin', 'system_admin'],
+        permissions: ['user:read'],
+      },
+      {
+        id: 'club-settings',
+        label: 'Club settings',
+        path: '/settings/club',
+        icon: <Settings className="h-[18px] w-[18px]" />,
+        roles: ['club_admin', 'system_admin'],
+        permissions: ['club:settings'],
+      },
+      {
+        id: 'platform-users',
+        label: 'Platform users',
+        path: '/admin/users',
+        icon: <Shield className="h-[18px] w-[18px]" />,
+        roles: ['system_admin'],
+      },
+    ],
   },
 ];
 
@@ -155,138 +181,129 @@ export function Sidebar({ className, collapsed = false, onToggleCollapse }: Side
   const { user, hasPermission, hasRole } = useAuth();
 
   // Guests see the full module list so they can explore what the platform does before
-  // creating an account. Admin-only destinations stay hidden — they would only lead to a
+  // creating an account. Administration stays hidden — those destinations only lead to a
   // permission redirect.
   const isGuest = !user;
 
-  const filteredNavItems = isGuest
-    ? navigationConfig
-    : navigationConfig.filter(item => {
-      if (item.roles && !hasRole(item.roles)) return false;
-      if (item.permissions && !item.permissions.some(p => hasPermission(p))) return false;
-      return true;
-    });
-
-  const filteredClubAdminItems = isGuest
-    ? []
-    : clubAdminNavItems.filter(item => {
-      if (item.roles && !hasRole(item.roles)) return false;
-      if (item.permissions && !item.permissions.some(p => hasPermission(p))) return false;
-      return true;
-    });
-
-  const filteredSystemAdminItems = isGuest
-    ? []
-    : systemAdminNavItems.filter(item => item.roles && hasRole(item.roles));
-  const allNavItems: NavItem[] = [...filteredNavItems, ...filteredClubAdminItems, ...filteredSystemAdminItems];
-
-  const tabs = allNavItems.map(item => ({
-    id: item.id,
-    label: item.label,
-    count: item.injuryCount,
-    icon: item.icon,
-    variant: item.id === 'injuries' && (item.injuryCount || 0) > 0 ? 'danger' as const : 'default' as const,
-  }));
-
-  const handleTabChange = (id: string) => {
-    const item = allNavItems.find(i => i.id === id);
-    if (item?.path) {
-      navigate(item.path);
-    }
+  const visible = (item: NavItem) => {
+    if (isGuest) return true;
+    if (item.roles && !hasRole(item.roles)) return false;
+    if (item.permissions && !item.permissions.some(p => hasPermission(p))) return false;
+    return true;
   };
 
-  const currentItem = allNavItems.find(item => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`));
-  const currentPath = currentItem?.id || location.pathname.split('/')[1] || 'dashboard';
+  const groups = navigationGroups
+    .filter(group => !isGuest || group.id !== 'admin')
+    .map(group => ({ ...group, items: group.items.filter(visible) }))
+    .filter(group => group.items.length > 0);
+
+  const allItems = groups.flatMap(group => group.items);
+
+  const currentItem = allItems.find(
+    item => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)
+  );
 
   const sidebarWidth = collapsed ? 'w-lane-sm' : 'w-lane';
-  const logoText = collapsed ? null : <span className="font-display text-xl tracking-wide text-white">ST<span className="text-volt">M</span>S</span>;
 
   return (
-    <aside className={cn(
-      'fixed left-0 top-0 z-40 h-screen bg-ink border-r border-line flex flex-col transition-all duration-300 lg:translate-x-0',
-      sidebarWidth,
-      className
-    )}>
-      {/* Logo & Collapse Toggle */}
-      <div className="h-16 px-space-md border-b border-line flex items-center justify-between">
+    <aside
+      className={cn(
+        'fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-border bg-coal transition-all duration-300 lg:translate-x-0',
+        sidebarWidth,
+        className
+      )}
+    >
+      {/* Brand */}
+      <div className={cn('flex h-14 shrink-0 items-center border-b border-border', collapsed ? 'justify-center px-2' : 'justify-between px-3')}>
         <button
           onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-3 w-full text-left"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+          className="group flex items-center gap-2.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-volt/70 focus-visible:ring-offset-2 focus-visible:ring-offset-coal"
+          aria-label="STMS home"
         >
-          <div className="w-8 h-8 rounded-lg bg-volt flex items-center justify-center flex-shrink-0">
-            <Zap size={18} strokeWidth={2.6} className="text-ink" />
-          </div>
-          {logoText}
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-volt text-ink transition-transform duration-300 group-hover:rotate-[-8deg]">
+            <Zap size={17} strokeWidth={2.8} />
+          </span>
+          {!collapsed && (
+            <span className="font-display text-lg tracking-[0.02em] text-text-primary">
+              ST<span className="text-volt">M</span>S
+            </span>
+          )}
         </button>
-        <button
-          onClick={onToggleCollapse}
-          className="p-1.5 rounded-lg text-fog hover:text-white hover:bg-white/[0.03] transition-colors lg:hidden"
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          aria-expanded={!collapsed}
-        >
-          {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
-        </button>
+        {!collapsed && onToggleCollapse && (
+          <button
+            onClick={onToggleCollapse}
+            className="hidden rounded-md p-1.5 text-text-muted transition-colors hover:bg-white/[0.05] hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-volt/70 lg:grid"
+            aria-label="Collapse sidebar"
+            aria-expanded={!collapsed}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
-      {/* Navigation Lanes */}
-      <nav className="flex-1 overflow-y-auto py-space-md px-space-md" aria-label="Main navigation" role="navigation">
-        {!collapsed && <VTabs
-          tabs={tabs}
-          activeId={currentPath}
-          onChange={handleTabChange}
-        />}
-        {collapsed && (
-          <div className="flex flex-col gap-1">
-            {tabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => handleTabChange(tab.id)}
-                className={cn(
-                  'v-tab relative',
-                  currentPath === tab.id && 'v-tab-active',
-                  tab.variant === 'danger' && 'v-tab-danger'
-                )}
-                aria-label={tab.label}
-                aria-current={currentPath === tab.id ? 'page' : undefined}
-              >
-                <span className="flex items-center justify-center w-full">
-                  {tab.icon}
-                </span>
-                {tab.count !== undefined && tab.count > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-danger-500 text-white text-[10px] font-medium flex items-center justify-center">
-                    {tab.count > 9 ? '9+' : tab.count}
-                  </span>
-                )}
-                <div className="absolute left-full top-0 w-40 p-2 bg-ink border border-line rounded-lg shadow-[0_20px_40px_-10px_rgba(0,0,0,0.5)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50 whitespace-nowrap">
-                  {tab.label}
-                </div>
-              </button>
-            ))}
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto px-2 py-3" aria-label="Main navigation">
+        {groups.map(group => (
+          <div key={group.id} className="mb-4 last:mb-0">
+            {!collapsed && group.label && <p className="section-label mb-1.5 px-2.5">{group.label}</p>}
+            <div className="space-y-0.5">
+              {group.items.map(item => {
+                const active = currentItem?.id === item.id;
+
+                if (collapsed) {
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => navigate(item.path)}
+                      className={cn(
+                        'group relative flex w-full items-center justify-center rounded-md py-2.5 transition-colors',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-volt/70',
+                        active ? 'bg-white/[0.06] text-volt' : 'text-text-secondary hover:bg-white/[0.04] hover:text-text-primary'
+                      )}
+                      aria-label={item.label}
+                      aria-current={active ? 'page' : undefined}
+                    >
+                      {item.icon}
+                      <span className="pointer-events-none absolute left-full z-50 ml-2 hidden whitespace-nowrap rounded-md border border-border bg-surface px-2 py-1 text-caption text-text-primary shadow-shadow-lg group-hover:block">
+                        {item.label}
+                      </span>
+                    </button>
+                  );
+                }
+
+                return (
+                  <VTab
+                    key={item.id}
+                    label={item.label}
+                    icon={item.icon}
+                    active={active}
+                    onClick={() => navigate(item.path)}
+                    aria-current={active ? 'page' : undefined}
+                  />
+                );
+              })}
+            </div>
           </div>
-        )}
+        ))}
       </nav>
 
-      {/* User info at bottom */}
-      <div className={cn('p-space-md border-t border-line transition-all duration-300', collapsed && 'px-space-md')}>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-volt/10 flex items-center justify-center text-volt font-medium flex-shrink-0">
-            {user ? user.name.charAt(0).toUpperCase() : <Zap size={16} strokeWidth={2.4} />}
-          </div>
+      {/* Account */}
+      <div className="shrink-0 border-t border-border p-2">
+        <div className={cn('flex items-center gap-2.5 rounded-md px-1.5 py-1.5', collapsed && 'justify-center')}>
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-volt/10 text-body-sm font-semibold text-volt">
+            {user ? user.name.charAt(0).toUpperCase() : <Zap size={15} strokeWidth={2.4} />}
+          </span>
           {!collapsed && (
-            <div className="flex-1 min-w-0">
-              <p className="text-body-sm font-medium text-white truncate">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-body-sm font-medium text-text-primary">
                 {user ? user.name : 'Browsing as guest'}
               </p>
               {user ? (
-                <p className="text-caption text-fog truncate capitalize">
-                  {user.role.replace('_', ' ')}
-                </p>
+                <p className="truncate text-caption capitalize text-text-muted">{user.role.replace('_', ' ')}</p>
               ) : (
                 <button
                   onClick={() => navigate('/login')}
-                  className="text-caption text-volt hover:underline"
-                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                  className="text-caption font-medium text-volt hover:underline"
                 >
                   Sign in
                 </button>
@@ -294,6 +311,17 @@ export function Sidebar({ className, collapsed = false, onToggleCollapse }: Side
             </div>
           )}
         </div>
+
+        {collapsed && onToggleCollapse && (
+          <button
+            onClick={onToggleCollapse}
+            className="mt-1 hidden w-full items-center justify-center rounded-md py-1.5 text-text-muted transition-colors hover:bg-white/[0.05] hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-volt/70 lg:flex"
+            aria-label="Expand sidebar"
+            aria-expanded={!collapsed}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        )}
       </div>
     </aside>
   );

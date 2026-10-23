@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, Building2, Search, Shield, Trash2, Users } from 'lucide-react';
 import { toast } from 'sonner';
-import { Avatar, Badge, Button, Card, CardContent, ConfirmModal, Input, Modal, Select } from '@/components/ui';
+import { Avatar, Button, Card, CardContent, ConfirmModal, EmptyState, Input, Modal, PageHeader, Select, Stat } from '@/components/ui';
 import { clubApi, userApi } from '@/services/api';
 import { Club, User } from '@/types';
 import { useAuth } from '@/context/AuthContext';
@@ -130,35 +130,74 @@ export function SystemUserManagement() {
   };
 
   return (
-    <div className="space-y-6">
-      <section className="surface-raised relative overflow-hidden p-6 sm:p-8">
-        <div className="absolute right-0 top-0 h-full w-1.5 bg-gradient-to-b from-sky-400 via-sky-500 to-rose-400" />
-        <p className="text-sm font-semibold text-sky-400">PLATFORM ADMINISTRATION</p>
-        <h1 className="mt-2 text-3xl font-bold text-text-primary">Account control center</h1>
-        <p className="mt-2 max-w-2xl text-text-secondary">Search every STMS account and permanently remove an account from Firebase Authentication and the STMS database.</p>
+    <div className="page-shell">
+      <PageHeader
+        title="Account control center"
+        description="Search every STMS account and permanently remove an account from Firebase Authentication and the STMS database."
+        meta={
+          <span className="inline-flex items-baseline gap-1.5">
+            <span className="num text-text-secondary">{loading ? '—' : total}</span> accounts matching filters
+          </span>
+        }
+      />
+
+      <section className="grid gap-3 sm:max-w-xs" aria-label="Platform account count">
+        <Stat label="Accounts matching filters" value={loading ? '—' : total} hint="across every club" icon={<Users className="h-4 w-4" />} tone="volt" />
       </section>
 
-      <Card><CardContent className="flex items-center gap-4 p-5">
-        <Users className="h-8 w-8 text-sky-400" />
-        <div><p className="text-sm text-text-secondary">Accounts matching filters</p><p className="text-2xl font-bold text-text-primary">{loading ? '—' : total}</p></div>
-      </CardContent></Card>
-
-      <Card><CardContent className="space-y-5 p-5 sm:p-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><h2 className="text-xl font-semibold text-text-primary">Club directory</h2><p className="mt-1 text-sm text-text-secondary">Create a club or attach your system-admin account to an existing club to open its roster.</p></div><Button onClick={() => setCreateClubOpen(true)} leftIcon={<Building2 className="h-4 w-4" />}>Create a club</Button></div>
-        {clubsLoading ? <div className="py-8 text-center text-text-secondary" role="status">Loading clubs…</div> : clubs.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border px-6 py-10 text-center"><Building2 className="mx-auto h-8 w-8 text-text-muted" /><h3 className="mt-3 font-semibold text-text-primary">No clubs found in this database</h3><p className="mt-1 text-sm text-text-secondary">If you expected seeded clubs, check that the backend is connected to the same MongoDB database where they were created.</p></div>
-        ) : (
-          <div className="grid gap-3 md:grid-cols-2">{clubs.map(club => <div key={club.id} className="flex flex-col gap-4 rounded-xl border border-border bg-cold-900/40 p-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex min-w-0 items-center gap-3"><span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: `${club.branding?.primaryColor || '#0ea5e9'}30`, color: club.branding?.primaryColor || '#0ea5e9' }}><Building2 className="h-5 w-5" /></span><div className="min-w-0"><p className="truncate font-semibold text-text-primary">{club.name}</p><p className="truncate text-sm text-text-secondary">{club.slug}</p><p className="mt-1 text-xs text-text-muted">{club.hasAccess ? 'Admin access active' : 'Not attached to your account'}</p></div></div><Button size="sm" className="shrink-0" loading={activatingClubId === club.id} disabled={Boolean(activatingClubId)} onClick={() => void openClubRoster(club)}>{club.hasAccess ? 'Manage users' : 'Add my access'}</Button></div>)}</div>
-        )}
-      </CardContent></Card>
+      <Card padding="none">
+        <CardContent className="space-y-4 p-4 sm:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-heading-sm font-semibold text-text-primary">Club directory</h2>
+              <p className="mt-0.5 text-caption text-text-secondary">Create a club or attach your system-admin account to an existing club to open its roster.</p>
+            </div>
+            <Button onClick={() => setCreateClubOpen(true)} leftIcon={<Building2 className="h-4 w-4" />}>Create a club</Button>
+          </div>
+          {clubsLoading ? <p className="py-8 text-center text-body-sm text-text-secondary" role="status">Loading clubs…</p> : clubs.length === 0 ? (
+            <EmptyState
+              icon={<Building2 className="h-5 w-5" />}
+              title="No clubs found in this database"
+              description="If you expected seeded clubs, check that the backend is connected to the same MongoDB database where they were created."
+            />
+          ) : (
+            <div className="grid gap-2.5 md:grid-cols-2">
+              {clubs.map(club => (
+                <div key={club.id} className="flex flex-col gap-4 rounded-radius-md border border-border bg-ink/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-radius-md"
+                      style={{ backgroundColor: `${club.branding?.primaryColor || '#D8FF3E'}26`, color: club.branding?.primaryColor || '#D8FF3E' }}
+                    >
+                      <Building2 className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-body-sm font-semibold text-text-primary">{club.name}</p>
+                      <p className="num truncate text-caption text-text-muted">{club.slug}</p>
+                      <p className="mt-0.5 text-micro text-text-muted">{club.hasAccess ? 'Admin access active' : 'Not attached to your account'}</p>
+                    </div>
+                  </div>
+                  <Button size="sm" className="shrink-0" loading={activatingClubId === club.id} disabled={Boolean(activatingClubId)} onClick={() => void openClubRoster(club)}>
+                    {club.hasAccess ? 'Manage users' : 'Add my access'}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Modal isOpen={createClubOpen} onClose={() => setCreateClubOpen(false)} title="Create a club" description="A new club starts with your system-admin account as its head coach." size="sm">
         <form onSubmit={createClub} className="space-y-4"><Input label="Club name" required minLength={2} maxLength={100} value={newClubName} onChange={event => setNewClubName(event.target.value)} placeholder="Aditya Athletics" /><Input label="URL slug" maxLength={50} pattern="[a-z0-9-]+" value={newClubSlug} onChange={event => setNewClubSlug(event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))} hint="Optional. Use lowercase letters, numbers, and hyphens." /><div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={() => setCreateClubOpen(false)}>Cancel</Button><Button type="submit" loading={creatingClub} disabled={newClubName.trim().length < 2}>Create club</Button></div></form>
       </Modal>
 
-      <Card><CardContent className="space-y-5 p-5 sm:p-6">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-          <div><h2 className="text-xl font-semibold text-text-primary">All platform accounts</h2><p className="mt-1 text-sm text-text-secondary">System administrators cannot delete their own account from this screen.</p></div>
+      <Card padding="none">
+        <CardContent className="space-y-4 p-4 sm:p-5">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+            <div>
+              <h2 className="text-heading-sm font-semibold text-text-primary">All platform accounts</h2>
+              <p className="mt-0.5 text-caption text-text-secondary">System administrators cannot delete their own account from this screen.</p>
+            </div>
           <div className="grid gap-3 sm:grid-cols-3 xl:min-w-[680px]">
             <Input aria-label="Search platform accounts" placeholder="Search name, email, or UID" value={search} onChange={event => { setPage(1); setSearch(event.target.value); }} leftIcon={<Search className="h-4 w-4" />} />
             <Select aria-label="Filter by role" value={role} onChange={event => { setPage(1); setRole(event.target.value); }} options={roleOptions} />
@@ -166,32 +205,72 @@ export function SystemUserManagement() {
           </div>
         </div>
 
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-text-secondary">
-          <div className="flex gap-3"><AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" /><p>Permanent deletion removes the Firebase identity, MongoDB user record, club memberships, pending invitations, and refresh sessions. Historical audit events are retained without the account profile for accountability.</p></div>
+        <div className="rounded-radius-md border border-amber-500/30 bg-amber-500/[0.05] p-3.5">
+          <div className="flex gap-2.5">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" aria-hidden="true" />
+            <p className="text-body-sm leading-relaxed text-text-secondary">Permanent deletion removes the Firebase identity, MongoDB user record, club memberships, pending invitations, and refresh sessions. Historical audit events are retained without the account profile for accountability.</p>
+          </div>
         </div>
 
-        {loading ? <div className="py-14 text-center text-text-secondary" role="status">Loading platform accounts…</div> : users.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border px-6 py-14 text-center">
-            <Shield className="mx-auto h-9 w-9 text-text-muted" />
-            <h3 className="mt-3 font-semibold text-text-primary">No accounts match these filters</h3>
-            <p className="mt-1 text-sm text-text-secondary">Try a different search term or clear a filter.</p>
-          </div>
+        {loading ? <p className="py-14 text-center text-text-secondary" role="status">Loading platform accounts…</p> : users.length === 0 ? (
+          <EmptyState
+            icon={<Shield className="h-5 w-5" />}
+            title="No accounts match these filters"
+            description="Try a different search term or clear a filter."
+          />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] text-left">
-              <thead><tr className="border-b border-border text-xs uppercase tracking-wide text-text-muted"><th className="px-3 py-3 font-medium">Account</th><th className="px-3 py-3 font-medium">Role</th><th className="px-3 py-3 font-medium">Status</th><th className="px-3 py-3 font-medium">Clubs</th><th className="px-3 py-3 font-medium">Last active</th><th className="px-3 py-3 text-right font-medium">Action</th></tr></thead>
-              <tbody>{users.map(member => <tr key={member.id} className="border-b border-border/70 last:border-0">
-                <td className="px-3 py-4"><div className="flex items-center gap-3"><Avatar name={member.name} src={member.avatarUrl || undefined} size="sm" /><div className="min-w-0"><p className="truncate font-medium text-text-primary">{member.name}</p><p className="truncate text-sm text-text-secondary">{member.email}</p><p className="mt-0.5 font-mono text-xs text-text-muted">UID {member.firebaseUid}</p></div></div></td>
-                <td className="px-3 py-4 capitalize text-text-secondary">{member.role.replace('_', ' ')}</td>
-                <td className="px-3 py-4"><Badge variant={member.status === 'active' ? 'success' : 'neutral'}>{member.status}</Badge></td>
-                <td className="px-3 py-4 text-sm text-text-secondary">{member.clubIds?.length || 0}</td>
-                <td className="px-3 py-4 text-sm text-text-secondary">{member.lastLoginAt ? new Date(member.lastLoginAt).toLocaleDateString() : 'Never'}</td>
-                <td className="px-3 py-4 text-right">{member.firebaseUid === currentUser?.firebaseUid ? <span className="text-xs text-text-muted">You</span> : <Button variant="ghost" size="sm" className="text-rose-400 hover:text-rose-300" aria-label={`Permanently delete ${member.email}`} onClick={() => setDeleteTarget(member)} leftIcon={<Trash2 className="h-4 w-4" />}>Delete</Button>}</td>
-              </tr>)}</tbody>
+            <table className="data-table min-w-[820px]">
+              <thead>
+                <tr>
+                  <th>Account</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Clubs</th>
+                  <th>Last active</th>
+                  <th className="text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map(member => (
+                  <tr key={member.id}>
+                    <td>
+                      <div className="flex items-center gap-3">
+                        <Avatar name={member.name} src={member.avatarUrl || undefined} size="sm" />
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-text-primary">{member.name}</p>
+                          <p className="truncate text-caption text-text-secondary">{member.email}</p>
+                          <p className="num mt-0.5 truncate text-micro text-text-muted">UID {member.firebaseUid}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="capitalize text-text-secondary">{member.role.replace('_', ' ')}</td>
+                    <td><span className={member.status === 'active' ? 'badge-success' : 'badge-neutral'}>{member.status}</span></td>
+                    <td className="num text-text-secondary">{member.clubIds?.length || 0}</td>
+                    <td className="num text-caption text-text-secondary">{member.lastLoginAt ? new Date(member.lastLoginAt).toLocaleDateString() : 'Never'}</td>
+                    <td className="text-right">
+                      {member.firebaseUid === currentUser?.firebaseUid ? (
+                        <span className="text-micro text-text-muted">You</span>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-danger-400 hover:text-danger-300"
+                          aria-label={`Permanently delete ${member.email}`}
+                          onClick={() => setDeleteTarget(member)}
+                          leftIcon={<Trash2 className="h-4 w-4" />}
+                        >
+                          Delete
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
             </table>
           </div>
         )}
-        {!loading && totalPages > 1 && <div className="flex items-center justify-between border-t border-border pt-4"><p className="text-sm text-text-secondary">Page {page} of {totalPages}</p><div className="flex gap-2"><Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(value => value - 1)}>Previous</Button><Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(value => value + 1)}>Next</Button></div></div>}
+        {!loading && totalPages > 1 && <div className="flex items-center justify-between border-t border-border pt-4"><p className="num text-caption text-text-muted">Page {page} of {totalPages}</p><div className="flex gap-2"><Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(value => value - 1)}>Previous</Button><Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(value => value + 1)}>Next</Button></div></div>}
       </CardContent></Card>
 
       <ConfirmModal isOpen={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)} onConfirm={() => void deleteAccount()} title="Permanently delete this account?" message={`This will permanently delete ${deleteTarget?.email || 'this account'} from Firebase and MongoDB, remove their club memberships and pending invitations, and revoke refresh sessions. This cannot be undone.`} confirmText="Delete permanently" loading={deleting} />

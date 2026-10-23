@@ -148,15 +148,18 @@ const firebaseAuthHandler = asyncHandler(async (req, res) => {
   } else {
     if (user.status !== 'active') throw new UnauthorizedError('This account is not active');
 
-    const permissionsMissing = !user.permissions?.length;
-    if (permissionsMissing) {
-      user.permissions = permissionsForRole(user.role);
+    // `permissions` is a cached copy of the role matrix. Reconcile it on every sign-in so a
+    // permission change reaches existing accounts instead of only newly created ones.
+    const expectedPermissions = permissionsForRole(user.role);
+    const permissionsChanged = JSON.stringify(user.permissions || []) !== JSON.stringify(expectedPermissions);
+    if (permissionsChanged) {
+      user.permissions = expectedPermissions;
       await db.collection('users').updateOne({ _id: user._id }, { $set: { permissions: user.permissions } });
     }
 
     // Custom claims live on the uid, so a newly linked account needs them written even when
     // its stored permissions were already in place.
-    if (permissionsMissing || linkedToNewUid) {
+    if (permissionsChanged || linkedToNewUid) {
       await setUserClaims(uid, {
         role: user.role,
         clubIds: getClubIds(user),
@@ -583,7 +586,15 @@ router.post('/switch-club', authenticate, validate(switchClubSchema), asyncHandl
     { $set: { activeClubId: new ObjectId(clubId), role, permissions, updatedAt: new Date() } }
   );
 
-  const activeMemberships = await db.collection('club_memberships').distinct('clubId', { userId: user._id, status: 'active' });
+  // `distinct` is not part of MongoDB's versioned API v1, and Atlas rejects it when
+  // `apiStrict: true` is enabled. Read the rows and de-duplicate them here instead.
+  const activeMembershipRows = await db.collection('club_memberships')
+    .find({ userId: user._id, status: 'active' })
+    .project({ clubId: 1 })
+    .toArray();
+  const activeMemberships = [...new Map(
+    activeMembershipRows.map(row => [row.clubId.toString(), row.clubId])
+  ).values()];
   const clubIds = activeMemberships.map((id: ObjectId) => id.toString());
   await db.collection('users').updateOne(
     { _id: user._id },

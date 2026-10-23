@@ -15,11 +15,11 @@ const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'analytics:read', 'analytics:report', 'profile:read', 'profile:write',
   ],
   coach: [
-    'athlete:read', 'athlete:write', 'attendance:read', 'attendance:write',
+    'athlete:read', 'athlete:write', 'attendance:read', 'attendance:write', 'attendance:report',
     'workout:read', 'workout:write', 'workout:assign', 'performance:read',
     'performance:write', 'injury:read', 'injury:write', 'injury:rtp',
     'permission:read', 'permission:write', 'announcement:read',
-    'profile:read', 'profile:write',
+    'analytics:read', 'profile:read', 'profile:write',
   ],
   athlete: [
     'profile:read', 'profile:write', 'workout:read', 'workout:complete',

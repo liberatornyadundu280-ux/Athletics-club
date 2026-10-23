@@ -21,6 +21,7 @@
     "migrate:test": "ts-node src/migrate.ts --db stms_test",
     "admin:promote": "ts-node src/scripts/promote-system-admin.ts",
     "db:seed": "ts-node src/seed.ts",
+    "db:seed:exercises": "ts-node src/seed-exercises.ts",
     "db:seed:history": "ts-node src/seed-history.ts"
   },
   "dependencies": {

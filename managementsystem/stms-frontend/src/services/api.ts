@@ -445,7 +445,7 @@ class ApiService {
 
   async getWorkouts() { const response = await this.client.get<ApiResponse<any[]>>('/workouts'); return response.data.data || []; }
   async getWorkout(id: string) { const response = await this.client.get<ApiResponse<any>>(`/workouts/${id}`); return response.data.data!; }
-  async getExercises() { const response = await this.client.get<ApiResponse<any[]>>('/workouts/exercises'); return response.data.data || []; }
+  async getExercises(params?: { search?: string; category?: string; phase?: string; eventGroup?: string; equipment?: string; muscle?: string; level?: string; source?: string; limit?: number; offset?: number }) { const response = await this.client.get<ApiResponse<any[]>>('/workouts/exercises', { params }); return response.data.data || []; }
   async createExercise(data: Record<string, unknown>) { const response = await this.client.post<ApiResponse<any>>('/workouts/exercises', data); return response.data.data!; }
   async createWorkout(data: Record<string, unknown>) { const response = await this.client.post<ApiResponse<any>>('/workouts', data); return response.data.data!; }
   async updateWorkout(id: string, data: Record<string, unknown>) { const response = await this.client.patch<ApiResponse<any>>(`/workouts/${id}`, data); return response.data.data!; }

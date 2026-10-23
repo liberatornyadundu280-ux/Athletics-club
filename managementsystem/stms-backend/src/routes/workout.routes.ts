@@ -5,14 +5,52 @@ import { getDatabase } from '../config/database';
 import { asyncHandler } from '../middleware/error-handler';
 import { requirePermission } from '../middleware/rbac.middleware';
 import { validate } from '../middleware/validation.middleware';
-import { ConflictError, ForbiddenError, NotFoundError } from '../utils/errors';
+import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../utils/errors';
 import { captureWorkoutOpen } from '../services/attendance.service';
 import { generateRecommendation } from '../services/recommendation.service';
 import { RuleEngine } from '../services/ruleEngine';
+import {
+  ENERGY_SYSTEMS,
+  EVENT_GROUPS,
+  EXERCISE_CATEGORIES,
+  EXERCISE_LEVELS,
+  EXERCISE_PHASES,
+  EXERCISE_SOURCES,
+} from '../types/exercise';
 
 const router = Router();
 const id = z.string().regex(/^[0-9a-fA-F]{24}$/);
-const exerciseSchema = z.object({ name: z.string().trim().min(2).max(100), description: z.string().max(500).optional(), equipment: z.array(z.string().max(60)).max(10).default([]), primaryMuscles: z.array(z.string().max(60)).max(10).default([]), videoUrl: z.string().url().optional().or(z.literal('')) });
+const exerciseSchema = z.object({
+  name: z.string().trim().min(2).max(100),
+  description: z.string().max(500).optional(),
+  category: z.enum(EXERCISE_CATEGORIES).default('strength'),
+  eventGroups: z.array(z.enum(EVENT_GROUPS)).min(1).max(7).default(['general']),
+  level: z.enum(EXERCISE_LEVELS).default('intermediate'),
+  phase: z.enum(EXERCISE_PHASES).default('strength'),
+  energySystem: z.enum(ENERGY_SYSTEMS).default('mixed'),
+  movementPattern: z.string().trim().max(40).default('strength'),
+  cnsIntensity: z.number().int().min(1).max(5).default(3),
+  equipment: z.array(z.string().max(60)).max(10).default([]),
+  primaryMuscles: z.array(z.string().max(60)).max(10).default([]),
+  secondaryMuscles: z.array(z.string().max(60)).max(10).default([]),
+  contraindications: z.array(z.string().max(60)).max(10).default([]),
+  instructions: z.array(z.string().trim().max(500)).max(12).default([]),
+  tags: z.array(z.string().trim().min(1).max(40)).max(30).default([]),
+  imageUrl: z.string().url().max(500).optional().or(z.literal('')).nullable(),
+  videoUrl: z.string().url().max(500).optional().or(z.literal('')).nullable(),
+});
+const exerciseQuery = z.object({
+  search: z.string().trim().max(80).optional(),
+  category: z.enum(EXERCISE_CATEGORIES).optional(),
+  phase: z.enum(EXERCISE_PHASES).optional(),
+  eventGroup: z.enum(EVENT_GROUPS).optional(),
+  equipment: z.string().trim().max(60).optional(),
+  muscle: z.string().trim().max(60).optional(),
+  level: z.enum(EXERCISE_LEVELS).optional(),
+  source: z.enum(EXERCISE_SOURCES).optional(),
+  limit: z.coerce.number().int().min(1).max(500).default(250),
+  offset: z.coerce.number().int().min(0).default(0),
+});
 const workoutExerciseSchema = z.object({ exerciseId: id.optional().nullable(), name: z.string().trim().min(2).max(100), sets: z.number().int().min(1).max(30), reps: z.string().trim().min(1).max(40), restSeconds: z.number().int().min(0).max(3600).default(0), tempo: z.string().max(30).optional(), targetZone: z.string().max(80).optional(), coachingNotes: z.string().max(500).optional() });
 const workoutSchema = z.object({ name: z.string().trim().min(2).max(120), description: z.string().max(2000).optional(), estimatedDuration: z.number().int().min(1).max(600).default(60), difficulty: z.enum(['beginner', 'intermediate', 'advanced']).default('intermediate'), tags: z.array(z.string().trim().min(1).max(40)).max(20).default([]), exercises: z.array(workoutExerciseSchema).min(1).max(40), isTemplate: z.boolean().default(true) });
 const workoutBody = z.object({ body: workoutSchema });
@@ -22,6 +60,11 @@ const exerciseBody = z.object({ body: exerciseSchema });
 const completeSchema = z.object({ params: z.object({ id }), body: z.object({ durationMinutes: z.number().int().min(0).max(600).optional(), perceivedEffort: z.number().int().min(1).max(10).optional(), painLevel: z.number().int().min(0).max(10).optional(), painLocation: z.string().trim().max(80).optional(), notes: z.string().max(2000).optional(), exerciseResults: z.array(z.object({ exerciseIndex: z.number().int().min(0).max(39), completedSets: z.number().int().min(0).max(30), actualReps: z.string().max(40).optional(), notes: z.string().max(500).optional() })).max(40).optional() }) });
 
 function formatDoc(doc: any) { return { ...doc, id: doc._id.toString(), clubId: doc.clubId?.toString() || null, createdAt: doc.createdAt?.toISOString?.(), updatedAt: doc.updatedAt?.toISOString?.() }; }
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 async function getWorkout(workoutId: string, clubId: ObjectId) {
   if (!id.safeParse(workoutId).success) throw new NotFoundError('Workout');
   const workout = await getDatabase().collection('workouts').findOne({ _id: new ObjectId(workoutId), clubId, archivedAt: { $exists: false } });
@@ -126,15 +169,86 @@ function regulationMessage(readiness: any, score: number | null, volume: number,
 }
 
 router.get('/exercises', requirePermission('workout:read'), asyncHandler(async (req, res) => {
-  const db = getDatabase(); const clubId = new ObjectId(req.clubId);
-  const rows = await db.collection('exercises').find({ $or: [{ clubId }, { clubId: null }] }).sort({ name: 1 }).limit(500).toArray();
-  res.json({ status: 'success', data: rows.map(formatDoc) });
+  const db = getDatabase();
+  const clubId = new ObjectId(req.clubId);
+  const parsed = exerciseQuery.safeParse(req.query);
+  if (!parsed.success) {
+    throw new ValidationError(
+      'Invalid exercise filters',
+      parsed.error.issues.map(issue => ({ field: issue.path.join('.'), message: issue.message }))
+    );
+  }
+
+  const query = parsed.data;
+  const conditions: Record<string, unknown>[] = [{ $or: [{ clubId }, { clubId: null }] }];
+
+  if (query.category) conditions.push({ category: query.category });
+  if (query.phase) conditions.push({ phase: query.phase });
+  if (query.eventGroup) conditions.push({ eventGroups: query.eventGroup });
+  if (query.level) conditions.push({ level: query.level });
+  if (query.source) conditions.push({ source: query.source });
+
+  if (query.equipment) {
+    const regex = new RegExp(escapeRegex(query.equipment), 'i');
+    conditions.push({ equipment: regex });
+  }
+  if (query.muscle) {
+    const regex = new RegExp(escapeRegex(query.muscle), 'i');
+    conditions.push({ $or: [{ primaryMuscles: regex }, { secondaryMuscles: regex }] });
+  }
+  if (query.search) {
+    const regex = new RegExp(escapeRegex(query.search), 'i');
+    conditions.push({
+      $or: [
+        { name: regex },
+        { description: regex },
+        { tags: regex },
+        { primaryMuscles: regex },
+        { secondaryMuscles: regex },
+        { equipment: regex },
+      ],
+    });
+  }
+
+  const filter: Record<string, unknown> = { $and: conditions };
+  const [total, rows] = await Promise.all([
+    db.collection('exercises').countDocuments(filter),
+    db.collection('exercises')
+      .find(filter)
+      .sort({ name: 1 })
+      .skip(query.offset)
+      .limit(query.limit)
+      .toArray(),
+  ]);
+
+  res.json({
+    status: 'success',
+    data: rows.map(formatDoc),
+    meta: { total, limit: query.limit, offset: query.offset },
+  });
 }));
 
 router.post('/exercises', requirePermission('workout:write'), validate(exerciseBody), asyncHandler(async (req, res) => {
-  const input = exerciseBody.shape.body.parse(req.body); const now = new Date();
-  const doc = { _id: new ObjectId(), clubId: new ObjectId(req.clubId), ...input, createdBy: req.user!.uid, createdAt: now, updatedAt: now };
-  await getDatabase().collection('exercises').insertOne(doc);
+  const db = getDatabase();
+  const clubId = new ObjectId(req.clubId);
+  const input = exerciseBody.shape.body.parse(req.body);
+  const duplicate = await db.collection('exercises').findOne({ clubId, name: input.name });
+  if (duplicate) throw new ConflictError('An exercise with that name already exists in your club');
+
+  const now = new Date();
+  const doc = {
+    _id: new ObjectId(),
+    clubId,
+    ...input,
+    imageUrl: input.imageUrl || null,
+    videoUrl: input.videoUrl || null,
+    source: 'club',
+    license: 'Club',
+    createdBy: req.user!.uid,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await db.collection('exercises').insertOne(doc);
   res.status(201).json({ status: 'success', data: formatDoc(doc) });
 }));
 
@@ -266,7 +380,14 @@ router.patch('/:id', requirePermission('workout:write'), validate(workoutPatch),
   const workout = await getWorkout(req.params.id, new ObjectId(req.clubId));
   const input = workoutPatch.shape.body.parse(req.body);
   if (input.exercises) await validateExerciseReferences(input.exercises, new ObjectId(req.clubId));
-  const updated = await getDatabase().collection('workouts').findOneAndUpdate({ _id: workout._id, clubId: new ObjectId(req.clubId) }, { $set: { ...input, updatedAt: new Date() } }, { returnDocument: 'after' });
+  // A starter workout becomes coach-owned the moment it is edited. The seeder can then
+  // refresh the rest of the pack without silently overwriting this coach's changes.
+  const updates: Record<string, unknown> = {
+    ...input,
+    updatedAt: new Date(),
+    ...(workout.starterPack ? { coachEdited: true } : {}),
+  };
+  const updated = await getDatabase().collection('workouts').findOneAndUpdate({ _id: workout._id, clubId: new ObjectId(req.clubId) }, { $set: updates }, { returnDocument: 'after' });
   res.json({ status: 'success', data: formatDoc(updated) });
 }));
 

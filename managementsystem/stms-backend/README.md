@@ -4,7 +4,7 @@ Smart Trainer Management System - Backend API built with Node.js, Express, TypeS
 
 ## Current module status
 
-Sprint 1 account/auth workflows and the Sprint 2–8 feature APIs are implemented in this repository. The application lives in `stms-backend`; deployment requires valid MongoDB, Redis, Firebase Admin, and JWT credentials. Local builds do not verify external service connectivity. Recommendation generation currently uses explainable cold-start rules; there is no trained ML model or worker service configured.
+Sprint 1 account/auth workflows and the Sprint 2-8 feature APIs are implemented in this repository. The application lives in `stms-backend`; deployment requires valid MongoDB, Redis, Firebase Admin, and JWT credentials. Local builds do not verify external service connectivity. A trained XGBoost model and a Redis Streams inference worker live in `feature_engineering/stms_ml/`; when Redis or the worker is unavailable, recommendation generation falls back to explainable cold-start rules.
 
 ## 🚀 Quick Start
 

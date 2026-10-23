@@ -200,10 +200,10 @@ const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     difficulty: 'advanced',
     tags: ['speed', 'sprints', 'max-velocity'],
     exercises: [
-      { exercise: 'A-Skip Drill', sets: 4, reps: '20m', restSeconds: 60, targetZone: 'rhythm', coachingNotes: 'Tall posture, fast ground contact.' },
-      { exercise: 'Flying 30m Sprint', sets: 5, reps: '30m', restSeconds: 240, targetZone: '95-100% max velocity', coachingNotes: 'Full recovery — quality over volume.' },
-      { exercise: 'Box Jump', sets: 4, reps: '5', restSeconds: 120, targetZone: 'explosive', coachingNotes: 'Step down, never rebound.' },
-      { exercise: 'Back Squat', sets: 4, reps: '5', restSeconds: 180, targetZone: '80-85% 1RM', tempo: 'controlled' },
+      { exercise: 'A-Skip', sets: 4, reps: '20m', restSeconds: 60, targetZone: 'rhythm', coachingNotes: 'Tall posture, fast ground contact.' },
+      { exercise: 'Flying 30m', sets: 5, reps: '30m', restSeconds: 240, targetZone: '95-100% max velocity', coachingNotes: 'Full recovery — quality over volume.' },
+      { exercise: 'Box Jump (Multiple Response)', sets: 4, reps: '5', restSeconds: 120, targetZone: 'explosive', coachingNotes: 'Step down, never rebound.' },
+      { exercise: 'Barbell Squat', sets: 4, reps: '5', restSeconds: 180, targetZone: '80-85% 1RM', tempo: 'controlled' },
       { exercise: 'Nordic Hamstring Curl', sets: 3, reps: '6', restSeconds: 90, coachingNotes: 'Slow eccentric, no cramping.' },
       { exercise: 'Plank', sets: 3, reps: '45s', restSeconds: 45 },
       { exercise: 'Mobility Flow', sets: 1, reps: '8 min', restSeconds: 0 },
@@ -221,9 +221,9 @@ const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     difficulty: 'advanced',
     tags: ['speed-endurance', 'sprints'],
     exercises: [
-      { exercise: 'A-Skip Drill', sets: 3, reps: '20m', restSeconds: 60 },
-      { exercise: 'Flying 30m Sprint', sets: 3, reps: '30m', restSeconds: 180, targetZone: '95% max velocity' },
-      { exercise: 'Bounding', sets: 3, reps: '6 contacts', restSeconds: 120 },
+      { exercise: 'A-Skip', sets: 3, reps: '20m', restSeconds: 60 },
+      { exercise: 'Flying 30m', sets: 3, reps: '30m', restSeconds: 180, targetZone: '95% max velocity' },
+      { exercise: 'Alternate Leg Diagonal Bound', sets: 3, reps: '6 contacts', restSeconds: 120 },
       { exercise: 'Romanian Deadlift', sets: 3, reps: '8', restSeconds: 120, targetZone: '70-75% 1RM' },
       { exercise: 'Plank', sets: 3, reps: '45s', restSeconds: 45 },
       { exercise: 'Mobility Flow', sets: 1, reps: '8 min', restSeconds: 0 },
@@ -241,12 +241,12 @@ const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     difficulty: 'intermediate',
     tags: ['strength', 'power'],
     exercises: [
-      { exercise: 'A-Skip Drill', sets: 3, reps: '20m', restSeconds: 45 },
-      { exercise: 'Box Jump', sets: 4, reps: '4', restSeconds: 120 },
-      { exercise: 'Back Squat', sets: 5, reps: '5', restSeconds: 180, targetZone: '80-85% 1RM' },
+      { exercise: 'A-Skip', sets: 3, reps: '20m', restSeconds: 45 },
+      { exercise: 'Box Jump (Multiple Response)', sets: 4, reps: '4', restSeconds: 120 },
+      { exercise: 'Barbell Squat', sets: 5, reps: '5', restSeconds: 180, targetZone: '80-85% 1RM' },
       { exercise: 'Romanian Deadlift', sets: 4, reps: '6', restSeconds: 150, targetZone: '75-80% 1RM' },
-      { exercise: 'Bench Press', sets: 4, reps: '6', restSeconds: 150, targetZone: '75-80% 1RM' },
-      { exercise: 'Pull-Up', sets: 3, reps: '8', restSeconds: 90 },
+      { exercise: 'Barbell Bench Press - Medium Grip', sets: 4, reps: '6', restSeconds: 150, targetZone: '75-80% 1RM' },
+      { exercise: 'Pullups', sets: 3, reps: '8', restSeconds: 90 },
       { exercise: 'Nordic Hamstring Curl', sets: 3, reps: '6', restSeconds: 90 },
       { exercise: 'Plank', sets: 3, reps: '60s', restSeconds: 45 },
     ],
@@ -263,10 +263,10 @@ const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     difficulty: 'intermediate',
     tags: ['jumps', 'technique'],
     exercises: [
-      { exercise: 'A-Skip Drill', sets: 4, reps: '20m', restSeconds: 60, coachingNotes: 'Same rhythm as the approach.' },
-      { exercise: 'Bounding', sets: 4, reps: '6 contacts', restSeconds: 120 },
-      { exercise: 'Box Jump', sets: 3, reps: '5', restSeconds: 120 },
-      { exercise: 'Back Squat', sets: 3, reps: '5', restSeconds: 180, targetZone: '75-80% 1RM' },
+      { exercise: 'A-Skip', sets: 4, reps: '20m', restSeconds: 60, coachingNotes: 'Same rhythm as the approach.' },
+      { exercise: 'Alternate Leg Diagonal Bound', sets: 4, reps: '6 contacts', restSeconds: 120 },
+      { exercise: 'Box Jump (Multiple Response)', sets: 3, reps: '5', restSeconds: 120 },
+      { exercise: 'Barbell Squat', sets: 3, reps: '5', restSeconds: 180, targetZone: '75-80% 1RM' },
       { exercise: 'Nordic Hamstring Curl', sets: 3, reps: '6', restSeconds: 90 },
       { exercise: 'Mobility Flow', sets: 1, reps: '10 min', restSeconds: 0 },
     ],
@@ -283,9 +283,9 @@ const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     difficulty: 'advanced',
     tags: ['jumps', 'power'],
     exercises: [
-      { exercise: 'A-Skip Drill', sets: 3, reps: '20m', restSeconds: 60 },
-      { exercise: 'Box Jump', sets: 5, reps: '3', restSeconds: 150, coachingNotes: 'Maximal intent, minimal ground time.' },
-      { exercise: 'Bounding', sets: 3, reps: '6 contacts', restSeconds: 150 },
+      { exercise: 'A-Skip', sets: 3, reps: '20m', restSeconds: 60 },
+      { exercise: 'Box Jump (Multiple Response)', sets: 5, reps: '3', restSeconds: 150, coachingNotes: 'Maximal intent, minimal ground time.' },
+      { exercise: 'Alternate Leg Diagonal Bound', sets: 3, reps: '6 contacts', restSeconds: 150 },
       { exercise: 'Romanian Deadlift', sets: 3, reps: '6', restSeconds: 120, targetZone: '70-75% 1RM' },
       { exercise: 'Plank', sets: 3, reps: '45s', restSeconds: 45 },
     ],
@@ -303,10 +303,10 @@ const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     tags: ['throws', 'power'],
     exercises: [
       { exercise: 'Mobility Flow', sets: 1, reps: '8 min', restSeconds: 0 },
-      { exercise: 'Med Ball Overhead Throw', sets: 5, reps: '4', restSeconds: 120, coachingNotes: 'Throw through the wall, not at it.' },
-      { exercise: 'Back Squat', sets: 4, reps: '5', restSeconds: 180, targetZone: '80-85% 1RM' },
-      { exercise: 'Bench Press', sets: 4, reps: '6', restSeconds: 150, targetZone: '75-80% 1RM' },
-      { exercise: 'Pull-Up', sets: 3, reps: '8', restSeconds: 90 },
+      { exercise: 'Standing Two-Arm Overhead Throw', sets: 5, reps: '4', restSeconds: 120, coachingNotes: 'Throw through the wall, not at it.' },
+      { exercise: 'Barbell Squat', sets: 4, reps: '5', restSeconds: 180, targetZone: '80-85% 1RM' },
+      { exercise: 'Barbell Bench Press - Medium Grip', sets: 4, reps: '6', restSeconds: 150, targetZone: '75-80% 1RM' },
+      { exercise: 'Pullups', sets: 3, reps: '8', restSeconds: 90 },
       { exercise: 'Plank', sets: 3, reps: '45s', restSeconds: 45 },
     ],
   },
@@ -323,8 +323,8 @@ const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     tags: ['endurance', 'aerobic'],
     exercises: [
       { exercise: 'Mobility Flow', sets: 1, reps: '10 min', restSeconds: 0 },
-      { exercise: 'A-Skip Drill', sets: 3, reps: '20m', restSeconds: 60 },
-      { exercise: 'Bounding', sets: 3, reps: '6 contacts', restSeconds: 90 },
+      { exercise: 'A-Skip', sets: 3, reps: '20m', restSeconds: 60 },
+      { exercise: 'Alternate Leg Diagonal Bound', sets: 3, reps: '6 contacts', restSeconds: 90 },
       { exercise: 'Romanian Deadlift', sets: 3, reps: '8', restSeconds: 120, targetZone: '65-70% 1RM' },
       { exercise: 'Plank', sets: 3, reps: '60s', restSeconds: 45 },
       { exercise: 'Mobility Flow', sets: 1, reps: '8 min', restSeconds: 0 },
@@ -1191,8 +1191,18 @@ async function main(): Promise<void> {
     const profilesCreated = await ensureAthleteProfiles(db, clubId);
     if (profilesCreated) console.log(`  Created ${profilesCreated} missing athlete profile(s) for athlete logins`);
 
-    const exerciseDocs = await db.collection('exercises').find({ clubId }).toArray();
-    const exercises: ExerciseMap = new Map(exerciseDocs.map((exercise) => [exercise.name as string, exercise._id as ObjectId]));
+    const exerciseDocs = await db
+      .collection('exercises')
+      .find({ $or: [{ clubId }, { clubId: null }] })
+      .project({ _id: 1, name: 1, clubId: 1 })
+      .toArray();
+    const exercises: ExerciseMap = new Map();
+    for (const exercise of exerciseDocs) {
+      const name = exercise.name as string;
+      if (!exercises.has(name) || exercise.clubId === null) {
+        exercises.set(name, exercise._id as ObjectId);
+      }
+    }
     if (exercises.size === 0) throw new Error('No exercises found for this club — run npm run db:seed first.');
 
     const workload = await db

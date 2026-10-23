@@ -2,9 +2,15 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Activity, RefreshCw, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Badge, Button, Card, CardContent, Select } from '@/components/ui';
+import { Button, Card, CardContent, EmptyState, PageHeader, Select } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 import { athleteApi, recommendationApi, workoutApi } from '@/services/api';
+
+const statusTone: Record<string, string> = {
+  pending: 'badge-amber',
+  accepted: 'badge-success',
+  dismissed: 'badge-neutral',
+};
 
 export function Recommendations() {
   const { user, hasPermission } = useAuth();
@@ -40,15 +46,208 @@ export function Recommendations() {
     catch (cause: any) { toast.error(cause.message || 'Could not update recommendation'); }
   };
 
+  const pendingCount = items.filter(item => item.status === 'pending').length;
+  const selectedWorkouts = workouts.filter(workout => Object.values(workoutById).includes(workout.id));
+
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <section className="surface-raised relative overflow-hidden p-6 sm:p-8"><div className="absolute right-0 top-0 h-full w-1.5 bg-gradient-to-b from-sky-400 via-sky-500 to-amber-400" /><div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-semibold text-sky-400">SPRINT 6 · SMART TRAINING</p><h1 className="mt-2 text-3xl font-bold text-text-primary">Training suggestions</h1><p className="mt-2 max-w-2xl text-text-secondary">Suggestions use recent performance, attendance, workout effort, and active injury records. Each card shows the signals behind it.</p></div><Sparkles className="hidden h-8 w-8 text-amber-300 sm:block" /></div></section>
-      {canReview && <Card><CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-end"><Select label="Athlete" value={athleteId} onChange={event => setAthleteId(event.target.value)} options={[{ value: '', label: 'Choose an athlete' }, ...athletes.map(athlete => ({ value: athlete.id, label: `${athlete.firstName} ${athlete.lastName}` }))]} /><Button loading={generating} disabled={!athleteId} onClick={() => void generate()} leftIcon={<RefreshCw className="h-4 w-4" />}>Generate suggestion</Button></CardContent></Card>}
-      {canReview && !loading && athletes.length === 0 && <div className="flex flex-col gap-3 rounded-lg border border-border p-4 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="font-semibold text-text-primary">Add athletes before generating</h2><p className="mt-1 text-sm text-text-secondary">This club has no active athlete profiles yet. Import the roster or add an athlete to enable recommendations.</p></div><Link className="inline-flex min-h-10 items-center justify-center rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400" to="/athletes">Open athlete roster</Link></div>}
-      {isAthlete && <div className="flex justify-end"><Button loading={generating} onClick={() => void generate()} leftIcon={<RefreshCw className="h-4 w-4" />}>Refresh my plan</Button></div>}
-      <p className="text-xs text-text-muted">Suggestions provide a training focus, intensity, recovery guidance, and supporting signals. Select a saved workout below a pending suggestion to inspect its complete exercise prescription before assigning it. Cold-start suggestions use explainable rules, not a trained prediction model. Follow clinician restrictions where applicable.</p>
-      {canReview && Object.values(workoutById).some(Boolean) && <section className="space-y-3" aria-label="Selected workout details"><h2 className="text-lg font-semibold text-text-primary">Selected workout details</h2>{workouts.filter(workout => Object.values(workoutById).includes(workout.id)).map(workout => <div key={workout.id} className="border-t border-border pt-3"><div className="flex flex-wrap items-baseline justify-between gap-2"><h3 className="font-semibold text-text-primary">{workout.name}</h3><p className="text-sm text-text-secondary">{workout.estimatedDuration} min · {workout.difficulty}</p></div>{workout.description && <p className="mt-1 text-sm text-text-secondary">{workout.description}</p>}<ol className="mt-3 space-y-3">{(workout.exercises || []).map((exercise: any, index: number) => <li key={`${workout.id}-${index}`} className="border-l-2 border-sky-400/60 pl-3"><h4 className="font-medium text-text-primary">{index + 1}. {exercise.name}</h4><p className="mt-1 text-sm text-text-secondary">{exercise.sets} sets · {exercise.reps} · {exercise.restSeconds}s rest</p>{(exercise.tempo || exercise.targetZone) && <p className="mt-1 text-sm text-text-secondary">{[exercise.tempo && `Tempo: ${exercise.tempo}`, exercise.targetZone && `Target: ${exercise.targetZone}`].filter(Boolean).join(' · ')}</p>}{exercise.coachingNotes && <p className="mt-1 text-sm text-text-secondary">Coach notes: {exercise.coachingNotes}</p>}</li>)}</ol></div>)}</section>}
-      {loading ? <div className="py-14 text-center text-text-secondary" role="status">Reading recent training records…</div> : error ? <div className="py-14 text-center"><p role="alert">{error}</p><Button className="mt-4" variant="outline" onClick={() => void load()}>Try again</Button></div> : items.length === 0 ? <Card><CardContent className="py-16 text-center"><Activity className="mx-auto h-10 w-10 text-text-muted" /><h2 className="mt-4 font-semibold text-text-primary">No training suggestions yet</h2><p className="mt-2 text-sm text-text-secondary">Generate one after selecting an athlete, or complete a workout / record a performance to refresh it automatically.</p></CardContent></Card> : <div className="space-y-3">{items.map(item => <Card key={item.id}><CardContent className="p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex flex-wrap items-center gap-2"><h2 className="text-lg font-semibold text-text-primary">{item.focus}</h2><Badge variant={item.status === 'pending' ? 'gold' : item.status === 'accepted' ? 'success' : 'neutral'}>{item.status}</Badge></div><p className="mt-1 text-sm text-text-secondary">{item.athleteName} · {new Date(item.generatedAt).toLocaleString()} · {Math.round((item.confidence || 0) * 100)}% confidence</p></div><Badge variant="outline">{item.modelVersion}</Badge></div><div className="mt-4 grid gap-3 sm:grid-cols-2"><div className="rounded-lg border border-border p-3"><p className="text-xs font-semibold text-text-muted">INTENSITY</p><p className="mt-1 text-sm text-text-primary">{item.intensity}</p></div><div className="rounded-lg border border-border p-3"><p className="text-xs font-semibold text-text-muted">RECOVERY</p><p className="mt-1 text-sm text-text-primary">{item.recovery}</p></div></div><div className="mt-4"><p className="text-xs font-semibold text-text-muted">WHY THIS SUGGESTION</p><ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-text-secondary">{item.drivers.map((driver: string, index: number) => <li key={index}>{driver}</li>)}</ul></div>{canReview && item.status === 'pending' && <div className="mt-5 flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:items-end sm:justify-end"><Select aria-label={`Workout for ${item.athleteName}`} value={workoutById[item.id] || ''} onChange={event => setWorkoutById(previous => ({ ...previous, [item.id]: event.target.value }))} options={[{ value: '', label: 'Choose workout to assign' }, ...workouts.map(workout => ({ value: workout.id, label: workout.name }))]} /><Button variant="ghost" onClick={() => void review(item, 'dismissed')}>Dismiss</Button><Button onClick={() => void review(item, 'accepted')} disabled={!workoutById[item.id]}>Accept and assign</Button></div>}</CardContent></Card>)}</div>}
+    <div className="page-shell">
+      <PageHeader
+        title="Training suggestions"
+        description="Each suggestion is built from recent performance, attendance, workout effort and active injuries — with the signals behind it stated plainly."
+        meta={
+          <span className="inline-flex items-baseline gap-1.5">
+            <span className="num text-text-secondary">{loading ? '—' : items.length}</span> suggestions ·{' '}
+            <span className="num text-text-secondary">{pendingCount}</span> awaiting review
+          </span>
+        }
+        actions={
+          canReview ? (
+            <>
+              <Select
+                aria-label="Athlete"
+                value={athleteId}
+                onChange={event => setAthleteId(event.target.value)}
+                className="w-[200px]"
+                options={[
+                  { value: '', label: 'Choose an athlete' },
+                  ...athletes.map(athlete => ({ value: athlete.id, label: `${athlete.firstName} ${athlete.lastName}` })),
+                ]}
+              />
+              <Button loading={generating} disabled={!athleteId} onClick={() => void generate()} leftIcon={<Sparkles className="h-4 w-4" />}>
+                Generate
+              </Button>
+            </>
+          ) : isAthlete ? (
+            <Button loading={generating} onClick={() => void generate()} leftIcon={<RefreshCw className="h-4 w-4" />}>
+              Refresh my plan
+            </Button>
+          ) : undefined
+        }
+      />
+
+      {canReview && !loading && athletes.length === 0 && (
+        <Card padding="none">
+          <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-heading-sm font-semibold text-text-primary">Add athletes before generating</h2>
+              <p className="mt-1 text-body-sm text-text-secondary">
+                This club has no active athlete profiles yet. Import the roster or add an athlete to enable recommendations.
+              </p>
+            </div>
+            <Link className="btn btn-primary btn-sm shrink-0" to="/athletes">
+              Open athlete roster
+            </Link>
+          </div>
+        </Card>
+      )}
+
+      <p className="max-w-3xl text-caption leading-relaxed text-text-muted">
+        Suggestions provide a training focus, intensity, recovery guidance and supporting signals. Pick a saved workout
+        below a pending suggestion to inspect the complete exercise prescription before assigning it. Cold-start
+        suggestions use explainable rules, not a trained prediction model. Follow clinician restrictions where applicable.
+      </p>
+
+      {selectedWorkouts.length > 0 && (
+        <section className="surface p-4" aria-label="Selected workout details">
+          <h2 className="text-heading-sm font-semibold text-text-primary">Selected workout details</h2>
+          <div className="mt-3 space-y-5">
+            {selectedWorkouts.map(workout => (
+              <div key={workout.id} className="border-t border-border pt-4 first:border-0 first:pt-0">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <h3 className="font-semibold text-text-primary">{workout.name}</h3>
+                  <p className="num text-caption text-text-secondary">
+                    {workout.estimatedDuration} min · {workout.difficulty}
+                  </p>
+                </div>
+                {workout.description && <p className="mt-1 text-body-sm text-text-secondary">{workout.description}</p>}
+                <ol className="mt-3 divide-y divide-border/60">
+                  {(workout.exercises || []).map((exercise: any, index: number) => (
+                    <li key={`${workout.id}-${index}`} className="border-l-2 border-volt/50 py-2 pl-3">
+                      <h4 className="text-body-sm font-medium text-text-primary">
+                        <span className="num mr-1.5 text-text-muted">{index + 1}.</span>
+                        {exercise.name}
+                      </h4>
+                      <p className="num mt-1 text-caption text-text-secondary">
+                        {exercise.sets} sets · {exercise.reps} · {exercise.restSeconds}s rest
+                      </p>
+                      {(exercise.tempo || exercise.targetZone) && (
+                        <p className="mt-1 text-caption text-text-secondary">
+                          {[exercise.tempo && `Tempo: ${exercise.tempo}`, exercise.targetZone && `Target: ${exercise.targetZone}`]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </p>
+                      )}
+                      {exercise.coachingNotes && <p className="mt-1 text-caption text-text-muted">Coach notes: {exercise.coachingNotes}</p>}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {loading ? (
+        <div className="space-y-3" role="status" aria-label="Loading training suggestions">
+          {[0, 1].map(item => (
+            <div key={item} className="surface space-y-3 p-5">
+              <div className="skeleton h-4 w-1/3" />
+              <div className="skeleton h-3 w-1/2" />
+              <div className="skeleton h-16 w-full" />
+            </div>
+          ))}
+        </div>
+      ) : error ? (
+        <Card padding="none">
+          <EmptyState
+            icon={<Activity className="h-5 w-5" />}
+            title="Suggestions could not be loaded"
+            description={error}
+            action={<Button variant="outline" onClick={() => void load()}>Try again</Button>}
+          />
+        </Card>
+      ) : items.length === 0 ? (
+        <Card padding="none">
+          <EmptyState
+            icon={<Sparkles className="h-5 w-5" />}
+            title="No training suggestions yet"
+            description="Generate one after selecting an athlete, or complete a workout or record a performance to refresh it automatically."
+            action={
+              (canReview || isAthlete) && (
+                <Button loading={generating} disabled={canReview && !athleteId} onClick={() => void generate()}>
+                  Generate a suggestion
+                </Button>
+              )
+            }
+          />
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {items.map(item => (
+            <Card key={item.id} padding="none">
+              <CardContent className="p-4 sm:p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-heading-sm font-semibold text-text-primary">{item.focus}</h2>
+                      <span className={statusTone[item.status] || 'badge-neutral'}>{item.status}</span>
+                    </div>
+                    <p className="mt-1 text-caption text-text-secondary">
+                      {item.athleteName} · <span className="num">{new Date(item.generatedAt).toLocaleString()}</span> ·{' '}
+                      <span className="num text-text-primary">{Math.round((item.confidence || 0) * 100)}%</span> confidence
+                    </p>
+                  </div>
+                  <span className="rounded border border-border px-2 py-0.5 text-micro text-text-muted">{item.modelVersion}</span>
+                </div>
+
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  <div className="rounded-radius-md border border-border bg-ink/40 p-3">
+                    <p className="stat-label">Intensity</p>
+                    <p className="mt-1 text-body-sm text-text-primary">{item.intensity}</p>
+                  </div>
+                  <div className="rounded-radius-md border border-border bg-ink/40 p-3">
+                    <p className="stat-label">Recovery</p>
+                    <p className="mt-1 text-body-sm text-text-primary">{item.recovery}</p>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <p className="stat-label">Why this suggestion</p>
+                  <ul className="mt-2 space-y-1.5">
+                    {item.drivers.map((driver: string, index: number) => (
+                      <li key={index} className="flex gap-2 text-body-sm text-text-secondary">
+                        <span aria-hidden="true" className="mt-[0.45rem] h-1 w-1 shrink-0 rounded-full bg-volt" />
+                        {driver}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {canReview && item.status === 'pending' && (
+                  <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:items-end sm:justify-end">
+                    <Select
+                      aria-label={`Workout for ${item.athleteName}`}
+                      value={workoutById[item.id] || ''}
+                      onChange={event => setWorkoutById(previous => ({ ...previous, [item.id]: event.target.value }))}
+                      className="sm:w-[240px]"
+                      options={[
+                        { value: '', label: 'Choose workout to assign' },
+                        ...workouts.map(workout => ({ value: workout.id, label: workout.name })),
+                      ]}
+                    />
+                    <div className="flex gap-2">
+                      <Button variant="ghost" onClick={() => void review(item, 'dismissed')}>Dismiss</Button>
+                      <Button onClick={() => void review(item, 'accepted')} disabled={!workoutById[item.id]}>
+                        Accept and assign
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { Db } from 'mongodb';
 import * as initialSchema from './001-initial-schema';
 import * as dailyReadiness from './002-daily-readiness-and-exercise-enhancements';
 import * as refreshTokens from './003-refresh-tokens';
+import * as exerciseLibrary from './004-exercise-library';
 
 export type Migration = {
   /** Stable identifier recorded in the `_migrations` collection. */
@@ -21,4 +22,5 @@ export const migrations: Migration[] = [
   { name: '001-initial-schema', up: initialSchema.up, down: initialSchema.down },
   { name: '002-daily-readiness-and-exercise-enhancements', up: dailyReadiness.up, down: dailyReadiness.down },
   { name: '003-refresh-tokens', up: refreshTokens.up, down: refreshTokens.down },
+  { name: '004-exercise-library', up: exerciseLibrary.up, down: exerciseLibrary.down },
 ];

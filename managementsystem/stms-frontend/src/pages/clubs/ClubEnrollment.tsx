@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building2, Check, Clock3, Send } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button, Card, CardContent, Select } from '@/components/ui';
+import { Button, Card, CardContent, PageHeader, Select } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 import { clubApi } from '@/services/api';
 import { ClubDiscoveryItem } from '@/types';
@@ -67,15 +67,13 @@ export function ClubEnrollment() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <section className="surface-raised relative overflow-hidden p-6 sm:p-8">
-        <div className="absolute right-0 top-0 h-full w-1.5 bg-gradient-to-b from-sky-400 via-sky-500 to-amber-400" />
-        <p className="text-sm font-semibold text-sky-400">CLUB ENROLLMENT</p>
-        <h1 className="mt-2 text-3xl font-bold text-text-primary">Find your training club</h1>
-        <p className="mt-2 max-w-xl text-text-secondary">Choose a club and send its staff an enrollment request. Your access begins after they approve it.</p>
-      </section>
+    <div className="page-shell mx-auto max-w-3xl">
+      <PageHeader
+        title="Find your training club"
+        description="Choose a club and send its staff an enrollment request. Your access begins after they approve it."
+      />
 
-      <Card>
+      <Card padding="none">
         <CardContent className="space-y-5 p-5 sm:p-6">
           {loading ? <div className="py-12 text-center text-text-secondary" role="status">Loading clubs…</div> : clubs.length === 0 ? (
             <div className="py-12 text-center">
@@ -93,19 +91,36 @@ export function ClubEnrollment() {
               />
 
               {selectedClub?.request?.status === 'pending' ? (
-                <div className="flex items-start gap-3 border-l-2 border-amber-400 px-4 py-3" role="status">
-                  <Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
-                  <div><p className="font-medium text-text-primary">Request sent</p><p className="mt-1 text-sm text-text-secondary">Club staff will review your request. Sent {new Date(selectedClub.request.createdAt).toLocaleDateString()}.</p></div>
+                <div className="flex items-start gap-3 border-l-2 border-amber-500/60 px-4 py-3" role="status">
+                  <Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
+                  <div>
+                    <p className="font-medium text-text-primary">Request sent</p>
+                    <p className="mt-1 text-body-sm text-text-secondary">
+                      Club staff will review your request. Sent <span className="num">{new Date(selectedClub.request.createdAt).toLocaleDateString()}</span>.
+                    </p>
+                  </div>
                 </div>
               ) : selectedClub?.request?.status === 'approved' ? (
-                <div className="flex flex-wrap items-center justify-between gap-3 border-l-2 border-emerald-400 px-4 py-3" role="status">
-                  <div className="flex items-start gap-3"><Check className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" /><div><p className="font-medium text-text-primary">You’re approved</p><p className="mt-1 text-sm text-text-secondary">Your membership at {selectedClub.name} is ready.</p></div></div>
+                <div className="flex flex-wrap items-center justify-between gap-3 border-l-2 border-success-500/60 px-4 py-3" role="status">
+                  <div className="flex items-start gap-3">
+                    <Check className="mt-0.5 h-5 w-5 shrink-0 text-success-400" />
+                    <div>
+                      <p className="font-medium text-text-primary">You're approved</p>
+                      <p className="mt-1 text-body-sm text-text-secondary">Your membership at {selectedClub.name} is ready.</p>
+                    </div>
+                  </div>
                   <Button type="button" loading={saving} onClick={() => void enterClub()}>Open club</Button>
                 </div>
               ) : (
                 <>
-                  {pendingRequest && <p className="text-sm text-amber-300" role="status">You already have a pending request with {pendingRequest.name}.</p>}
-                  {selectedClub?.request?.status === 'rejected' && <p className="text-sm text-text-secondary">Your earlier request was declined. You may send a new request.</p>}
+                  {pendingRequest && (
+                    <p className="text-body-sm text-amber-400" role="status">
+                      You already have a pending request with {pendingRequest.name}.
+                    </p>
+                  )}
+                  {selectedClub?.request?.status === 'rejected' && (
+                    <p className="text-body-sm text-text-secondary">Your earlier request was declined. You may send a new request.</p>
+                  )}
                   <div>
                     <label htmlFor="enrollment-message" className="label">Note for club staff <span className="text-text-muted">(optional)</span></label>
                     <textarea id="enrollment-message" className="input min-h-24 resize-y" maxLength={500} value={message} onChange={event => setMessage(event.target.value)} placeholder="Share a little about your events or training goals." />

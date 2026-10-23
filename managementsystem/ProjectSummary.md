@@ -338,3 +338,162 @@
 - **The assignment is still coach-authored.** Auto-regulation changes what the athlete sees when they open it, but the stored assignment remains the coach's prescription. If coaches want to see the calibrated version in their own views, persist a per-day adjusted copy rather than recomputing on every GET.
 - **Pain is post-session only.** There is no mid-session "stop, this hurts" action; adding one would need an immediate coach notification path, not just a feature update.
 - No online learning exists, by design. If the owner expects the model to improve from these logs, the next step is a scheduled retraining job that rebuilds the 31-feature dataset from `workout_logs` and `daily_readiness`, not per-request updates.
+
+## Session 11 — 2026-10-21
+
+**Contributor(s):** AI Assistant (opencode)
+
+**Focus:** Give coaches a searchable, image-enabled exercise library inside the workout builder, including track & field movements that a generic gym dataset cannot supply, while keeping every generated workout editable.
+
+**Decisions made:**
+
+- **Use a hybrid source, not one dataset.** free-exercise-db provides a broad, public-domain base of 876 movements, but it has no sprint drills, special-endurance repetitions, throws or jumps. The catalogue therefore combines 149 curated free-exercise-db entries with 71 STMS-authored track entries. wger and paid exercise APIs were rejected for v1 because they add licensing or cost without solving the track-specific gap.
+- **Curate instead of importing everything.** 876 gym exercises would bury the 20 sprint drills a coach actually needs and would include machines the club does not have. The base slice keeps only movements relevant to a track programme, excludes machine/cable-dependent entries, and normalizes instructions and metadata into the STMS vocabulary.
+- **Separate the movement from the dose.** A library entry describes how to perform a movement. A workout line owns sets, reps or distance, rest, tempo and target. Swapping a movement therefore preserves the prescription instead of dropping it.
+- **Global catalogue, club-private additions.** Seeded entries use `clubId: null`; a coach-created exercise carries the club's ObjectId and `source: 'club'`. There is no global editing UI in v1. `db:seed:exercises --reset` removes seeded entries that are no longer in the catalogue, keeps the ids of the rest, and never deletes club exercises.
+- **An image must show the movement.** Imported entries use the upstream image only for the exact exercise. Track entries currently use no upstream images and show a neutral category placeholder; a close-but-different movement is not reused just to fill the card.
+- **Text and images now, video later.** YouTube references remain a V2 concern because a wrong or dead video is worse than no video, and v1 needs a usable library rather than a media pipeline.
+- **Starter workouts are ordinary club workouts.** Five sessions are written per club as `isTemplate: true` / `starterPack: true`, with every line linked to a library exercise. A coach can edit, duplicate or delete them; re-running the seed inserts missing starter names but does not overwrite a workout the coach has changed.
+
+**Changes / additions:**
+
+- `stms-backend/src/data/exercises.base.json`: 149 normalized free-exercise-db entries with images, instructions, primary/secondary muscles, equipment and provenance.
+- `stms-backend/src/data/track-exercises.ts`: 71 authored entries covering warm-up, sprint mechanics, acceleration, max velocity, speed endurance, special endurance, plyometrics, throws, jumps, prehab, core and recovery.
+- `stms-backend/src/types/exercise.ts`: canonical categories, phases, energy systems, event groups, levels and source/provenance fields.
+- `stms-backend/src/services/exercise-library.ts` and `src/seed-exercises.ts`: validation and idempotent seeding, with `--dry-run`, `--reset` and `--force`; `package.json` now exposes `db:seed:exercises`.
+- `stms-backend/src/migrations/004-exercise-library.ts`: backfills category/phase/energy fields on existing exercises, marks old seed records `legacy`, normalizes vocabulary and adds search/filter indexes. Registered in `migrations/index.ts`; matching indexes added to `config/database.ts`.
+- `stms-backend/src/data/starter-workouts.ts` and `src/services/starter-workouts.ts`: five editable starter sessions (400m Speed & Mechanics, 400m Special Endurance, Acceleration & Strength, Tempo & Recovery, Sprint Mechanics & Plyometrics). The 400m sessions carry example paces for a 52-second runner (200m repeats around 25s, 300m around 38–39s, tempo 200s around 40–45s). `seed.ts` now writes them after the library.
+- `stms-backend/src/routes/workout.routes.ts`: `GET /workouts/exercises` gained `search`, `category`, `phase`, `eventGroup`, `equipment`, `muscle`, `level`, `source`, `limit` and `offset`; `POST /workouts/exercises` accepts the new metadata and rejects duplicate names within a club.
+- `stms-backend/src/seed-history.ts`: demo templates now resolve exercises from the global library as well as the club, and reference the normalized names.
+- Frontend: `ExercisePicker.tsx` (image cards, instant search, category/event/phase/level filters, neutral placeholders), `WorkoutBuilder.tsx` (picker integration, dose-preserving swaps, custom club-exercise creation), `constants/exercises.ts`, updated `Exercise` type and `workoutApi.getExercises(params)`.
+- `Docs/AgentsDocumentation/data-sources.md`: source, licence, provenance, image policy, vocabulary, seed commands, starter-workout rules and maintenance checklist.
+- Verified: dry run reports 220 entries (free-exercise-db 149, stms 71); `stms_dev` holds 220 global entries with zero duplicate global names; 149 exact upstream images returned `image/jpeg` (ten needed a retry) and no track entry reuses a close-but-different image; `db:seed` wrote five starter workouts with every line linked; `--reset` updated 220 entries, removed 0 and preserved the ObjectIds used by starter workouts; a real coach token exercised search/filter, custom-exercise creation, workout creation and dose-preserving swap; temporary records were removed. Backend and frontend typechecks and production builds pass.
+
+**Skill(s) used:** none (no skill loaded)
+
+**Open questions / next steps:**
+
+- **Review the track cues and images with the coach.** The 71 authored entries are internally consistent, but a coach should confirm the cues, distances and image choices before owner acceptance.
+- **Mirror library images.** v1 hotlinks GitHub raw URLs. Before a large public launch, copy the images to Cloudinary or another controlled host so the picker does not depend on GitHub rate limits.
+- **Legacy duplicates remain in old development databases.** Migration 004 marks the previous 12 club exercises `legacy`; the picker hides a legacy entry when a global entry has the same name, but the records remain for old workout logs. A fresh environment does not create them. Decide later whether to archive or delete them.
+- **The starter pack is a starting point, not a periodized programme.** Five complete sessions give a coach something to edit immediately; a multi-week 400m progression is still the Sprint 4 mesocycle work.
+- **No automatic substitution or video yet.** Coaches swap movements manually and keep the dose; YouTube references remain deferred.
+
+## Session 12 — 2026-10-21
+
+**Contributor(s):** AI Assistant (opencode)
+
+**Focus:** Turn the five ad-hoc starter workouts into an evidence-informed 400m block that a coach can actually run for four weeks, and make updating that block safe for clubs that have already edited their copies.
+
+**Decisions made:**
+
+- **A starter pack is a microcycle, not a sample menu.** The twelve sessions are organised as high / low / high across four weeks. High-CNS sessions are separated by at least 48 hours, and the low day is either extensive tempo or a short strength-maintenance session. This follows the high/low organisation described by Haugen et al. (2019), UK Athletics and the World Athletics 400m overview.
+- **Speed work is stopped when quality drops.** Acceleration and max-velocity sessions use short reps, full recovery and explicit stop rules. The NSCA excerpt is unambiguous that sprint sessions are high-quality neural work; adding reps after mechanics deteriorate trains the wrong thing.
+- **Speed endurance and special endurance are separate sessions.** The 3×60m session is 95% work with full recovery. The 2×200m, broken 400m and split 400m sessions are race-pace special endurance with full recovery between reps and a short recovery inside the split. This avoids the common mistake of turning every hard running day into the same "lactic" session.
+- **The 400m paces are a worked example, not a prescription.** The 52-second runner sees about 25s per 200m at race pace, 38–39s for 300m, 13–14s for the final 100m and 40–45s for tempo 200s. Coaches are told to adjust them to the athlete's current 200m/400m model.
+- **Strength is maintained, not maximised, during race-pace weeks.** Week 1 builds general strength; Week 3 keeps a low-volume strength session so the running sessions stay the priority.
+- **Updating a pack must not silently overwrite coach work.** `db:seed` still inserts only missing starter workouts. `--refresh-starters` updates unedited copies, and the API marks a starter workout `coachEdited: true` the first time a coach saves it. `--prune-starters` removes only stale starter workouts with no assignments or logs. This is an explicit migration path, not the default seed behaviour.
+- **The source basis is documented, not hidden in the data.** `data-sources.md` now maps each principle to World Athletics, UK Athletics, Haugen et al., the NSCA and Australian Athletics, and records that the sessions are STMS-authored rather than copied.
+
+**Changes / additions:**
+
+- `stms-backend/src/data/starter-workouts.ts`: replaced the five sessions with a twelve-session, four-week 400m block; each workout now carries `program`, `week`, `slot` and `intent` metadata, complete warm-up/main/accessory/cooldown lines, and source notes in the file header.
+- `stms-backend/src/services/starter-workouts.ts`: added `STARTER_PACK_VERSION`, `refresh`/`prune` options, safe update logic and counts for inserted, refreshed, coach-edited, pruned and retained workouts.
+- `stms-backend/src/seed.ts`: added `--refresh-starters` and `--prune-starters`; the summary now reports what happened to the pack instead of only the pack size.
+- `stms-backend/src/routes/workout.routes.ts`: a PATCH to a starter workout now sets `coachEdited: true` so a later refresh cannot overwrite it.
+- `stms-backend/src/data/track-exercises.ts`: corrected speed-endurance cues for 60m and 100m repeats so they call for full recovery rather than 2–4 minutes.
+- `Docs/AgentsDocumentation/data-sources.md`: replaced the five-session description with the four-week table, the source basis, the 52s example paces, and the refresh/prune rules.
+
+**Verification:**
+
+- The catalogue name check found 105 starter exercise lines, 39 unique movements and zero missing library references.
+- `npm run db:seed -- --refresh-starters --prune-starters` on `stms_dev` inserted 12 starter workouts and pruned the 5 old unedited starters; the club now has exactly 12 starter workouts, all tagged `program: '400m Starter Block'`.
+- All 105 exercise lines are linked to library exercise ids, and every workout carries `starterPackVersion: 2`.
+- The seeder now prefers the global library entry when a legacy club exercise shares its name; a follow-up refresh moved every starter line that had been linked to a legacy copy (`Nordic Hamstring Curl`, `Romanian Deadlift`, `Mobility Flow`) onto the global library entry.
+- A disposable-club test confirmed refresh behaviour: first seed inserted 12; second seed refreshed 11, preserved 1 coach-edited workout, pruned 1 unreferenced stale starter and retained 1 stale starter that still had an assignment. The test records were removed.
+- Backend `typecheck` and production build pass; frontend `typecheck` and production build pass.
+
+**Skill(s) used:** none (no skill loaded)
+
+**Open questions / next steps:**
+
+- **Coach review of the block is the real acceptance test.** The sessions are internally consistent and source-aligned, but a coach should confirm the 52s paces, weekly spacing and exercise selection against the athlete's actual programme.
+- **This is still not a multi-week programme object.** The twelve workouts are standalone templates with week/slot metadata; scheduling a whole block, copying it to a group and tracking progression remains Sprint 4 mesocycle work.
+- **The 400m block is sprint-specific.** A throws, jumps or distance club receives the same starter pack until event-specific packs are authored.
+- **Refresh is deliberately opt-in.** Running the default seed will not update existing clubs to a new pack version; use `--refresh-starters`, and expect coach-edited workouts to stay untouched.
+- **Image mirroring, video references and the legacy duplicate exercises remain open** from Session 11.
+
+## Session 13 - 2026-10-22
+
+**Contributor(s):** Implementation assistant
+**Focus:** Frontend presentation layer — one design system, and a dashboard built on real data.
+
+**Decisions made:**
+
+- The interior now shares the landing page's language: near-black surfaces (`ink` → `coal` → `surface` → `raise`), a single volt accent, Space Grotesk for UI, Anton for page titles, JetBrains Mono for every time, distance, percentage and date.
+- Dark is the only theme. The theme toggle and `ThemeContext` were removed because they never worked; `color-scheme: dark` is set once in CSS.
+- The old colour scales (`cold`, `track`, `sky`, `amber`) were retuned in place rather than deleted, so every existing screen picked up the new palette immediately and the build stayed green between commits. `sky` is now a volt alias and is to be replaced by `volt` as each module is swept.
+- Structure, not a new accent colour, carries the identity: a seven-lane week strip is the spine of the app, and activity is shown as a feed of things that happened rather than a grid of cards.
+- Motion is limited to one page-load stagger plus state changes.
+- No new endpoints, fields or capabilities. The dashboard reads only: `analytics/summary`, `attendance/sessions`, `workouts/assignments` (or `/mine`), `athletes`, `workouts` and `announcements`. Every call is wrapped in `Promise.allSettled` so one 403 degrades a single panel instead of the page, and each call is skipped when the role lacks the permission.
+
+**Changes / additions:**
+
+- `stms-frontend/tailwind.config.js`: new palette and semantic aliases, mono/display type roles, layered shadows, volt glow variants, refined keyframes.
+- `stms-frontend/src/styles/index.css`: rewritten as a single foundation. Removed the dead Tailwind-v4 `@theme` block, the duplicate `@layer base` block and the duplicated scrollbar/`.glass` rules; added `.page-shell`, `.page-title`, `.num`, `.surface-inset` and volt focus rings.
+- New primitives in `src/components/ui/`: `PageHeader`, `Data` (`Stat`, `Sparkline`, `ProgressRing`), `WeekLane`, `ActivityFeed`, `EmptyState`, `Segmented`.
+- `src/pages/dashboard/Dashboard.tsx`: rebuilt as **Today** — date and week context, week lane, a stat strip with a 14-day attendance sparkline, today's sessions with the next one marked, a real activity feed, announcements and a weekly completion ring. Athletes get their next assignment as the hero object with a single "Start session" action; coaches get the day's session board with "Mark attendance".
+- `src/components/layout/Sidebar.tsx`: grouped navigation (Training, Athlete care, Club, Administration), working collapsed rail with tooltips, desktop collapse control that previously never appeared.
+- `src/components/layout/Header.tsx`: sticky instead of fixed (it used to leave a gap when the sidebar collapsed), single brand mark, working announcement bell, dark-only.
+- `src/components/layout/ClubSwitcher.tsx`, `src/pages/settings/Settings.tsx`: restyled; the Settings "Appearance" tab was removed because the app no longer has a light theme.
+- `src/components/common/LoadingScreen.tsx`: replaced non-existent `primary`/`surface-950` tokens with the real palette.
+- Deleted `src/components/ui/Card.tsx` (never imported, used tokens that do not exist) and `src/context/ThemeContext.tsx`.
+
+**Verification:**
+
+- `npm run typecheck` and `npm run build` pass in `stms-frontend` after every step.
+- Class-name audit against `HEAD`: the only stylesheet selectors removed were `.stat-card-{success,danger,amber,info}`, which were restored once `StatCard` was found to use them.
+- No backend, schema, migration or permission file was touched.
+
+**Skill(s) used:** none loaded (`frontend-design` guidance was applied from the approved plan rather than invoked)
+
+**Open questions / next steps:**
+
+- **Owner sign-off on the Today screen** is the next gate before any module screen is touched.
+- The eight module pages still carry the copy-pasted sky/amber hero header (now rendering lime via the alias) and internal `SPRINT n` eyebrows; they are Phase 2 work.
+- `Card.tsx` was dead code and was deleted; `Stat` and `Segmented` are shipped but not yet consumed, and are intended for the module sweep.
+- The dashboard makes zero writes; there is no polling, so it refreshes on navigation only.
+
+## Session 14 - 2026-10-22
+
+**Contributor(s):** AI Assistant (opencode)
+**Focus:** Technical owner-acceptance pass for Sprints 2-8, covering authentication, permissions, multi-club isolation and real MongoDB/Firebase workflows.
+
+**Decisions made:**
+
+- **Separate technical acceptance from UI sign-off.** The API/database pass can prove isolation, permissions, persistence and workflow state transitions; it cannot prove that a coach finds a screen clear. The sprint checkboxes therefore stay open until the owner/coach walkthrough happens.
+- **Use two controlled clubs, not the shared development club alone.** Riverside supplied realistic history. A disposable second club, disposable Firebase accounts and a disposable athlete in each club made cross-club reads, writes, switches, invitations and self-enrollment testable without touching the real roster or leaving fixtures behind.
+- **Fix blockers as they appear, then re-verify the affected path.** The pass found a real Atlas-only failure in `switch-club` and two permission mismatches. Fixing them was cheaper and safer than recording them as deferred UI polish.
+- **Redis absence is an environment limitation, not evidence that Sprint 6 works end to end.** With no Redis listener, generation correctly fell back to the rule engine (`rules-cold-start-v1`). The model path stays unverified until Redis and the Python worker are running together.
+
+**Changes / additions:**
+
+- `stms-backend/src/routes/auth.routes.ts`: replaced `.distinct('clubId', ...)` in `switch-club` with a projected `find` plus in-process de-duplication. MongoDB's versioned API v1 does not include `distinct`, so Atlas with `apiStrict: true` answered 500 on every club switch.
+- `stms-backend/src/routes/auth.routes.ts`: sign-in now reconciles the cached `user.permissions` against the current role matrix instead of only filling an empty array. A role-permission change therefore reaches existing accounts on their next sign-in, and the Firebase custom claims are rewritten when the value changes.
+- `stms-backend/src/utils/role-permissions.ts`: coaches now receive `attendance:report` and `analytics:read`, matching the sidebar, which already offered coaches Analytics and the attendance summary. Detailed athlete analytics via `analytics:report` remains club-admin-only.
+- Acceptance evidence: 63 API/database checks passed against the acceptance build, covering guest denial, invalid Firebase tokens, refresh rotation/old-token rejection/logout invalidation, role enforcement, two-club reads and writes, athlete CRUD/archive/CSV/invitations/self-enrollment, attendance bulk marking and QR expiry, the 220-entry exercise library and club-private isolation, workout assignment/ownership/readiness calibration/completion, PB/SB sequence and athlete scoping, recommendation generation/review/assignment, injury privacy/wellness/rehab/RTP, permission letter approval/public verification, analytics and announcements.
+- The two permission checks that originally expected a coach 403 were intentionally changed by the permission alignment. After the change, coach attendance/analytics summaries returned 200, athlete attendance report stayed 403, and the club-admin-only athlete analytics report stayed 403. Login exposed the new permissions and a refresh token round-trip returned `/auth/me` with them.
+- Cleanup: removed the disposable club, accounts, invitations, sessions, workouts, exercises, results, tests, goals, injuries, permission letters, recommendations and announcements. `stms_dev` is back to one club, 26 athletes, 24 sessions, 20 workouts, 208 results, 3 injuries and 27 recommendations, with zero `acceptance.*` users, athletes or clubs.
+- Verification: backend `typecheck` and production build pass; frontend production build passes; landing production build passes. The backend unit suite remains at 6 passed / 5 failed in `tests/unit/auth.service.test.ts`, the stale non-ObjectId and missing-mock-import debt already recorded in `AGENTS.md`.
+
+**Skill(s) used:** none (no skill loaded)
+
+**Open questions / next steps:**
+
+- **Manual coach/owner UI walkthrough is the remaining gate.** It should cover the Today dashboard, attendance marking and QR display, workout builder/player, performance entry/export, recommendation review, injury/wellness/RTP screens, permission letters and announcements.
+- **Run Sprint 6 against Redis and the worker.** Start Redis first, then `feature_engineering/stms_ml/inference_worker.py`, and confirm a real `modelVersion`/athlete-specific response. The fallback is correct, but it is not the ML acceptance test.
+- **Confirm the coach permission policy.** Coaches can now read the club analytics summary and attendance report but not the detailed athlete analytics report. If club admins should keep both reports private, revert the two permissions and remove Analytics from the coach sidebar instead.
+- **Permission changes propagate on the next Firebase sign-in.** The sign-in path now reconciles the cached permissions and rewrites custom claims, and switching clubs also recomputes them. A user who only refreshes an existing session may keep the old claim set until the refresh token is rotated or they sign in again; if revocation must be immediate, add a permission-version check or revoke refresh tokens when a role changes.
+- **Production API URL.** The frontend's local `VITE_API_URL` is `/api/v1` and depends on the Vite proxy. Vercel must set it to the Render API URL; the current `vercel.json` rewrites every path to `index.html` and would otherwise swallow `/api` calls.
+- **Deferred gaps still need explicit owner acceptance:** QR image rendering/live Firebase sync, multi-week programmes, historical trends/rankings/federation export, cloud injury attachments/PDFs, hosted notification delivery/monitoring, and production ML worker hosting/retraining.
+- The prerequisite work from earlier sessions remains: rotate the leaked Atlas/Cloudinary credentials, point Render's `MONGODB_URI` at `/stms_dev`, and verify deployment secrets/origins.

@@ -136,19 +136,42 @@ export function AthleteDetail() {
   if (!isNew && !athlete) return <div className="mx-auto max-w-3xl py-16 text-center"><h1 className="text-xl font-semibold text-text-primary">Athlete profile unavailable</h1><p className="mt-2 text-text-secondary">This record may have been archived or may belong to another club.</p><Button className="mt-5" variant="outline" onClick={() => navigate('/athletes')}>Return to roster</Button></div>;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <Button variant="ghost" size="sm" onClick={() => navigate('/athletes')} leftIcon={<ArrowLeft className="h-4 w-4" />}>Athlete roster</Button>
-      <section className="surface-raised relative overflow-hidden p-6 sm:p-8">
-        <div className="absolute bottom-0 left-0 h-1.5 w-full bg-gradient-to-r from-sky-400 via-sky-500 to-amber-400" />
+    <div className="page-shell">
+      <Button variant="ghost" size="sm" className="-ml-2 self-start" onClick={() => navigate('/athletes')} leftIcon={<ArrowLeft className="h-4 w-4" />}>Athlete roster</Button>
+
+      <section className="surface p-5 sm:p-6">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-          {isNew ? <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-sky-500/15 text-sky-300"><UserRound className="h-8 w-8" /></div> : <Avatar size="xl" name={`${athlete?.firstName} ${athlete?.lastName}`} />}
+          {isNew ? (
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-radius-lg bg-volt/10 text-volt"><UserRound className="h-8 w-8" /></div>
+          ) : (
+            <Avatar size="xl" name={`${athlete?.firstName} ${athlete?.lastName}`} />
+          )}
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-sky-400">ATHLETE PROFILE</p>
-            <h1 className="mt-1 truncate text-3xl font-bold text-text-primary">{isNew ? 'Add an athlete' : `${athlete?.firstName} ${athlete?.lastName}`}</h1>
-            <p className="mt-1 text-text-secondary">{isNew ? 'Create a roster record. An STMS login can be linked later by matching email.' : athlete?.email}</p>
+            <p className="stat-label">{isNew ? 'New roster record' : 'Athlete profile'}</p>
+            <h1 className="mt-1 truncate font-display text-2xl uppercase leading-none tracking-[-0.01em] text-text-primary sm:text-3xl">
+              {isNew ? 'Add an athlete' : `${athlete?.firstName} ${athlete?.lastName}`}
+            </h1>
+            <p className="mt-2 truncate text-body-sm text-text-secondary">
+              {isNew ? 'Create a roster record. An STMS login can be linked later by matching email.' : athlete?.email}
+            </p>
           </div>
-          {!isNew && athlete && <Badge variant={athlete.status === 'active' ? 'success' : athlete.status === 'injured' ? 'amber' : 'neutral'} dot>{athlete.status}</Badge>}
-          {!isNew && canWrite && <div className="flex gap-2"><Button variant="outline" onClick={() => { setForm(toForm(athlete!)); setEditing(value => !value); }} leftIcon={<Pencil className="h-4 w-4" />}>{editing ? 'Cancel edit' : 'Edit profile'}</Button><Button variant="ghost" onClick={() => setConfirmArchive(true)} aria-label="Archive athlete" leftIcon={<Archive className="h-4 w-4" />}>Archive</Button></div>}
+          <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+            {!isNew && athlete && (
+              <span className={athlete.status === 'active' ? 'badge-success' : athlete.status === 'injured' ? 'badge-amber' : 'badge-neutral'}>
+                {athlete.status}
+              </span>
+            )}
+            {!isNew && canWrite && (
+              <>
+                <Button variant="outline" onClick={() => { setForm(toForm(athlete!)); setEditing(value => !value); }} leftIcon={<Pencil className="h-4 w-4" />}>
+                  {editing ? 'Cancel edit' : 'Edit profile'}
+                </Button>
+                <Button variant="ghost" onClick={() => setConfirmArchive(true)} aria-label="Archive athlete" leftIcon={<Archive className="h-4 w-4" />}>
+                  Archive
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       </section>
 
@@ -162,15 +185,101 @@ export function AthleteDetail() {
           </form>
         </CardContent></Card>
       ) : athlete && (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(280px,.8fr)]">
-          <Card><CardContent className="space-y-6 p-5 sm:p-6">
-            <section><div className="mb-4 flex items-center gap-2"><UserRound className="h-4 w-4 text-sky-400" /><h2 className="font-semibold text-text-primary">Athlete details</h2></div><dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">{[["Email", athlete.email], ["Phone", athlete.phone || 'Not provided'], ["Date of birth", athlete.dateOfBirth || 'Not provided'], ["Gender", athlete.gender], ["School", athlete.school || 'Not provided'], ["Grade / year", athlete.grade || 'Not provided']].map(([label, value]) => <div key={label}><dt className="text-xs font-medium text-text-muted">{label}</dt><dd className="mt-1 text-sm text-text-primary">{value}</dd></div>)}</dl></section>
-            <section className="border-t border-border pt-5"><div className="mb-3 flex items-center gap-2"><BadgeCheck className="h-4 w-4 text-amber-400" /><h2 className="font-semibold text-text-primary">Event focus</h2></div><div className="flex flex-wrap gap-2">{athlete.eventSpecialization?.length ? athlete.eventSpecialization.map(event => <Badge key={event} variant="outline">{event}</Badge>) : <span className="text-sm text-text-muted">No event specializations added.</span>}</div></section>
-            {athlete.medicalNotes && <section className="border-t border-border pt-5"><h2 className="font-semibold text-text-primary">Training safety notes</h2><p className="mt-2 whitespace-pre-wrap text-sm text-text-secondary">{athlete.medicalNotes}</p></section>}
-          </CardContent></Card>
-          <div className="space-y-6">
-            <Card><CardContent className="space-y-4 p-5"><h2 className="font-semibold text-text-primary">Emergency contact</h2>{athlete.emergencyContact ? <><p className="text-sm text-text-primary">{athlete.emergencyContact.name} · {athlete.emergencyContact.relationship}</p><p className="flex items-center gap-2 text-sm text-text-secondary"><MapPin className="h-4 w-4" />{athlete.emergencyContact.phone}</p>{athlete.emergencyContact.email && <p className="flex items-center gap-2 text-sm text-text-secondary"><Mail className="h-4 w-4" />{athlete.emergencyContact.email}</p>}</> : <p className="text-sm text-text-muted">No emergency contact has been added.</p>}</CardContent></Card>
-            <Card><CardContent className="space-y-4 p-5"><h2 className="font-semibold text-text-primary">Club account</h2><div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-sky-400" /><p className="text-sm text-text-secondary">{athlete.userId ? 'Linked to an active STMS account in this club.' : 'This roster profile is not linked to an STMS account yet.'}</p></div><div className="flex items-center gap-2 border-t border-border pt-3 text-xs text-text-muted"><CalendarDays className="h-4 w-4" />Added {new Date(athlete.createdAt).toLocaleDateString()}</div></CardContent></Card>
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(280px,.7fr)]">
+          <Card padding="none">
+            <CardContent className="space-y-5 p-5">
+              <section>
+                <div className="mb-3 flex items-center gap-2">
+                  <UserRound className="h-4 w-4 text-volt" aria-hidden="true" />
+                  <h2 className="text-heading-sm font-semibold text-text-primary">Athlete details</h2>
+                </div>
+                <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+                  {[
+                    ['Email', athlete.email],
+                    ['Phone', athlete.phone || 'Not provided'],
+                    ['Date of birth', athlete.dateOfBirth || 'Not provided'],
+                    ['Gender', athlete.gender],
+                    ['School', athlete.school || 'Not provided'],
+                    ['Grade / year', athlete.grade || 'Not provided'],
+                  ].map(([label, value]) => (
+                    <div key={label} className="min-w-0">
+                      <dt className="stat-label">{label}</dt>
+                      <dd className={`mt-1 truncate text-body-sm capitalize ${value === 'Not provided' ? 'text-text-muted' : 'text-text-primary'}`}>
+                        {value}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+
+              <section className="border-t border-border pt-4">
+                <div className="mb-2.5 flex items-center gap-2">
+                  <BadgeCheck className="h-4 w-4 text-volt" aria-hidden="true" />
+                  <h2 className="text-heading-sm font-semibold text-text-primary">Event focus</h2>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {athlete.eventSpecialization?.length ? (
+                    athlete.eventSpecialization.map(event => (
+                      <span key={event} className="rounded border border-border px-2 py-0.5 text-micro text-text-secondary">
+                        {event}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-body-sm text-text-muted">No event specializations added.</span>
+                  )}
+                </div>
+              </section>
+
+              {athlete.medicalNotes && (
+                <section className="border-t border-border pt-4">
+                  <h2 className="text-heading-sm font-semibold text-text-primary">Training safety notes</h2>
+                  <p className="mt-2 whitespace-pre-wrap text-body-sm text-text-secondary">{athlete.medicalNotes}</p>
+                </section>
+              )}
+            </CardContent>
+          </Card>
+
+          <div className="space-y-4">
+            <Card padding="none">
+              <CardContent className="space-y-2.5 p-5">
+                <h2 className="text-heading-sm font-semibold text-text-primary">Emergency contact</h2>
+                {athlete.emergencyContact ? (
+                  <>
+                    <p className="text-body-sm text-text-primary">
+                      {athlete.emergencyContact.name} · <span className="text-text-muted">{athlete.emergencyContact.relationship}</span>
+                    </p>
+                    <p className="flex items-center gap-2 text-body-sm text-text-secondary">
+                      <MapPin className="h-4 w-4 text-text-muted" aria-hidden="true" />
+                      <span className="num">{athlete.emergencyContact.phone}</span>
+                    </p>
+                    {athlete.emergencyContact.email && (
+                      <p className="flex items-center gap-2 text-body-sm text-text-secondary">
+                        <Mail className="h-4 w-4 text-text-muted" aria-hidden="true" />
+                        {athlete.emergencyContact.email}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-body-sm text-text-muted">No emergency contact has been added.</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card padding="none">
+              <CardContent className="space-y-3 p-5">
+                <h2 className="text-heading-sm font-semibold text-text-primary">Club account</h2>
+                <div className="flex items-start gap-2.5">
+                  <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-volt" aria-hidden="true" />
+                  <p className="text-body-sm text-text-secondary">
+                    {athlete.userId ? 'Linked to an active STMS account in this club.' : 'This roster profile is not linked to an STMS account yet.'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 border-t border-border pt-3 text-caption text-text-muted">
+                  <CalendarDays className="h-4 w-4" aria-hidden="true" />
+                  Added <span className="num">{new Date(athlete.createdAt).toLocaleDateString()}</span>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       )}

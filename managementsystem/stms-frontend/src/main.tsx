@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '@/context/AuthContext';
-import { ThemeProvider } from '@/context/ThemeContext';
 import App from './App';
 import './styles/index.css';
 
@@ -26,23 +25,22 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <ThemeProvider>
-          <AuthProvider>
-            <App />
-            <Toaster
-              position="top-right"
-              theme="system"
-              toastOptions={{
-                duration: 4000,
-                style: {
-                  background: 'rgb(18 26 46)',
-                  color: 'rgb(232 236 239)',
-                  border: '1px solid rgb(30 42 74)',
-                },
-              }}
-            />
-          </AuthProvider>
-        </ThemeProvider>
+        <AuthProvider>
+          <App />
+          <Toaster
+            position="top-right"
+            theme="dark"
+            toastOptions={{
+              duration: 4000,
+              style: {
+                background: '#1C232C',
+                color: '#EDF1F5',
+                border: '1px solid #232C38',
+                borderRadius: '10px',
+              },
+            }}
+          />
+        </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
   </React.StrictMode>

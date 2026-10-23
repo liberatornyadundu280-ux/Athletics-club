@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Clipboard, MailPlus, Search, Shield, Users } from 'lucide-react';
 import { toast } from 'sonner';
-import { Avatar, Badge, Button, Card, CardContent, ConfirmModal, Input, Modal, Select } from '@/components/ui';
+import { Avatar, Button, Card, CardContent, ConfirmModal, EmptyState, Input, Modal, PageHeader, Select, Stat } from '@/components/ui';
 import { userApi } from '@/services/api';
 import { User, UserRole } from '@/types';
 import { useAuth } from '@/context/AuthContext';
@@ -102,59 +102,145 @@ export function UserManagement() {
   const canDelete = hasPermission('user:delete');
 
   return (
-    <div className="space-y-6">
-      <section className="surface-raised relative overflow-hidden p-6 sm:p-8">
-        <div className="absolute right-0 top-0 h-full w-1.5 bg-gradient-to-b from-sky-400 via-sky-500 to-amber-400" />
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-sky-400">CLUB ROSTER</p>
-            <h1 className="mt-2 text-3xl font-bold text-text-primary">People behind the progress</h1>
-            <p className="mt-2 max-w-xl text-text-secondary">Manage club access and keep coaches and athletes moving together.</p>
-          </div>
-          {canInvite && <Button onClick={() => setInviteOpen(true)} leftIcon={<MailPlus className="h-4 w-4" />}>Invite a member</Button>}
-        </div>
-      </section>
+    <div className="page-shell">
+      <PageHeader
+        title="Club members"
+        description="Manage club access and keep coaches and athletes moving together."
+        meta={
+          <span className="inline-flex items-baseline gap-1.5">
+            <span className="num text-text-secondary">{loading ? '—' : total}</span> people with access
+          </span>
+        }
+        actions={
+          canInvite && (
+            <Button onClick={() => setInviteOpen(true)} leftIcon={<MailPlus className="h-4 w-4" />}>
+              Invite a member
+            </Button>
+          )
+        }
+      />
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card><CardContent className="flex items-center gap-4 p-5"><Users className="h-8 w-8 text-sky-400" /><div><p className="text-sm text-text-secondary">Roster size</p><p className="text-2xl font-bold text-text-primary">{loading ? '—' : total}</p></div></CardContent></Card>
-        <Card><CardContent className="flex items-center gap-4 p-5"><Shield className="h-8 w-8 text-amber-400" /><div><p className="text-sm text-text-secondary">Coaching team</p><p className="text-2xl font-bold text-text-primary">{loading ? '—' : coachTotal}</p></div></CardContent></Card>
-        <Card><CardContent className="flex items-center gap-4 p-5"><Users className="h-8 w-8 text-text-muted" /><div><p className="text-sm text-text-secondary">Athletes</p><p className="text-2xl font-bold text-text-primary">{loading ? '—' : athleteTotal}</p></div></CardContent></Card>
-      </div>
+      <section className="grid gap-3 sm:grid-cols-3" aria-label="Club member counts">
+        <Stat label="Roster size" value={loading ? '—' : total} hint="accounts in this club" icon={<Users className="h-4 w-4" />} />
+        <Stat label="Coaching team" value={loading ? '—' : coachTotal} hint="coaches and admins" icon={<Shield className="h-4 w-4" />} tone="volt" />
+        <Stat label="Athletes" value={loading ? '—' : athleteTotal} hint="athlete accounts" icon={<Users className="h-4 w-4" />} />
+      </section>
 
       <EnrollmentRequestsPanel />
 
-      <Card>
-        <CardContent className="space-y-5 p-5 sm:p-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div><h2 className="text-xl font-semibold text-text-primary">Club members</h2><p className="mt-1 text-sm text-text-secondary">Role changes are saved to their account and Firebase claims.</p></div>
-            <div className="w-full sm:max-w-xs"><Input aria-label="Search members" placeholder="Search name or email" value={search} onChange={event => { setPage(1); setSearch(event.target.value); }} leftIcon={<Search className="h-4 w-4" />} /></div>
+      <Card padding="none">
+        <CardContent className="p-0">
+          <div className="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-heading-sm font-semibold text-text-primary">Members</h2>
+              <p className="mt-0.5 text-caption text-text-secondary">Role changes are saved to the account and Firebase claims.</p>
+            </div>
+            <div className="w-full sm:max-w-xs">
+              <Input
+                aria-label="Search members"
+                placeholder="Search name or email"
+                value={search}
+                onChange={event => { setPage(1); setSearch(event.target.value); }}
+                leftIcon={<Search className="h-4 w-4" />}
+              />
+            </div>
           </div>
 
-          {loading ? <div className="py-14 text-center text-text-secondary" role="status">Loading club roster…</div> : users.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border px-6 py-14 text-center">
-              <Users className="mx-auto h-9 w-9 text-text-muted" />
-              <h3 className="mt-3 font-semibold text-text-primary">Your roster is ready for its first teammate</h3>
-              <p className="mt-1 text-sm text-text-secondary">Invite your coaching staff or athletes to get started.</p>
-              {canInvite && <Button className="mt-5" onClick={() => setInviteOpen(true)} leftIcon={<MailPlus className="h-4 w-4" />}>Invite a member</Button>}
+          {loading ? (
+            <div className="divide-y divide-border/60" role="status" aria-label="Loading club members">
+              {[0, 1, 2, 3].map(row => (
+                <div key={row} className="flex items-center gap-3 px-4 py-4">
+                  <div className="skeleton h-8 w-8 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <div className="skeleton h-3.5 w-1/4" />
+                    <div className="skeleton h-3 w-1/3" />
+                  </div>
+                </div>
+              ))}
             </div>
+          ) : users.length === 0 ? (
+            <EmptyState
+              icon={<Users className="h-5 w-5" />}
+              title={search ? 'No members match this search' : 'Your roster is ready for its first teammate'}
+              description={search ? 'Try a shorter name or email.' : 'Invite your coaching staff or athletes to get started.'}
+              action={
+                !search && canInvite && (
+                  <Button onClick={() => setInviteOpen(true)} leftIcon={<MailPlus className="h-4 w-4" />}>
+                    Invite a member
+                  </Button>
+                )
+              }
+            />
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[650px] text-left">
-                <thead><tr className="border-b border-border text-xs uppercase tracking-wide text-text-muted"><th className="px-3 py-3 font-medium">Member</th><th className="px-3 py-3 font-medium">Role</th><th className="px-3 py-3 font-medium">Status</th><th className="px-3 py-3 font-medium">Joined</th><th className="px-3 py-3 text-right font-medium">Actions</th></tr></thead>
-                <tbody>{users.map(member => {
-                  const self = member.firebaseUid === currentUser?.firebaseUid;
-                  return <tr key={member.id} className="border-b border-border/70 last:border-0 hover:bg-cold-800/30">
-                    <td className="px-3 py-4"><div className="flex items-center gap-3"><Avatar name={member.name} src={member.avatarUrl || undefined} size="sm" /><div><p className="font-medium text-text-primary">{member.name}{self && <span className="ml-2 text-xs text-sky-400">You</span>}</p><p className="text-sm text-text-secondary">{member.email}</p></div></div></td>
-                    <td className="px-3 py-4">{canChangeRole && !self ? <Select aria-label={`Role for ${member.name}`} value={member.role} onChange={event => void updateRole(member, event.target.value as UserRole)} options={roleOptions} /> : <span className="capitalize text-text-secondary">{member.role.replace('_', ' ')}</span>}</td>
-                    <td className="px-3 py-4"><Badge variant={member.status === 'active' ? 'success' : 'neutral'}>{member.status}</Badge></td>
-                    <td className="px-3 py-4 text-sm text-text-secondary">{new Date(member.createdAt).toLocaleDateString()}</td>
-                    <td className="px-3 py-4 text-right">{canDelete && !self && <Button variant="ghost" size="sm" aria-label={`Deactivate ${member.name}`} onClick={() => setDeleteTarget(member)}>Deactivate</Button>}</td>
-                  </tr>;
-                })}</tbody>
+              <table className="data-table min-w-[660px]">
+                <thead>
+                  <tr>
+                    <th>Member</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Joined</th>
+                    <th className="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map(member => {
+                    const self = member.firebaseUid === currentUser?.firebaseUid;
+                    return (
+                      <tr key={member.id}>
+                        <td>
+                          <div className="flex items-center gap-3">
+                            <Avatar name={member.name} src={member.avatarUrl || undefined} size="sm" />
+                            <div className="min-w-0">
+                              <p className="flex items-center gap-2 truncate font-medium text-text-primary">
+                                {member.name}
+                                {self && <span className="badge-primary">You</span>}
+                              </p>
+                              <p className="truncate text-caption text-text-secondary">{member.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          {canChangeRole && !self ? (
+                            <Select
+                              aria-label={`Role for ${member.name}`}
+                              value={member.role}
+                              onChange={event => void updateRole(member, event.target.value as UserRole)}
+                              options={roleOptions}
+                              className="w-[150px]"
+                            />
+                          ) : (
+                            <span className="text-body-sm capitalize text-text-secondary">{member.role.replace('_', ' ')}</span>
+                          )}
+                        </td>
+                        <td>
+                          <span className={member.status === 'active' ? 'badge-success' : 'badge-neutral'}>{member.status}</span>
+                        </td>
+                        <td className="num text-caption text-text-secondary">{new Date(member.createdAt).toLocaleDateString()}</td>
+                        <td className="text-right">
+                          {canDelete && !self && (
+                            <Button variant="ghost" size="sm" aria-label={`Deactivate ${member.name}`} onClick={() => setDeleteTarget(member)}>
+                              Deactivate
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
               </table>
             </div>
           )}
-          {!loading && totalPages > 1 && <div className="flex items-center justify-between border-t border-border pt-4"><p className="text-sm text-text-secondary">Page {page} of {totalPages}</p><div className="flex gap-2"><Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(current => current - 1)}>Previous</Button><Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(current => current + 1)}>Next</Button></div></div>}
+
+          {!loading && totalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-border px-4 py-3">
+              <p className="num text-caption text-text-muted">Page {page} of {totalPages}</p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(current => current - 1)}>Previous</Button>
+                <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(current => current + 1)}>Next</Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -162,13 +248,25 @@ export function UserManagement() {
         <form onSubmit={invite} className="space-y-4">
           <Input label="Email address" type="email" required autoComplete="email" value={inviteEmail} onChange={event => setInviteEmail(event.target.value)} placeholder="teammate@example.com" />
           <Select label="Club role" value={inviteRole} onChange={event => setInviteRole(event.target.value)} options={roleOptions} />
-          <p className="text-xs text-text-muted">The current API creates a shareable invite link; email delivery is not configured yet.</p>
-          <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={() => setInviteOpen(false)}>Cancel</Button><Button type="submit" loading={saving} leftIcon={<Clipboard className="h-4 w-4" />}>Create invite link</Button></div>
+          <p className="text-caption text-text-muted">The current API creates a shareable invite link; email delivery is not configured yet.</p>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={() => setInviteOpen(false)}>Cancel</Button>
+            <Button type="submit" loading={saving} leftIcon={<Clipboard className="h-4 w-4" />}>Create invite link</Button>
+          </div>
         </form>
       </Modal>
 
       <Modal isOpen={Boolean(createdInviteLink)} onClose={() => setCreatedInviteLink('')} title="Invitation link ready" description={`Share this link with ${createdInviteEmail || 'the invited member'}. It expires in seven days.`} size="md">
-        <div className="space-y-4"><Input label="Secure invitation link" readOnly value={createdInviteLink} onFocus={event => event.currentTarget.select()} /><p className="text-sm text-text-secondary">The invited person must sign in with the email address you entered before accepting.</p><div className="flex justify-end gap-2"><Button variant="ghost" onClick={() => setCreatedInviteLink('')}>Close</Button><Button onClick={async () => { try { await navigator.clipboard.writeText(createdInviteLink); toast.success('Link copied'); } catch { toast.error('Clipboard access is unavailable. Select and copy the link.'); } }} leftIcon={<Clipboard className="h-4 w-4" />}>Copy link</Button></div></div>
+        <div className="space-y-4">
+          <Input label="Secure invitation link" readOnly value={createdInviteLink} onFocus={event => event.currentTarget.select()} />
+          <p className="text-body-sm text-text-secondary">The invited person must sign in with the email address you entered before accepting.</p>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setCreatedInviteLink('')}>Close</Button>
+            <Button onClick={async () => { try { await navigator.clipboard.writeText(createdInviteLink); toast.success('Link copied'); } catch { toast.error('Clipboard access is unavailable. Select and copy the link.'); } }} leftIcon={<Clipboard className="h-4 w-4" />}>
+              Copy link
+            </Button>
+          </div>
+        </div>
       </Modal>
 
       <ConfirmModal isOpen={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)} onConfirm={() => void removeMember()} title="Deactivate this account?" message={`${deleteTarget?.name} will lose access to STMS and their account details will be anonymized. This action can’t be undone.`} confirmText="Deactivate account" loading={deleteLoading} />

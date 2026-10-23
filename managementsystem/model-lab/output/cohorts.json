@@ -1,0 +1,22 @@
+{
+  "acwr": {
+    "shipped_median": 1.0,
+    "standard_median": 4.0,
+    "shipped_above_1_3": 0.0,
+    "standard_above_1_3": 0.9895833333333334,
+    "athlete_days": 288
+  },
+  "readiness_link": {
+    "pairs": 201,
+    "correlation": -0.018403271219257455,
+    "training_correlation": -0.6462653310910454,
+    "training_rows": 2500
+  },
+  "labels": {
+    "competitions": 3,
+    "results": 208,
+    "athletes_with_results": 26,
+    "median_results_per_athlete": 8.0
+  },
+  "quiet_day_share": 1.0
+}

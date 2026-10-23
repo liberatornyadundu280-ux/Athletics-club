@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { BarChart3, Download, RefreshCw, Users } from 'lucide-react';
 import { toast } from 'sonner';
-import { Badge, Button, Card, CardContent } from '@/components/ui';
+import { Button, Card, CardContent, EmptyState, Input, PageHeader } from '@/components/ui';
 import { analyticsApi } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 
@@ -47,19 +47,206 @@ export function Analytics() {
   };
 
   const metrics = summary ? [
-    ['Attendance rate', `${summary.attendance.rate}%`, `${summary.attendance.present + summary.attendance.late} attended`],
-    ['Workout compliance', `${summary.workouts.compliance}%`, `${summary.workouts.completed}/${summary.workouts.assigned} completed`],
-    [athleteMode ? 'Your profile' : 'Active athletes', String(summary.activeAthletes), `${summary.sessions} sessions in range`],
-    ['Active injuries', String(summary.activeInjuries), `${summary.activeGoals} active goals`],
+    { label: 'Attendance rate', value: summary.attendance.rate, unit: '%', hint: `${summary.attendance.present + summary.attendance.late} attended` },
+    { label: 'Workout compliance', value: summary.workouts.compliance, unit: '%', hint: `${summary.workouts.completed}/${summary.workouts.assigned} completed` },
+    { label: athleteMode ? 'Your profile' : 'Active athletes', value: summary.activeAthletes, unit: '', hint: `${summary.sessions} sessions in range` },
+    { label: 'Active injuries', value: summary.activeInjuries, unit: '', hint: `${summary.activeGoals} active goals` },
   ] : [];
 
-  return <div className="mx-auto max-w-6xl space-y-6">
-    <section className="surface-raised flex flex-col gap-4 p-6 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-semibold text-sky-400">SPRINT 8 · CLUB REPORTS</p><h1 className="mt-2 text-3xl font-bold text-text-primary">Analytics</h1><p className="mt-2 text-text-secondary">Live summaries from attendance, workouts, performance, injuries, and goals.</p></div><div className="flex flex-wrap items-end gap-2"><label className="text-xs text-text-muted">From<input className="mt-1 block rounded-lg border border-border bg-cold-900 px-3 py-2 text-sm text-text-primary" type="date" value={from} max={to} onChange={event => setFrom(event.target.value)} /></label><label className="text-xs text-text-muted">To<input className="mt-1 block rounded-lg border border-border bg-cold-900 px-3 py-2 text-sm text-text-primary" type="date" value={to} min={from} max={dateValue(new Date())} onChange={event => setTo(event.target.value)} /></label><Button variant="outline" onClick={exportCsv} disabled={!summary} leftIcon={<Download className="h-4 w-4" />}>Export CSV</Button></div></section>
-    {loading ? <div role="status" className="py-16 text-center text-text-secondary">Loading club reports…</div> : !summary ? <Card><CardContent className="py-16 text-center"><BarChart3 className="mx-auto h-10 w-10 text-text-muted"/><p className="mt-3 text-text-secondary">No report data is available yet.</p><Button className="mt-4" variant="outline" onClick={() => void load()} leftIcon={<RefreshCw className="h-4 w-4"/>}>Retry</Button></CardContent></Card> : <>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{metrics.map(([label, value, detail]) => <Card key={label}><CardContent className="p-5"><p className="text-sm text-text-muted">{label}</p><p className="mt-2 text-3xl font-bold text-text-primary">{value}</p><p className="mt-1 text-xs text-text-secondary">{detail}</p></CardContent></Card>)}</div>
-      <div className="grid gap-6 lg:grid-cols-2"><Card><CardContent className="p-5"><h2 className="font-semibold text-text-primary">Attendance by day</h2><div className="mt-6 flex h-52 items-end gap-1 border-b border-border">{dailySeries.map(item => <div key={item.date} className="group relative flex h-full flex-1 items-end" title={`${item.date}: ${item.rate}%`}><div className="w-full rounded-t bg-sky-500/80" style={{ height: `${Math.max(item.rate, item.rate ? 4 : 0)}%` }} /></div>)}</div><div className="mt-2 flex justify-between text-xs text-text-muted"><span>{summary.from}</span><span>{summary.to}</span></div><div className="mt-4 flex flex-wrap gap-2">{Object.entries(summary.attendance).filter(([key]) => ['present', 'late', 'absent', 'excused'].includes(key)).map(([key, value]) => <Badge key={key} variant="neutral">{key}: {value as number}</Badge>)}</div></CardContent></Card>
-      <Card><CardContent className="p-5"><h2 className="font-semibold text-text-primary">Performance & training</h2><div className="mt-5 grid grid-cols-2 gap-3">{[['Results recorded', summary.performance.total], ['Personal bests', summary.performance.personalBests], ['Season bests', summary.performance.seasonBests], ['Workouts assigned', summary.workouts.assigned]].map(([label, value]) => <div className="rounded-xl bg-cold-800 p-4" key={label}><p className="text-xs text-text-muted">{label}</p><p className="mt-1 text-2xl font-semibold text-text-primary">{value}</p></div>)}</div><p className="mt-4 text-xs text-text-muted">Date range: {summary.from} – {summary.to}</p></CardContent></Card></div>
-      {canReport && <Card><CardContent className="p-5"><div className="flex items-center gap-2"><Users className="h-5 w-5 text-sky-400"/><h2 className="font-semibold text-text-primary">Athlete overview</h2></div>{athletes.length ? <div className="mt-4 overflow-x-auto"><table className="w-full min-w-[560px] text-left text-sm"><thead className="text-xs uppercase text-text-muted"><tr><th className="py-3">Athlete</th><th>Attendance</th><th>Records</th><th>Workout completion</th><th>Assignments</th></tr></thead><tbody>{athletes.map(row => <tr key={row.athleteId} className="border-t border-border"><td className="py-3 font-medium text-text-primary">{row.name}</td><td>{row.attendanceRate}%</td><td>{row.attendanceRecords}</td><td>{row.workoutCompliance}%</td><td>{row.workoutsAssigned}</td></tr>)}</tbody></table></div> : <p className="mt-4 text-sm text-text-muted">No active athletes have report data in this date range.</p>}</CardContent></Card>}
-    </>}
-  </div>;
+  const maxRate = Math.max(...dailySeries.map(item => item.rate), 1);
+
+  return (
+    <div className="page-shell">
+      <PageHeader
+        title="Analytics"
+        description="Live summaries from attendance, workouts, performance, injuries and goals."
+        meta={
+          summary && (
+            <span className="num">
+              {summary.from} → {summary.to}
+            </span>
+          )
+        }
+        actions={
+          <>
+            <Input
+              label="From"
+              type="date"
+              value={from}
+              max={to}
+              onChange={event => setFrom(event.target.value)}
+              className="w-[150px]"
+            />
+            <Input
+              label="To"
+              type="date"
+              value={to}
+              min={from}
+              max={dateValue(new Date())}
+              onChange={event => setTo(event.target.value)}
+              className="w-[150px]"
+            />
+            <Button variant="outline" onClick={exportCsv} disabled={!summary} leftIcon={<Download className="h-4 w-4" />}>
+              Export CSV
+            </Button>
+          </>
+        }
+      />
+
+      {loading ? (
+        <div className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {[0, 1, 2, 3].map(item => (
+              <div key={item} className="surface space-y-3 p-4">
+                <div className="skeleton h-3 w-1/2" />
+                <div className="skeleton h-7 w-1/3" />
+                <div className="skeleton h-3 w-2/3" />
+              </div>
+            ))}
+          </div>
+          <div className="surface h-64 animate-pulse" />
+        </div>
+      ) : !summary ? (
+        <Card padding="none">
+          <EmptyState
+            icon={<BarChart3 className="h-5 w-5" />}
+            title="No report data yet"
+            description="Once sessions and results are recorded, this range will fill in."
+            action={
+              <Button variant="outline" onClick={() => void load()} leftIcon={<RefreshCw className="h-4 w-4" />}>
+                Retry
+              </Button>
+            }
+          />
+        </Card>
+      ) : (
+        <>
+          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Club summary">
+            {metrics.map(metric => (
+              <div key={metric.label} className="surface p-4">
+                <p className="stat-label">{metric.label}</p>
+                <div className="mt-2 flex items-baseline gap-1">
+                  <span className="num text-[1.75rem] font-semibold leading-none tracking-[-0.02em] text-text-primary">
+                    {metric.value}
+                  </span>
+                  {metric.unit && <span className="text-body-sm font-medium text-text-muted">{metric.unit}</span>}
+                </div>
+                <p className="mt-1.5 text-caption text-text-muted">{metric.hint}</p>
+              </div>
+            ))}
+          </section>
+
+          <div className="grid gap-3 lg:grid-cols-[1.35fr_1fr]">
+            <Card padding="none">
+              <CardContent className="p-4">
+                <div className="flex items-baseline justify-between gap-3">
+                  <h2 className="text-heading-sm font-semibold text-text-primary">Attendance by day</h2>
+                  <span className="num text-caption text-text-muted">{dailySeries.length} days</span>
+                </div>
+
+                <div className="mt-5 flex h-52 items-end gap-[3px] border-b border-border pb-px" role="img" aria-label="Daily attendance rate">
+                  {dailySeries.map(item => (
+                    <div
+                      key={item.date}
+                      className="group relative flex h-full flex-1 items-end"
+                      title={`${item.date}: ${item.rate}%`}
+                    >
+                      <div
+                        className={`w-full rounded-t-sm transition-colors ${
+                          item.rate ? 'bg-volt/70 group-hover:bg-volt' : 'bg-white/[0.06]'
+                        }`}
+                        style={{ height: `${item.rate ? Math.max((item.rate / maxRate) * 100, 4) : 2}%` }}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                <div className="num mt-2 flex justify-between text-micro text-text-muted">
+                  <span>{dailySeries[0]?.date || summary.from}</span>
+                  <span>{dailySeries[dailySeries.length - 1]?.date || summary.to}</span>
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-1.5">
+                  {Object.entries(summary.attendance)
+                    .filter(([key]) => ['present', 'late', 'absent', 'excused'].includes(key))
+                    .map(([key, value]) => (
+                      <span key={key} className="rounded border border-border px-2 py-0.5 text-micro capitalize text-text-secondary">
+                        {key} <span className="num text-text-primary">{value as number}</span>
+                      </span>
+                    ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card padding="none">
+              <CardContent className="p-4">
+                <h2 className="text-heading-sm font-semibold text-text-primary">Performance &amp; training</h2>
+                <dl className="mt-4 grid grid-cols-2 gap-2">
+                  {[
+                    ['Results recorded', summary.performance.total],
+                    ['Personal bests', summary.performance.personalBests],
+                    ['Season bests', summary.performance.seasonBests],
+                    ['Workouts assigned', summary.workouts.assigned],
+                  ].map(([label, value]) => (
+                    <div key={String(label)} className="rounded-radius-md border border-border bg-ink/40 p-3">
+                      <dt className="text-micro uppercase tracking-[0.1em] text-text-muted">{label}</dt>
+                      <dd className="num mt-1 text-xl font-semibold text-text-primary">{value as number}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <p className="num mt-4 text-caption text-text-muted">
+                  {summary.from} – {summary.to}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {canReport && (
+            <Card padding="none">
+              <CardContent className="p-0">
+                <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+                  <Users className="h-4 w-4 text-volt" aria-hidden="true" />
+                  <h2 className="text-heading-sm font-semibold text-text-primary">Athlete overview</h2>
+                </div>
+                {athletes.length ? (
+                  <div className="overflow-x-auto">
+                    <table className="data-table min-w-[560px]">
+                      <thead>
+                        <tr>
+                          <th>Athlete</th>
+                          <th className="text-right">Attendance</th>
+                          <th className="text-right">Records</th>
+                          <th className="text-right">Workout completion</th>
+                          <th className="text-right">Assignments</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {athletes.map(row => (
+                          <tr key={row.athleteId}>
+                            <td className="font-medium text-text-primary">{row.name}</td>
+                            <td className="num text-right">
+                              <span className={row.attendanceRate >= 75 ? 'text-success-400' : 'text-amber-400'}>
+                                {row.attendanceRate}%
+                              </span>
+                            </td>
+                            <td className="num text-right text-text-secondary">{row.attendanceRecords}</td>
+                            <td className="num text-right text-text-secondary">{row.workoutCompliance}%</td>
+                            <td className="num text-right text-text-secondary">{row.workoutsAssigned}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="px-4 py-8 text-center text-body-sm text-text-muted">
+                    No active athletes have report data in this date range.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
+    </div>
+  );
 }

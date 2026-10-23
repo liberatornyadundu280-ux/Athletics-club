@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowRight, Download, FileUp, Plus, Search, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Avatar, Badge, Button, Card, CardContent, Input, Modal, Select } from '@/components/ui';
+import { Avatar, Button, Card, CardContent, EmptyState, Input, Modal, PageHeader, Select } from '@/components/ui';
 import { athleteApi } from '@/services/api';
 import { Athlete } from '@/types';
 import { useAuth } from '@/context/AuthContext';
@@ -46,6 +46,14 @@ function downloadTemplate() {
   link.click();
   URL.revokeObjectURL(url);
 }
+
+const statusTone: Record<string, string> = {
+  active: 'badge-success',
+  injured: 'badge-amber',
+  inactive: 'badge-neutral',
+  transferred: 'badge-neutral',
+  alumni: 'badge-neutral',
+};
 
 export function AthletesList() {
   const navigate = useNavigate();
@@ -147,79 +155,284 @@ export function AthletesList() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <section className="surface-raised relative overflow-hidden p-6 sm:p-8">
-        <div className="absolute right-0 top-0 h-full w-1.5 bg-gradient-to-b from-sky-400 via-sky-500 to-amber-400" />
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-sky-400">ATHLETE DIRECTORY</p>
-            <h1 className="mt-2 text-3xl font-bold text-text-primary">Build your roster</h1>
-            <p className="mt-2 max-w-xl text-text-secondary">Keep each athlete’s event focus and essential details in one club roster.</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {canImport && <Button variant="outline" onClick={() => setImportOpen(true)} leftIcon={<FileUp className="h-4 w-4" />}>Import CSV</Button>}
-            {canWrite && <Button onClick={() => navigate('/athletes/new')} leftIcon={<Plus className="h-4 w-4" />}>Add athlete</Button>}
-          </div>
-        </div>
-      </section>
+    <div className="page-shell">
+      <PageHeader
+        title="Athletes"
+        description="Each athlete's event focus and essential details, in one club roster."
+        meta={
+          <>
+            <span className="inline-flex items-baseline gap-1.5">
+              <span className="num text-text-secondary">{total}</span> on the roster
+            </span>
+            <span className="inline-flex items-baseline gap-1.5">
+              <span className="num text-text-secondary">{totalPages}</span> {totalPages === 1 ? 'page' : 'pages'}
+            </span>
+          </>
+        }
+        actions={
+          <>
+            {canImport && (
+              <Button variant="outline" onClick={() => setImportOpen(true)} leftIcon={<FileUp className="h-4 w-4" />}>
+                Import CSV
+              </Button>
+            )}
+            {canWrite && (
+              <Button onClick={() => navigate('/athletes/new')} leftIcon={<Plus className="h-4 w-4" />}>
+                Add athlete
+              </Button>
+            )}
+          </>
+        }
+      />
 
-      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_220px]">
-        <Input aria-label="Search athletes" placeholder="Search name, email, or school" value={search} onChange={event => { setPage(1); setSearch(event.target.value); }} leftIcon={<Search className="h-4 w-4" />} />
-        <Select aria-label="Filter athlete status" value={status} onChange={event => { setPage(1); setStatus(event.target.value); }} options={[{ value: '', label: 'Current roster' }, { value: 'active', label: 'Active' }, { value: 'injured', label: 'Injured' }, { value: 'inactive', label: 'Archived' }, { value: 'transferred', label: 'Transferred' }, { value: 'alumni', label: 'Alumni' }]} />
+      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_220px]">
+        <Input
+          aria-label="Search athletes"
+          placeholder="Search name, email, or school"
+          value={search}
+          onChange={event => { setPage(1); setSearch(event.target.value); }}
+          leftIcon={<Search className="h-4 w-4" />}
+        />
+        <Select
+          aria-label="Filter athlete status"
+          value={status}
+          onChange={event => { setPage(1); setStatus(event.target.value); }}
+          options={[
+            { value: '', label: 'Current roster' },
+            { value: 'active', label: 'Active' },
+            { value: 'injured', label: 'Injured' },
+            { value: 'inactive', label: 'Archived' },
+            { value: 'transferred', label: 'Transferred' },
+            { value: 'alumni', label: 'Alumni' },
+          ]}
+        />
       </div>
 
-      <Card>
+      <Card padding="none">
         <CardContent className="p-0">
-          <div className="flex items-center justify-between border-b border-border px-5 py-4 sm:px-6">
-            <div><h2 className="font-semibold text-text-primary">Club athletes</h2><p className="mt-1 text-sm text-text-secondary">{loading ? 'Loading roster…' : `${total} athlete${total === 1 ? '' : 's'} in this view`}</p></div>
-          </div>
-          {loading ? <div className="py-16 text-center text-text-secondary" role="status">Loading athlete roster…</div> : loadError ? (
-            <div className="px-6 py-16 text-center"><p role="alert" className="font-medium text-text-primary">The roster could not be loaded</p><p className="mt-2 text-sm text-text-secondary">{loadError}</p><Button className="mt-5" variant="outline" onClick={() => void loadAthletes()}>Try again</Button></div>
-          ) : athletes.length === 0 ? (
-            <div className="px-6 py-16 text-center">
-              <Users className="mx-auto h-10 w-10 text-text-muted" />
-              <h3 className="mt-4 font-semibold text-text-primary">{search ? 'No athletes match this search' : 'Your roster is ready to take shape'}</h3>
-              <p className="mx-auto mt-2 max-w-md text-sm text-text-secondary">{search ? 'Try a shorter name, email, or school.' : 'Add athletes one at a time or bring in an existing CSV roster.'}</p>
-              {!search && <div className="mt-5 flex justify-center gap-2">{canWrite && <Button onClick={() => navigate('/athletes/new')} leftIcon={<Plus className="h-4 w-4" />}>Add athlete</Button>}{canImport && <Button variant="outline" onClick={() => setImportOpen(true)} leftIcon={<FileUp className="h-4 w-4" />}>Import CSV</Button>}</div>}
-            </div>
-          ) : (
-            <div className="divide-y divide-border">
-              {athletes.map(athlete => (
-                <button key={athlete.id} onClick={() => navigate(`/athletes/${athlete.id}`)} className="group flex w-full items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-cold-800/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-sky-400 sm:px-6">
-                  <Avatar name={`${athlete.firstName} ${athlete.lastName}`} size="md" />
-                  <span className="min-w-0 flex-1">
-                    <span className="flex flex-wrap items-center gap-2"><span className="font-semibold text-text-primary">{athlete.firstName} {athlete.lastName}</span><Badge variant={athlete.status === 'active' ? 'success' : athlete.status === 'injured' ? 'amber' : 'neutral'}>{athlete.status}</Badge></span>
-                    <span className="mt-1 block truncate text-sm text-text-secondary">{athlete.email}{athlete.school ? ` · ${athlete.school}` : ''}</span>
-                    <span className="mt-1 block truncate text-xs text-text-muted">{athlete.eventSpecialization?.length ? athlete.eventSpecialization.join(' · ') : 'Events not set'}</span>
-                  </span>
-                  <ArrowRight className="h-4 w-4 shrink-0 text-text-muted transition-transform group-hover:translate-x-1 group-hover:text-sky-400" />
-                </button>
+          {loading ? (
+            <div className="divide-y divide-border/60" role="status" aria-label="Loading athlete roster">
+              {[0, 1, 2, 3, 4].map(row => (
+                <div key={row} className="flex items-center gap-3 px-4 py-4">
+                  <div className="skeleton h-10 w-10 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <div className="skeleton h-3.5 w-1/3" />
+                    <div className="skeleton h-3 w-1/2" />
+                  </div>
+                </div>
               ))}
             </div>
+          ) : loadError ? (
+            <EmptyState
+              icon={<Users className="h-5 w-5" />}
+              title="The roster could not be loaded"
+              description={loadError}
+              action={<Button variant="outline" onClick={() => void loadAthletes()}>Try again</Button>}
+            />
+          ) : athletes.length === 0 ? (
+            <EmptyState
+              icon={<Users className="h-5 w-5" />}
+              title={search ? 'No athletes match this search' : 'Your roster is ready to take shape'}
+              description={
+                search
+                  ? 'Try a shorter name, email, or school.'
+                  : 'Add athletes one at a time, or bring in an existing CSV roster.'
+              }
+              action={
+                !search && (
+                  <>
+                    {canWrite && (
+                      <Button onClick={() => navigate('/athletes/new')} leftIcon={<Plus className="h-4 w-4" />}>
+                        Add athlete
+                      </Button>
+                    )}
+                    {canImport && (
+                      <Button variant="outline" onClick={() => setImportOpen(true)} leftIcon={<FileUp className="h-4 w-4" />}>
+                        Import CSV
+                      </Button>
+                    )}
+                  </>
+                )
+              }
+            />
+          ) : (
+            <ul className="divide-y divide-border/60">
+              {athletes.map(athlete => {
+                const events = athlete.eventSpecialization || [];
+                return (
+                  <li key={athlete.id}>
+                    <button
+                      onClick={() => navigate(`/athletes/${athlete.id}`)}
+                      className="group flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-white/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-volt/70"
+                    >
+                      <Avatar name={`${athlete.firstName} ${athlete.lastName}`} size="md" />
+                      <span className="min-w-0 flex-1">
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span className="truncate text-body-sm font-semibold text-text-primary">
+                            {athlete.firstName} {athlete.lastName}
+                          </span>
+                          <span className={statusTone[athlete.status] || 'badge-neutral'}>{athlete.status}</span>
+                        </span>
+                        <span className="mt-0.5 block truncate text-caption text-text-secondary">
+                          {athlete.email}
+                          {athlete.school ? ` · ${athlete.school}` : ''}
+                        </span>
+                        {events.length > 0 && (
+                          <span className="mt-1.5 flex flex-wrap gap-1">
+                            {events.slice(0, 4).map(event => (
+                              <span
+                                key={event}
+                                className="rounded border border-border px-1.5 py-0.5 text-micro text-text-muted"
+                              >
+                                {event}
+                              </span>
+                            ))}
+                          </span>
+                        )}
+                      </span>
+                      <ArrowRight
+                        className="h-4 w-4 shrink-0 text-text-muted transition-transform group-hover:translate-x-0.5 group-hover:text-volt"
+                        aria-hidden="true"
+                      />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           )}
-          {!loading && totalPages > 1 && <div className="flex items-center justify-between border-t border-border px-5 py-4 sm:px-6"><p className="text-sm text-text-secondary">Page {page} of {totalPages}</p><div className="flex gap-2"><Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(value => value - 1)}>Previous</Button><Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(value => value + 1)}>Next</Button></div></div>}
+
+          {!loading && !loadError && totalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-border px-4 py-3">
+              <p className="num text-caption text-text-muted">
+                Page {page} of {totalPages}
+              </p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(value => value - 1)}>
+                  Previous
+                </Button>
+                <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(value => value + 1)}>
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      <Modal isOpen={importOpen} onClose={closeImport} title={importResults ? 'Import results' : 'Import athlete roster'} description="Review the rows before saving them to the active club." size="lg">
+      <Modal
+        isOpen={importOpen}
+        onClose={closeImport}
+        title={importResults ? 'Import results' : 'Import athlete roster'}
+        description="Review the rows before saving them to the active club."
+        size="lg"
+      >
         <div className="space-y-4">
-          {!importResults && <>
-            <div className="rounded-xl border border-border bg-cold-900/50 p-4 text-sm text-text-secondary"><p>CSV columns: firstName, lastName, email, phone, dateOfBirth, gender, eventSpecialization, school, grade. Separate multiple events with a vertical bar (|).</p><Button variant="ghost" size="sm" className="mt-3" onClick={downloadTemplate} leftIcon={<Download className="h-4 w-4" />}>Download CSV template</Button></div>
-            <label className="block rounded-xl border border-dashed border-sky-400/50 bg-sky-500/5 p-6 text-center">
-              <FileUp className="mx-auto h-7 w-7 text-sky-400" />
-              <span className="mt-2 block text-sm font-medium text-text-primary">Choose a CSV file</span>
-              <span className="mt-1 block text-xs text-text-muted">Maximum 250 rows per import</span>
-              <input ref={fileRef} type="file" accept=".csv,text/csv" className="sr-only" onChange={event => void readCsv(event.target.files?.[0])} />
-            </label>
-            {importError && <p role="alert" className="text-sm text-danger-400">{importError}</p>}
-            {importRows.length > 0 && <div className="space-y-2"><p className="text-sm font-medium text-text-primary">Preview: {importRows.length} rows</p><div className="max-h-48 overflow-auto rounded-lg border border-border"><table className="w-full text-left text-sm"><thead className="sticky top-0 bg-cold-900 text-text-muted"><tr><th className="px-3 py-2">Name</th><th className="px-3 py-2">Email</th><th className="px-3 py-2">Events</th></tr></thead><tbody>{importRows.slice(0, 5).map((row, index) => <tr className="border-t border-border" key={`${String(row.email)}-${index}`}><td className="px-3 py-2 text-text-primary">{String(row.firstName || '')} {String(row.lastName || '')}</td><td className="px-3 py-2 text-text-secondary">{String(row.email || '')}</td><td className="px-3 py-2 text-text-secondary">{(row.eventSpecialization as string[]).join(', ') || '—'}</td></tr>)}</tbody></table></div>{importRows.length > 5 && <p className="text-xs text-text-muted">Showing the first five rows. All rows will be checked by the server.</p>}</div>}
-            <div className="flex justify-end gap-2"><Button variant="ghost" onClick={closeImport}>Cancel</Button><Button onClick={() => void submitImport()} loading={importing} disabled={!importRows.length}>Import {importRows.length || ''} athletes</Button></div>
-          </>}
-          {importResults && <>
-            <div className="grid gap-3 sm:grid-cols-2"><div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4"><p className="text-2xl font-bold text-text-primary">{importResults.filter(item => item.status === 'created').length}</p><p className="text-sm text-text-secondary">Imported</p></div><div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4"><p className="text-2xl font-bold text-text-primary">{importResults.filter(item => item.status === 'error').length}</p><p className="text-sm text-text-secondary">Needs attention</p></div></div>
-            {importResults.some(item => item.status === 'error') && <div className="max-h-64 space-y-2 overflow-y-auto rounded-lg border border-border p-3" aria-label="Rows that need attention">{importResults.filter(item => item.status === 'error').map(item => <p key={item.row} className="text-sm text-text-secondary"><span className="font-medium text-amber-300">Row {item.row}</span> · {item.email || 'Missing email'} — {item.message}</p>)}</div>}
-            <div className="flex justify-end"><Button onClick={closeImport}>Done</Button></div>
-          </>}
+          {!importResults && (
+            <>
+              <div className="rounded-radius-md border border-border bg-ink/50 p-4 text-body-sm text-text-secondary">
+                <p>
+                  CSV columns: firstName, lastName, email, phone, dateOfBirth, gender, eventSpecialization, school,
+                  grade. Separate multiple events with a vertical bar (|).
+                </p>
+                <Button variant="ghost" size="sm" className="mt-2" onClick={downloadTemplate} leftIcon={<Download className="h-4 w-4" />}>
+                  Download CSV template
+                </Button>
+              </div>
+
+              <label className="block cursor-pointer rounded-radius-lg border border-dashed border-volt/40 bg-volt/[0.04] p-6 text-center transition-colors hover:border-volt/70">
+                <FileUp className="mx-auto h-7 w-7 text-volt" aria-hidden="true" />
+                <span className="mt-2 block text-body-sm font-medium text-text-primary">Choose a CSV file</span>
+                <span className="mt-1 block text-caption text-text-muted">Maximum 250 rows per import</span>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="sr-only"
+                  onChange={event => void readCsv(event.target.files?.[0])}
+                />
+              </label>
+
+              {importError && <p role="alert" className="text-body-sm text-danger-400">{importError}</p>}
+
+              {importRows.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-body-sm font-medium text-text-primary">
+                    Preview: <span className="num">{importRows.length}</span> rows
+                  </p>
+                  <div className="max-h-48 overflow-auto rounded-radius-md border border-border">
+                    <table className="w-full text-left text-body-sm">
+                      <thead className="sticky top-0 bg-ink/90 text-micro uppercase tracking-[0.1em] text-text-muted">
+                        <tr>
+                          <th className="px-3 py-2">Name</th>
+                          <th className="px-3 py-2">Email</th>
+                          <th className="px-3 py-2">Events</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {importRows.slice(0, 5).map((row, index) => (
+                          <tr className="border-t border-border" key={`${String(row.email)}-${index}`}>
+                            <td className="px-3 py-2 text-text-primary">
+                              {String(row.firstName || '')} {String(row.lastName || '')}
+                            </td>
+                            <td className="px-3 py-2 text-text-secondary">{String(row.email || '')}</td>
+                            <td className="px-3 py-2 text-text-secondary">
+                              {(row.eventSpecialization as string[]).join(', ') || '—'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {importRows.length > 5 && (
+                    <p className="text-caption text-text-muted">Showing the first five rows. All rows will be checked by the server.</p>
+                  )}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" onClick={closeImport}>Cancel</Button>
+                <Button onClick={() => void submitImport()} loading={importing} disabled={!importRows.length}>
+                  Import {importRows.length || ''} athletes
+                </Button>
+              </div>
+            </>
+          )}
+
+          {importResults && (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-radius-md border border-success-500/30 bg-success-500/[0.06] p-4">
+                  <p className="num text-2xl font-semibold text-text-primary">
+                    {importResults.filter(item => item.status === 'created').length}
+                  </p>
+                  <p className="text-body-sm text-text-secondary">Imported</p>
+                </div>
+                <div className="rounded-radius-md border border-amber-500/30 bg-amber-500/[0.06] p-4">
+                  <p className="num text-2xl font-semibold text-text-primary">
+                    {importResults.filter(item => item.status === 'error').length}
+                  </p>
+                  <p className="text-body-sm text-text-secondary">Needs attention</p>
+                </div>
+              </div>
+
+              {importResults.some(item => item.status === 'error') && (
+                <div
+                  className="max-h-64 space-y-2 overflow-y-auto rounded-radius-md border border-border p-3"
+                  aria-label="Rows that need attention"
+                >
+                  {importResults.filter(item => item.status === 'error').map(item => (
+                    <p key={item.row} className="text-body-sm text-text-secondary">
+                      <span className="font-medium text-amber-400">Row {item.row}</span> · {item.email || 'Missing email'} — {item.message}
+                    </p>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex justify-end">
+                <Button onClick={closeImport}>Done</Button>
+              </div>
+            </>
+          )}
         </div>
       </Modal>
     </div>
